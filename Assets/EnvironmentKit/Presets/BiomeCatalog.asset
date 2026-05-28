@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49eadd84508684b9f952c74f9a778656, type: 3}
+  m_Name: BiomeCatalog
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor::EnvironmentAuthoringKit.Editor.Generation.BiomeCatalog
+  biomes:
+  - biomeId: 0
+    terrainPreset: {fileID: 11400000, guid: 49096fe9522c043f7ae2c0cbb8205e1a, type: 2}
+    scatterProfile: {fileID: 11400000, guid: 69c6abf5ff49c4f02a6722aec2cdb4e9, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: e2869fe9c5b9e445f9c91daa19dc3793, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 2
+    terrainPreset: {fileID: 11400000, guid: 7770a3b68960b41d991c8789d042ad51, type: 2}
+    scatterProfile: {fileID: 11400000, guid: 33319ae8ef32a4755be4b41fb1c43e7c, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: 423174a7f4f5a42688d2e084a081373d, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 3
+    terrainPreset: {fileID: 11400000, guid: b9344ac2d6d1a4f6087dcbbc0c75c1ec, type: 2}
+    scatterProfile: {fileID: 11400000, guid: 2cf44e84e8986450b9d4f4bec6cb7f3e, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: beff3e15e48594940b5137270d9ded8a, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 4
+    terrainPreset: {fileID: 11400000, guid: b5cdddbe42e3949df8220046f42ed7cc, type: 2}
+    scatterProfile: {fileID: 11400000, guid: 2b228f9ee35a84f98b586b0846051f8f, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: e6958e6c2cd1440d4bf86096301a0b42, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 5
+    terrainPreset: {fileID: 11400000, guid: d7819e33366ef4616a9ce88c942c8e6a, type: 2}
+    scatterProfile: {fileID: 11400000, guid: f8d4c680cb825469d9e5a8c696f4af55, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: 13afdbca0f75c4c57b1bbbbb8092763b, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 6
+    terrainPreset: {fileID: 11400000, guid: 50dd90ed79d284eeb8fa52a2027b8c4c, type: 2}
+    scatterProfile: {fileID: 11400000, guid: dbab8b6bfe85b40c488eda54e2caa6d3, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: 8d1ebcfcc9aea4aa9a702467941a4d2a, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0
+  - biomeId: 1
+    terrainPreset: {fileID: 11400000, guid: 49096fe9522c043f7ae2c0cbb8205e1a, type: 2}
+    scatterProfile: {fileID: 11400000, guid: 69c6abf5ff49c4f02a6722aec2cdb4e9, type: 2}
+    atmospherePreset: {fileID: 11400000, guid: e2869fe9c5b9e445f9c91daa19dc3793, type: 2}
+    heightmapStamp: {fileID: 0}
+    defaultBlockout: 0

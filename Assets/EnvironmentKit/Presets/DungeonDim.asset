@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edca26d6afc4345aca781ea375004bca, type: 3}
+  m_Name: DungeonDim
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor::EnvironmentAuthoringKit.Editor.Atmosphere.AtmospherePreset
+  sunColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  sunIntensity: 1.1
+  sunRotation: {x: 50, y: -30, z: 0}
+  sunShadows: 1
+  ambientMode: 1
+  skyAmbient: {r: 0.45, g: 0.55, b: 0.7, a: 1}
+  equatorAmbient: {r: 0.4, g: 0.42, b: 0.38, a: 1}
+  groundAmbient: {r: 0.2, g: 0.22, b: 0.18, a: 1}
+  fogEnabled: 1
+  fogColor: {r: 0.15, g: 0.12, b: 0.14, a: 1}
+  fogDensity: 0.02
+  fogMode: 3
+  skyboxMaterial: {fileID: 0}
+  skyTint: {r: 0.5, g: 0.65, b: 0.9, a: 1}
+  bloomIntensity: 0
+  colorAdjustmentsPostExposure: 0

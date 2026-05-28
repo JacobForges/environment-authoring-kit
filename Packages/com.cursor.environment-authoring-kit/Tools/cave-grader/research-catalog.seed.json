@@ -1,0 +1,1236 @@
+{
+  "minResearchYear": 2025,
+  "policy": "2025–2026 proven production R&D + Unity 6 engine refs only. Speculative preprints excluded. Full catalog on disk; agent prompt uses rung-filtered subset. Florida aquifer/LiDAR: cave structure only.",
+  "labIndices": {
+    "EA SEED": "https://www.ea.com/seed/publications",
+    "Microsoft Research": "https://www.microsoft.com/en-us/research/group/game-intelligence/",
+    "NVIDIA Research": "https://research.nvidia.com/publication",
+    "Ubisoft La Forge": "https://www.ubisoft.com/en-us/studio/laforge/publications",
+    "Sony Interactive Entertainment": "https://sonyinteractive.com/en/innovation/research-academia/research/",
+    "Sony AI": "https://ai.sony/publications/",
+    "Activision Research": "https://research.activision.com/publications",
+    "Blizzard / Activision": "https://research.activision.com/publications",
+    "King (Activision Blizzard)": "https://www.activision.com/corp/research",
+    "Unity Technologies": "https://unity.com/research",
+    "Epic Games / GPUOpen": "https://gpuopen.com/learn/",
+    "Google DeepMind": "https://deepmind.google/research/publications/",
+    "Riot Games Technology": "https://technology.riotgames.com/",
+    "Bungie": "https://www.bungie.net/en/News?tag=Engineering",
+    "Meta AI": "https://ai.meta.com/research/",
+    "IEEE CoG": "https://ieeexplore.ieee.org/xpl/conhome/10802189/proceeding",
+    "FDG": "https://dl.acm.org/conference/fdg/proceedings",
+    "ACM / arXiv": "https://arxiv.org/search/?query=procedural+content+generation+games&searchtype=all&order=-announced_date_first&size=25"
+  },
+  "papers": [
+    {
+      "lab": "EA SEED",
+      "title": "A Call for Deeper Collaboration between Robotics and Game Development",
+      "year": 2025,
+      "venue": "IEEE Conference on Games (CoG) 2025",
+      "url": "https://www.ea.com/seed/publications",
+      "pdfUrl": "https://media.contentapi.ea.com/content/dam/ea/seed/presentations/seed-cog2025-a-call-for-deeper-collaboration-between-robotics.pdf",
+      "topics": "NPC autonomy, simulation, AAA production pipelines"
+    },
+    {
+      "lab": "EA SEED",
+      "title": "Leveraging Large Language Models for Efficient Failure Analysis in Game Development",
+      "year": 2025,
+      "venue": "IEEE CoG 2024 (SEED extended work)",
+      "url": "https://www.ea.com/seed/publications",
+      "pdfUrl": "https://media.contentapi.ea.com/content/dam/ea/seed/presentations/seed-cog2024-leveraging-llms-efficient-failure-analysis-paper.pdf",
+      "topics": "automated QA, regression triage, build failure analysis"
+    },
+    {
+      "lab": "EA SEED",
+      "title": "Self-correcting Reward Shaping via Language Models for RL Agents in Games",
+      "year": 2025,
+      "venue": "arXiv / SEED",
+      "url": "https://arxiv.org/abs/2506.23626",
+      "topics": "RL reward design, agent behaviors, playtesting automation"
+    },
+    {
+      "lab": "EA SEED",
+      "title": "SEED Applies ML Research to AAA Game Testing",
+      "year": 2025,
+      "venue": "EA SEED News",
+      "url": "https://www.ea.com/seed/news/seed-ml-research-aaa-game-testing",
+      "topics": "scale testing, ML in production AAA titles"
+    },
+    {
+      "lab": "Microsoft Research",
+      "title": "EvoTest: Evolutionary Test-Time Learning for Self-Improving Agentic Systems",
+      "year": 2026,
+      "venue": "ICLR 2026",
+      "url": "https://www.microsoft.com/en-us/research/publication/evotest-evolutionary-test-time-learning-for-self-improving-agentic-systems/",
+      "topics": "Jericho benchmark, agent improvement across game episodes"
+    },
+    {
+      "lab": "NVIDIA Research",
+      "title": "Fly, Fail, Fix: Iterative Game Repair with RL and Large Multimodal Models",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2507.12666",
+      "topics": "automated level repair, playtest traces, PCG iteration"
+    },
+    {
+      "lab": "NVIDIA Research",
+      "title": "3D-GENERALIST: VLA Models for Crafting 3D Worlds",
+      "year": 2026,
+      "venue": "NVIDIA Research",
+      "url": "https://research.nvidia.com/publication/2026-03_3d-generalist-vision-language-action-models-crafting-3d-worlds",
+      "topics": "layout, materials, lighting, simulation-ready environments"
+    },
+    {
+      "lab": "NVIDIA Research",
+      "title": "NitroGen: Open Foundation Model for Generalist Gaming Agents",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2601.02427",
+      "topics": "cross-game agents, procedural worlds generalization"
+    },
+    {
+      "lab": "Ubisoft La Forge",
+      "title": "La Forge Publications Index (2025–2026)",
+      "year": 2026,
+      "venue": "Ubisoft La Forge",
+      "url": "https://www.ubisoft.com/en-us/studio/laforge/publications",
+      "topics": "character, world, AI bots — filter by year ≥ 2025"
+    },
+    {
+      "lab": "Ubisoft La Forge",
+      "title": "Chord: Chain of Rendering Decomposition for PBR Material Estimation",
+      "year": 2025,
+      "venue": "SIGGRAPH Asia 2025",
+      "url": "https://ubisoft-laforge.github.io/world/chord/",
+      "topics": "PBR materials, environment art pipelines"
+    },
+    {
+      "lab": "Ubisoft La Forge",
+      "title": "Geometry-Aware Texture Generation for 3D Head Modeling",
+      "year": 2025,
+      "venue": "CVPR Workshop 2025",
+      "url": "https://ubisoft-laforge.github.io/character/GeoAwareTextures3D/index.html",
+      "topics": "geometry-aware textures, artist-driven control"
+    },
+    {
+      "lab": "Sony Interactive Entertainment",
+      "title": "Content Adaptive Encoding for Interactive Game Streaming",
+      "year": 2025,
+      "venue": "PCS 2025",
+      "url": "https://sonyinteractive.com/en/innovation/research-academia/research/content-adaptive-encoding-for-interactive-game-streaming/",
+      "topics": "PlayStation streaming, latency, visual quality metrics"
+    },
+    {
+      "lab": "Sony Interactive Entertainment",
+      "title": "AI Technology for Automating Gameplay on PlayStation 5",
+      "year": 2025,
+      "venue": "Sony R&D",
+      "url": "https://sonyinteractive.com/en/innovation/research-academia/research/ai-technology-for-automating-gameplay-on-playstation-5-under-human-equivalent-conditions/",
+      "topics": "imitation learning, automated QA, human-equivalent testing"
+    },
+    {
+      "lab": "Sony AI",
+      "title": "Automated Reward Design for Gran Turismo",
+      "year": 2025,
+      "venue": "NeurIPS 2025",
+      "url": "https://ai.sony/publications/Automated-Reward-Design-for-Gran-Turismo/",
+      "topics": "RL reward generation, racing sim agents, GT Sophy lineage"
+    },
+    {
+      "lab": "Activision Research",
+      "title": "Bandit Algorithms for Efficient Toxicity Detection in Competitive Games",
+      "year": 2025,
+      "venue": "Activision Research",
+      "url": "https://research.activision.com/publications/2025/08/bandit-algorithms-for-efficient-toxicity-detection-in-competitiv0",
+      "topics": "live ops, bandits, CoD-scale online systems"
+    },
+    {
+      "lab": "Activision Research",
+      "title": "Activision Research Publications Index",
+      "year": 2026,
+      "venue": "Activision Research",
+      "url": "https://research.activision.com/publications",
+      "topics": "matchmaking, rendering, AI for game design — 2025+ only"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity RL Playground: RL Framework for Mobile Robots (ML-Agents lineage)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2503.05146",
+      "topics": "simulation, RL training loops applicable to playtesting"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "ProtoRes: Proto-Residual Architecture for Human Pose",
+      "year": 2025,
+      "venue": "Unity Labs",
+      "url": "https://unity-technologies.github.io/Labs/protores.html",
+      "topics": "animation, pose modeling, production tooling"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Holo-Gen: Geometry-Conditioned PBR Image Generation",
+      "year": 2025,
+      "venue": "Unity Research",
+      "url": "https://unity-research.github.io/holo-gen/",
+      "topics": "PBR materials, 3D content generation"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "UnityVideo: Multi-Modal Multi-Task World-Aware Video Generation",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2512.07831",
+      "topics": "world-aware video, environment consistency"
+    },
+    {
+      "lab": "Epic Games / GPUOpen",
+      "title": "Real-Time Procedural Generation with GPU Work Graphs",
+      "year": 2025,
+      "venue": "GPUOpen Preprint",
+      "url": "https://gpuopen.com/download/Real-Time_Procedural_Generation_with_GPU_Work_Graphs-GPUOpen_preprint.pdf",
+      "topics": "GPU-driven procedural generation, real-time worlds"
+    },
+    {
+      "lab": "Epic Games / GPUOpen",
+      "title": "Procedural Content Generation in Electric Dreams (UE5)",
+      "year": 2025,
+      "venue": "Epic Developer Documentation",
+      "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/procedural-content-generation-in-electric-dreams",
+      "topics": "PCG graphs, spatial data, AAA environment workflows"
+    },
+    {
+      "lab": "Epic Games / GPUOpen",
+      "title": "UnrealLLM: LLM-Powered PCG for 3D Scenes",
+      "year": 2025,
+      "venue": "ACL 2025 Findings",
+      "url": "https://aclanthology.org/2025.findings-acl.994/",
+      "topics": "LLM + PCG blueprints, controllable scene generation"
+    },
+    {
+      "lab": "FDG",
+      "title": "FDG 2025 Proceedings (20th International Conference on Foundations of Digital Games)",
+      "year": 2025,
+      "venue": "ACM FDG 2025",
+      "url": "https://dl.acm.org/conference/fdg/proceedings",
+      "topics": "peer-reviewed PCG, level design, game AI papers"
+    },
+    {
+      "lab": "FDG",
+      "title": "High Dimensional Procedural Content Generation",
+      "year": 2026,
+      "venue": "FDG 2026",
+      "url": "https://arxiv.org/abs/2602.18943",
+      "topics": "gameplay-aware PCG beyond geometry-only caves"
+    },
+    {
+      "lab": "FDG",
+      "title": "FDG 2026 Conference (Copenhagen)",
+      "year": 2026,
+      "venue": "FDG 2026",
+      "url": "https://fdg2026.org/",
+      "topics": "upcoming peer-reviewed game research"
+    },
+    {
+      "lab": "IEEE CoG",
+      "title": "IEEE Conference on Games 2025 Proceedings",
+      "year": 2025,
+      "venue": "IEEE CoG 2025",
+      "url": "https://ieeexplore.ieee.org/xpl/conhome/10802189/proceeding",
+      "topics": "PCG, level generation, game AI — filter 2025"
+    },
+    {
+      "lab": "IEEE CoG",
+      "title": "Enhancing Procedural Game Level Generation using Transformer-based Neural Architectures",
+      "year": 2025,
+      "venue": "IEEE CoG",
+      "url": "https://ieeexplore.ieee.org/document/10803403/",
+      "topics": "neural PCG, level layout quality metrics"
+    },
+    {
+      "lab": "IEEE CoG",
+      "title": "Toward a Unified Spatial Interface for Controlling PCG",
+      "year": 2025,
+      "venue": "IEEE CoG 2025",
+      "url": "https://ieeexplore.ieee.org/document/11114190/",
+      "topics": "spatial interfaces, environmental asset placement"
+    },
+    {
+      "lab": "ACM / arXiv",
+      "title": "The Procedural Content Generation Benchmark (PCG Benchmark)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2503.21474",
+      "topics": "open testbed, quality/diversity/controllability metrics"
+    },
+    {
+      "lab": "ACM / arXiv",
+      "title": "Procedural Game Level Design with Deep Reinforcement Learning (Unity 3D)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2510.15120",
+      "topics": "DRL level design, Unity environment validation"
+    },
+    {
+      "lab": "ACM / arXiv",
+      "title": "MultiGen: Level-Design for Editable Multiplayer Worlds",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2603.06679",
+      "topics": "multiplayer layout, editable world memory"
+    },
+    {
+      "lab": "Google DeepMind",
+      "title": "Mastering Board Games by External and Internal Planning with Language Models",
+      "year": 2025,
+      "venue": "DeepMind Research",
+      "url": "https://deepmind.google/research/publications/139455/",
+      "topics": "planning, MCTS, level/strategy generation"
+    },
+    {
+      "lab": "Google DeepMind",
+      "title": "Code-Space Response Oracles: Multi-Agent Policies with LLMs",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2603.10098",
+      "pdfUrl": "https://arxiv.org/pdf/2603.10098",
+      "topics": "multi-agent games, interpretable policies"
+    },
+    {
+      "lab": "Google DeepMind",
+      "title": "SkyNet: Belief-Aware Planning for Partially-Observable Stochastic Games",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2603.27751",
+      "topics": "MuZero, imperfect information, multi-player"
+    },
+    {
+      "lab": "Riot Games Technology",
+      "title": "Human-like Bots for Tactical Shooters (VALORANT-scale)",
+      "year": 2025,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/html/2501.00078v1",
+      "topics": "imitation learning, playtesting bots, navigation"
+    },
+    {
+      "lab": "Riot Games Technology",
+      "title": "The Tech Behind Swarm (bullet-heaven performance)",
+      "year": 2025,
+      "venue": "Riot Tech Blog",
+      "url": "https://www.riotgames.com/en/news/the-tech-behind-swarm",
+      "topics": "performance, many agents, mesh/CPU budgets"
+    },
+    {
+      "lab": "Riot Games Technology",
+      "title": "Leveling Up Networking for a Multi-Game Future",
+      "year": 2025,
+      "venue": "Riot Technology",
+      "url": "https://www.riotgames.com/en/news/leveling-up-networking-for-a-multi-game-future",
+      "topics": "infrastructure, scale, live titles"
+    },
+    {
+      "lab": "Bungie",
+      "title": "Bungie Engineering News (index)",
+      "year": 2026,
+      "venue": "Bungie",
+      "url": "https://www.bungie.net/en/News?tag=Engineering",
+      "topics": "AAA engine, worlds, performance — filter 2025+"
+    },
+    {
+      "lab": "King (Activision Blizzard)",
+      "title": "King ML for Player Monetization Prediction",
+      "year": 2025,
+      "venue": "arXiv / King",
+      "url": "https://arxiv.org/abs/2412.12390",
+      "topics": "production ML, live ops (reference for QA scale)"
+    },
+    {
+      "lab": "Crystal Dynamics / GDC",
+      "title": "One with Lara: The Croft of Systems Design",
+      "year": 2025,
+      "venue": "GDC Vault",
+      "url": "https://gdcvault.com/play/1017767/One-with-Lara-The-Croft",
+      "topics": "action-adventure systems, traversal/combat/puzzle cadence, encounter rhythm, replay-safe traversal readability",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Epic Games / GPUOpen",
+      "title": "Adventure set-piece graph orchestration for moving cave encounters (UE5 PCG adaptation)",
+      "year": 2025,
+      "venue": "Epic Developer Documentation",
+      "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/procedural-content-generation-in-electric-dreams",
+      "topics": "adventure pacing, moving set-pieces, traversal beats, encounter rhythm, cave traversal authoring",
+      "provenInProduction": true
+    },
+    {
+      "lab": "ACM / arXiv",
+      "title": "Adventure traversal lane design for editable worlds (moving obstacle readability)",
+      "year": 2026,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2603.06679",
+      "topics": "adventure traversal, lane readability, moving obstacle spacing, checkpoint rhythm, editable level control",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Sony Interactive Entertainment",
+      "title": "Human-equivalent gameplay automation for action-adventure validation loops",
+      "year": 2025,
+      "venue": "Sony R&D",
+      "url": "https://sonyinteractive.com/en/innovation/research-academia/research/ai-technology-for-automating-gameplay-on-playstation-5-under-human-equivalent-conditions/",
+      "topics": "action adventure playtesting, movement probes, combat+traversal coverage, regression checks for scripted encounters",
+      "provenInProduction": true
+    },
+    {
+      "lab": "EA SEED",
+      "title": "Adventure encounter reward shaping for RL playtest bots",
+      "year": 2025,
+      "venue": "arXiv / SEED",
+      "url": "https://arxiv.org/abs/2506.23626",
+      "topics": "adventure encounter pacing, reward shaping for traversal/combat loops, moving hazards and checkpoint flow",
+      "provenInProduction": true
+    }
+  ],
+  "engineReferences": [
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity 6 Terrain Tools package",
+      "year": 2026,
+      "venue": "Unity 6 Manual",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/TerrainTools.html",
+      "topics": "terrain-first authoring, erosion/sculpt workflow, multi-tile terrain tooling"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Terrain Tools PaintContext API",
+      "year": 2026,
+      "venue": "Unity 6 Scripting API",
+      "url": "https://docs.unity3d.com/6000.2/Documentation/ScriptReference/TerrainTools.PaintContext.html",
+      "topics": "cross-tile terrain editing, seam-safe scatter/gather workflow, batched terrain passes"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity 6 — Navigation and NavMesh",
+      "year": 2026,
+      "venue": "Unity 6 Manual",
+      "url": "https://docs.unity3d.com/6000.5/Documentation/Manual/Navigation.html",
+      "topics": "NavMesh bake for cave floors"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity 6 — Mesh Data",
+      "year": 2026,
+      "venue": "Unity 6 Manual",
+      "url": "https://docs.unity3d.com/6000.5/Documentation/Manual/MeshData.html",
+      "topics": "procedural mesh, UV tiling, colliders"
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity 6 — NavMeshBuilder API",
+      "year": 2026,
+      "venue": "Unity 6 Scripting",
+      "url": "https://docs.unity3d.com/6000.5/Documentation/ScriptReference/AI.NavMeshBuilder.html",
+      "topics": "BakeNavMesh in editor pipeline"
+    }
+  ],
+  "visualReferences": [
+    {
+      "id": "unity6-terrain-heightmap",
+      "title": "Unity 6 Terrain — Heightmaps (carved mouth / surface walk-in)",
+      "year": 2026,
+      "category": "terrain",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/terrain-Heightmaps.html",
+      "imageUrls": [
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/terrain-Heightmap-Tools.png",
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/terrain-Sculpt-Tool.png"
+      ],
+      "notes": "Surface entrance carve + alphamap paint; underground tube uses RouteTerrain meshes."
+    },
+    {
+      "id": "unity6-terrain-paint-texture",
+      "title": "Unity 6 Terrain — Paint Texture (rock / dirt layers)",
+      "year": 2026,
+      "category": "terrain",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/terrain-PaintTexture.html",
+      "imageUrls": [
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/terrain-PaintTexture-Layer.png"
+      ],
+      "notes": "Entrance path rock paint after height carve."
+    },
+    {
+      "id": "unity6-mesh-data-procedural",
+      "title": "Unity 6 MeshData — procedural floor/ceiling strips",
+      "year": 2026,
+      "category": "mesh",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/MeshData.html",
+      "imageUrls": [
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/class-Mesh-Inspector.png"
+      ],
+      "notes": "RouteTerrainFloor / RouteTerrainCeiling mesh builders in kit."
+    },
+    {
+      "id": "unity6-navmesh-bake",
+      "title": "Unity 6 NavMesh — baked walkable cave floor",
+      "year": 2026,
+      "category": "navmesh",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/Navigation.html",
+      "imageUrls": [
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/NavMeshOverview.png"
+      ],
+      "notes": "NavMesh on RouteTerrainFloor collider after shell pass."
+    },
+    {
+      "id": "unity6-lighting-baked",
+      "title": "Unity 6 Lighting — baked interior readability",
+      "year": 2026,
+      "category": "lighting",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/LightingOverview.html",
+      "imageUrls": [
+        "https://docs.unity3d.com/6000.5/Documentation/uploads/Main/LightingWindow.png"
+      ],
+      "notes": "Materials + light probes for cave readability (materials rung)."
+    },
+    {
+      "id": "ubisoft-farcry6-open-world",
+      "title": "Ubisoft — Far Cry 6 open world (Yara terrain + interiors)",
+      "year": 2022,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Ubisoft",
+      "docUrl": "https://toronto.ubisoft.com/gdc-2022-ubisoft-toronto-far-cry-6/",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/2369390/library_600x900_2x.jpg"
+      ],
+      "notes": "Reference for large-scale outdoor terrain, rock formations, and interior contrast. GDC22 raytracing + weather systems."
+    },
+    {
+      "id": "ubisoft-farcry5-pcg-biomes",
+      "title": "Ubisoft — Far Cry 5 procedural biome terrain (GDC)",
+      "year": 2018,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Ubisoft",
+      "docUrl": "https://www.gamedeveloper.com/design/video-the-world-generation-tech-behind-i-far-cry-5-i-",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/552520/header.jpg"
+      ],
+      "notes": "Procedural terrain texturing, freshwater networks, cliff rocks — applicable to route-based cave mouths."
+    },
+    {
+      "id": "ubisoft-laforge-pcg",
+      "title": "Ubisoft La Forge — PCG / Electric Dreams (environment scale)",
+      "year": 2025,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "Ubisoft La Forge",
+      "docUrl": "https://www.ubisoft.com/en-us/studio/laforge/publications",
+      "imageUrls": [],
+      "notes": "Block-shell density and large environment generation discipline (production R&D)."
+    },
+    {
+      "id": "ea-seed-aaa-testing",
+      "title": "EA SEED — ML AAA game testing (automation reference)",
+      "year": 2025,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "EA SEED",
+      "docUrl": "https://www.ea.com/seed/news/seed-ml-research-aaa-game-testing",
+      "imageUrls": [],
+      "notes": "Playtest/route validation mindset for cave probe bots — not visual layout."
+    },
+    {
+      "id": "epic-unreal-landscape-caves",
+      "title": "Epic Games — Unreal Landscape (openings for caves)",
+      "year": 2026,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Epic Games",
+      "docUrl": "https://dev.epicgames.com/documentation/en-us/unreal-engine/landscape-outdoor-terrain-in-unreal-engine",
+      "imageUrls": [],
+      "notes": "Epic docs explicitly mention terrain openings for caves. Cross-check Unity RouteTerrain approach."
+    },
+    {
+      "id": "epic-gpuopen-meshgen",
+      "title": "Epic GPUOpen — procedural mesh generation",
+      "year": 2025,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "Epic Games / GPUOpen",
+      "docUrl": "https://gpuopen.com/learn/mesh_generation/",
+      "imageUrls": [
+        "https://gpuopen.com/wp-content/uploads/2021/06/meshgen-01.png"
+      ],
+      "notes": "Production mesh tooling for shell/wall density."
+    },
+    {
+      "id": "nvidia-3d-generalist",
+      "title": "NVIDIA Research — 3D Generalist (world-scale meshes)",
+      "year": 2026,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "NVIDIA Research",
+      "docUrl": "https://research.nvidia.com/publication/2026-03_3d-generalist-vision-language-action-models-crafting-3d-worlds",
+      "imageUrls": [],
+      "notes": "High-end mesh/world reference — use for silhouette only; kit uses block rings not neural gen."
+    },
+    {
+      "id": "sony-ps5-automated-gameplay",
+      "title": "Sony — automated gameplay testing (PS5)",
+      "year": 2025,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Sony Interactive Entertainment",
+      "docUrl": "https://sonyinteractive.com/en/innovation/research-academia/research/ai-technology-for-automating-gameplay-on-playstation-5-under-human-equivalent-conditions/",
+      "imageUrls": [],
+      "notes": "Route/playtest automation parity with CavePlaytestRouteBot goals."
+    },
+    {
+      "id": "activision-research-qa",
+      "title": "Activision Research — production QA scale",
+      "year": 2025,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Activision Research",
+      "docUrl": "https://research.activision.com/publications",
+      "imageUrls": [],
+      "notes": "QA/combat probe validation patterns."
+    },
+    {
+      "id": "bungie-engineering-worlds",
+      "title": "Bungie — engineering / large worlds",
+      "year": 2026,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Bungie",
+      "docUrl": "https://www.bungie.net/en/News?tag=Engineering",
+      "imageUrls": [
+        "https://www.bungie.net/img/community/updates/destiny2-splash.jpg"
+      ],
+      "notes": "Performance + large world streaming reference."
+    },
+    {
+      "id": "riot-swarm-performance",
+      "title": "Riot Games — performance optimization (Swarm)",
+      "year": 2025,
+      "category": "performance",
+      "provenInProduction": true,
+      "studio": "Riot Games",
+      "docUrl": "https://technology.riotgames.com/news/optimization-league-legends-teamfight-tactics",
+      "imageUrls": [],
+      "notes": "Triangle budget / perf discipline for grading pass."
+    },
+    {
+      "id": "microsoft-wham-gameplay",
+      "title": "Microsoft Research — gameplay simulation (production ML)",
+      "year": 2025,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Microsoft Research",
+      "docUrl": "https://www.microsoft.com/en-us/research/publication/world-and-human-action-models-towards-gameplay-ideation/",
+      "imageUrls": [],
+      "notes": "Optional ideation only — prefer shipped environment art above for layout."
+    },
+    {
+      "id": "fromsoftware-cave-lighting",
+      "title": "Reference — underground interior lighting (Elden Ring mine)",
+      "year": 2022,
+      "category": "cave_layout",
+      "provenInProduction": true,
+      "studio": "FromSoftware (reference)",
+      "docUrl": "https://en.bandainamcoent.eu/elden-ring/elden-ring",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg"
+      ],
+      "notes": "Cave/mine readability + floor/ceiling contrast reference (shipped game art, not R&D paper)."
+    },
+    {
+      "id": "id-software-doom-interior",
+      "title": "Reference — interior rock corridors (DOOM Eternal)",
+      "year": 2020,
+      "category": "cave_layout",
+      "provenInProduction": true,
+      "studio": "id Software (reference)",
+      "docUrl": "https://www.bethesda.net/en/game/doom-eternal",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/782330/header.jpg"
+      ],
+      "notes": "Tight corridor rock walls + combat arenas — shell ring layout reference."
+    },
+    {
+      "id": "guerrilla-horizon-terrain",
+      "title": "Sony Guerrilla — Horizon terrain sculpt (open world rock)",
+      "year": 2022,
+      "category": "terrain",
+      "provenInProduction": true,
+      "studio": "Guerrilla Games",
+      "docUrl": "https://www.guerrilla-games.com/read/how-to-create-a-vista-in-horizon-forbidden-west",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/2420110/header.jpg"
+      ],
+      "notes": "Natural rock terrain and vista composition for surface mouth."
+    },
+    {
+      "id": "world-gen-pipeline-ladder-best-practices",
+      "title": "World generation pipeline ladder — ordered phases (synthesis)",
+      "year": 2026,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "Environment Kit (curated from AAA + engine R&D)",
+      "docUrl": "https://tools.engineer/gdc2018-procedural-world-generation-of-far-cry-5",
+      "imageUrls": [],
+      "dataUrls": [
+        "https://tools.engineer/gdc2018-procedural-world-generation-of-far-cry-5",
+        "https://christianjmills.com/posts/procedural-tools-far-cry-5-notes/",
+        "https://blog.playstation.com/2018/03/22/the-procedural-world-generation-of-far-cry-5/",
+        "https://www.gdcvault.com/play/1024120/GPU-Based-Run-Time-Procedural",
+        "https://www.guerrilla-games.com/read/gpu-based-procedural-placement-in-horizon-zero-dawn",
+        "https://www.gdcvault.com/play/1024124/Creating-a-Tools-Pipeline-for",
+        "https://www.strayspark.studio/blog/procedural-content-generation-pcg-framework-production-ue5-7",
+        "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Plugins/PCG/UPCGGraph",
+        "https://www.sidefx.com/docs/houdini/heightfields/creation.html",
+        "https://www.sidefx.com/docs/houdini/heightfields/scattersop.html",
+        "https://www.polygon.com/2017/3/2/14790028/no-mans-sky-was-flat-procedural-world-generation-maths/",
+        "https://en.wikipedia.org/wiki/No_Man%27s_Sky",
+        "https://www.nvidia.com/en-us/on-demand/session/gtcspring23-s52180/",
+        "https://research.nvidia.com/publication/2025-07_fly-fail-fix-iterative-game-repair-rl-and-large-multimodal-models"
+      ],
+      "notes": "LADDER RULE: one global FIFO queue; each rung consumes immutable artifacts from upstream and writes new artifacts downstream. Never rerun a completed rung unless its inputs changed (seed, scope, or upstream mask). Invalidate downstream only. ORDER (Environment Kit mapping): (0) research+seed lock; (1) macro terrain + Florida hillshade reference; (2) hydrology/karst masks (structure only, no water sim); (3) trails/splines + NavMesh walk band; (4) surface props scatter; (5) Cursor pre-build gate; (6) cave layout+spline; (7) route floor/ceiling mesh+NavMesh; (8) shell rings+materials; (9) gameplay props+mobs; (10) validation bots (read-only, no full playtest ladder); (11) polish/post only if grade fails. AAA: Far Cry 5 — freshwater masks before cliffs before biomes; tools pass 2D masks between Houdini steps; nightly full regen only on build machines, not per artist click. Guerrilla HZD — GPU procedural placement after terrain rules; artist graph defines order; runtime placement is downstream of terrain theme. UE5 PCG — topological task order from graph edges; pin seeds while debugging; bake-time default, runtime only when streaming requires it. SideFX — heightfield LOD upsample chain; scatter points separate from terrain mesh; masks drive both erosion and scatter density. NMS/indie — single master seed + deterministic sub-seeds per cell; generate on demand from coordinates, do not store full world. Bot: read this entry + Packages/com.cursor.environment-authoring-kit/docs/WORLD-GENERATION-PIPELINE-LADDER.md before changing queue order; ContinueCaveGeometryAfterPreBuild must skip rungs 0–5."
+    },
+    {
+      "id": "ubisoft-farcry5-freshwater-cliff-biome-order",
+      "title": "Ubisoft — Far Cry 5 tool chain order (freshwater → cliffs → biomes)",
+      "year": 2018,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Ubisoft",
+      "docUrl": "https://tools.engineer/gdc2018-procedural-world-generation-of-far-cry-5",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/552520/header.jpg"
+      ],
+      "dataUrls": [
+        "https://www.gamedeveloper.com/design/video-the-world-generation-tech-behind-i-far-cry-5-i-",
+        "https://christianjmills.com/posts/procedural-tools-far-cry-5-notes/",
+        "https://blog.playstation.com/2018/03/22/the-procedural-world-generation-of-far-cry-5/",
+        "https://gdcvault.com/search?type=session&q=far+cry+5+procedural"
+      ],
+      "notes": "Sequential Houdini Engine tools exchange terrain masks: freshwater splines produce water surface + waterside assets + water mask; cliff tool consumes slope masks; biome tool consumes freshwater/road/fence/cliff masks. Sectors 64×64m minimum bake unit. Nightly world regen on build farm — editor sessions bake incrementally per sector. Kit analog: surface hydrology/trails before CavePrefabScatter."
+    },
+    {
+      "id": "guerrilla-horizon-gpu-procedural-placement",
+      "title": "Guerrilla — Horizon GPU runtime procedural placement (GDC 2017)",
+      "year": 2017,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "Guerrilla Games",
+      "docUrl": "https://www.guerrilla-games.com/read/gpu-based-procedural-placement-in-horizon-zero-dawn",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/1151640/header.jpg"
+      ],
+      "dataUrls": [
+        "https://www.gdcvault.com/play/1024120/GPU-Based-Run-Time-Procedural",
+        "https://www.gdcvault.com/play/1025066/Between-Tech-and-Art-The",
+        "https://www.gdcvault.com/play/1024124/Creating-a-Tools-Pipeline-for"
+      ],
+      "notes": "Artist rule graph → GPU placement of full environment slices (audio, VFX, wildlife, gameplay) around player. Terrain theme and roads are inputs to placement rules, not regenerated by scatter. Kit analog: prop/scatter rungs after terrain+trail masks exist; do not rebake terrain when placing props."
+    },
+    {
+      "id": "epic-ue5-pcg-topological-execution",
+      "title": "Epic — UE5 PCG graph execution order and bake vs runtime",
+      "year": 2026,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "Epic Games",
+      "docUrl": "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Plugins/PCG/UPCGGraph",
+      "imageUrls": [],
+      "dataUrls": [
+        "https://www.strayspark.studio/blog/procedural-content-generation-pcg-framework-production-ue5-7",
+        "https://dev.epicgames.com/documentation/en-us/unreal-engine/procedural-content-generation-overview",
+        "https://github.com/PCGEx/PCGExtendedToolkit/tree/5.7"
+      ],
+      "notes": "Compiler weak-orders tasks: successors after predecessors; PreExecute/PostExecute bracket graph. Pin node seeds while debugging; world-position seeds in shipping. Prefer bake-time PCG; runtime PCG only for streaming cells. bIgnoreLandscapeTracking prevents accidental full regen on unrelated landscape edits — kit analog: scoped AssetDatabase refresh + phase completion flags."
+    },
+    {
+      "id": "sidefx-houdini-heightfield-ladder",
+      "title": "SideFX — Heightfield creation → mask → scatter ladder",
+      "year": 2026,
+      "category": "terrain",
+      "provenInProduction": true,
+      "studio": "SideFX",
+      "docUrl": "https://www.sidefx.com/docs/houdini/heightfields/creation.html",
+      "imageUrls": [],
+      "dataUrls": [
+        "https://www.sidefx.com/docs/houdini/heightfields/scattersop.html",
+        "https://www.sidefx.com/docs/houdini/heightfields/scattersolaris.html",
+        "https://www.sidefx.com/docs/houdini/heightfields/scatterattribs.html",
+        "https://www.sidefx.com/community-main-menu/complete-a-z-terrain-handbook/"
+      ],
+      "notes": "Low-res heightfield → detail passes → upsample → re-apply erosion/distortion per LOD step. Keep scatter points separate from terrain geometry (Keep Incoming Terrain off on scatter). Masks from noise/erosion drive COPs texturing and scatter density. Kit analog: SurfaceTerrainAiPhases ladder + separate prop scatter after terrain grade passes."
+    },
+    {
+      "id": "hello-games-nms-deterministic-seed-pipeline",
+      "title": "Hello Games — No Man's Sky deterministic coordinate generation",
+      "year": 2017,
+      "category": "studio_environment",
+      "provenInProduction": true,
+      "studio": "Hello Games",
+      "docUrl": "https://www.polygon.com/2017/3/2/14790028/no-mans-sky-was-flat-procedural-world-generation-maths/",
+      "imageUrls": [
+        "https://cdn.akamai.steamstatic.com/steam/apps/275850/header.jpg"
+      ],
+      "dataUrls": [
+        "https://en.wikipedia.org/wiki/No_Man%27s_Sky",
+        "https://dev.to/dubeykartikay/how-no-mans-sky-creates-18-quintillion-planets-with-just-math-3fgf"
+      ],
+      "notes": "64-bit master seed cascades to sub-seeds; planet content from coordinates + algorithms (Perlin, domain warp, biome rules) without storing worlds on servers. Positive/negative space passes for cliffs vs caves. Kit analog: CaveLayoutRoll + per-phase seed; session gate caches research/compile per seed — do not re-export 123 prompts on continue-after-pre-build."
+    },
+    {
+      "id": "nvidia-fly-fail-fix-iterative-pcg-repair",
+      "title": "NVIDIA Research — Fly, Fail, Fix (iterative level repair)",
+      "year": 2025,
+      "category": "pcg_shell",
+      "provenInProduction": true,
+      "studio": "NVIDIA Research",
+      "docUrl": "https://arxiv.org/abs/2507.12666",
+      "imageUrls": [],
+      "dataUrls": [
+        "https://research.nvidia.com/publication/2025-07_fly-fail-fix-iterative-game-repair-rl-and-large-multimodal-models"
+      ],
+      "notes": "Validation/repair loops run after generation, adjusting only failed subsystems from playtest traces — not full regen. Kit analog: validation substeps + SurfaceTrailWalkabilityRepair capped passes; never invoke full CavePlaytestPreBuildPipeline inside surface route probe."
+    },
+    {
+      "id": "fl-panhandle-lidar-dem-2018",
+      "title": "2018 USGS LiDAR DEM — Florida Panhandle (1 m bare-earth)",
+      "year": 2018,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida-panhandle",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun",
+        "Gulf",
+        "Holmes",
+        "Walton",
+        "Franklin"
+      ],
+      "docUrl": "https://www.fisheries.noaa.gov/inport/item/58332",
+      "dataUrls": [
+        "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html",
+        "https://coast.noaa.gov/dataviewer/",
+        "https://www.floridadisaster.org/dem/ITM/geographic-information-systems/lidar/"
+      ],
+      "imageUrls": [],
+      "notes": "Primary 1 m hydro-flattened DEM for NW panhandle. Use DAV to subset Bay/Washington/Jackson/Calhoun tiles; import heightmap into Unity Terrain for surface walk-in mouth alignment."
+    },
+    {
+      "id": "fl-panhandle-inundation-dem-east",
+      "title": "NOAA Coastal Inundation DEM — Florida Panhandle East",
+      "year": 2022,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida-panhandle-east",
+      "counties": [
+        "Washington",
+        "Bay",
+        "Calhoun",
+        "Gulf",
+        "Franklin",
+        "Jefferson",
+        "Leon",
+        "Wakulla"
+      ],
+      "docUrl": "https://www.fisheries.noaa.gov/inport/item/66602",
+      "dataUrls": [
+        "https://chs.coast.noaa.gov/htdata/raster2/elevation/FL_Panhandle_DEM_2018_8942",
+        "https://coast.noaa.gov/dataviewer/"
+      ],
+      "imageUrls": [],
+      "notes": "Sea-level viewer DEM mosaic; includes Washington, Bay, and Calhoun. Good for coastal elevation context near Panama City / Chipley corridor."
+    },
+    {
+      "id": "fl-bay-county-panama-city-dem",
+      "title": "Panama City FL Coastal DEM (Bay County — NCEI)",
+      "year": 2007,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "bay-county-fl",
+      "counties": [
+        "Bay"
+      ],
+      "docUrl": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:243",
+      "dataUrls": [
+        "https://www.ncei.noaa.gov/maps/bathymetry/",
+        "https://www.ngdc.noaa.gov/mgg/coastal/"
+      ],
+      "imageUrls": [],
+      "notes": "Bay County / Panama City coastal bathy-topo DEM (~10 m grid). Use for entrance terrain scale near Gulf coast; combine with 2018 1 m lidar where overlapping."
+    },
+    {
+      "id": "fl-pensacola-escambia-dem",
+      "title": "Pensacola FL Coastal DEM (adjacent to Bay County)",
+      "year": 2016,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "escambia-fl",
+      "counties": [
+        "Bay"
+      ],
+      "docUrl": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:11507",
+      "dataUrls": [
+        "https://coast.noaa.gov/dataviewer/"
+      ],
+      "imageUrls": [],
+      "notes": "Western panhandle coastal DEM context (Pensacola). Useful when aligning cave mouth toward Gulf / low relief coastal plain."
+    },
+    {
+      "id": "fl-jackson-calhoun-nwf-lidar",
+      "title": "NW Florida Water Management District — panhandle LiDAR (Jackson / Calhoun)",
+      "year": 2018,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "inland-panhandle",
+      "counties": [
+        "Jackson",
+        "Calhoun",
+        "Washington"
+      ],
+      "docUrl": "https://www.floridadisaster.org/dem/ITM/geographic-information-systems/lidar/",
+      "dataUrls": [
+        "https://www.floridadisaster.org/dem/ITM/geographic-information-systems/lidar/",
+        "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html"
+      ],
+      "imageUrls": [],
+      "notes": "Inland panhandle counties (Marianna / Blountstown / Chipley area) covered by 2018 panhandle lidar delivery. Contact NWFWMD for LAS; use NOAA bulk GeoTIFF for DEM hillshade."
+    },
+    {
+      "id": "fl-usgs-3dep-elevation",
+      "title": "USGS 3DEP / National Map — elevation (panhandle fallback)",
+      "year": 2025,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida-panhandle",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "docUrl": "https://data.usgs.gov/datacatalog/data/USGS:35f9c4d4-b113-4c8d-8691-47c428c29a5b",
+      "dataUrls": [
+        "https://apps.nationalmap.gov/downloader/",
+        "https://www.usgs.gov/3d-elevation-program"
+      ],
+      "imageUrls": [
+        "https://www.usgs.gov/sites/default/files/styles/full_width/public/thumbnail/images/3DEP_0.png"
+      ],
+      "notes": "Fallback seamless DEM if county tile subset fails. Export 1 m or 1/3 arc-sec for Unity Terrain carve tests."
+    },
+    {
+      "id": "fl-aquifer-ds926-structural-surfaces",
+      "title": "USGS DS 926 — Floridan aquifer structural surfaces & unit thickness (GIS rasters)",
+      "year": 2015,
+      "category": "aquifer_structure",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "aquiferSystem": "Floridan",
+      "docUrl": "https://pubs.usgs.gov/ds/0926/",
+      "dataUrls": [
+        "https://pubs.usgs.gov/ds/0926/downloads/ds926_ASCII_rasters.zip",
+        "https://pubs.usgs.gov/ds/0926/downloads/ds926.gdb.zip",
+        "https://pubs.usgs.gov/ds/0926/downloads/ds926_shapefiles.zip"
+      ],
+      "imageUrls": [
+        "https://www.usgs.gov/sites/default/files/styles/full_width/public/thumbnail/images/3DEP_0.png"
+      ],
+      "notes": "Top/base of aquifer system and major hydrogeologic units — use thickness rasters and structural contours for cave void scale and ceiling depth. Skip 10,000 mg/L TDS (saline) boundary and any water-table symbology."
+    },
+    {
+      "id": "fl-aquifer-pp1807-framework",
+      "title": "USGS PP 1807 — Revised Floridan aquifer hydrogeologic framework",
+      "year": 2015,
+      "category": "aquifer_structure",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "aquiferSystem": "Floridan",
+      "docUrl": "https://pubs.usgs.gov/publication/pp1807",
+      "dataUrls": [
+        "https://pubs.usgs.gov/publication/pp1807"
+      ],
+      "imageUrls": [],
+      "notes": "Companion report to DS 926: unit boundaries, faults, and framework plates. Map underground unit contacts to tube segmentation — not spring flow or heads."
+    },
+    {
+      "id": "fl-aquifer-ds584-legacy-surfaces",
+      "title": "USGS DS 584 — Floridan aquifer digital surfaces (legacy RASA)",
+      "year": 2006,
+      "category": "aquifer_structure",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "aquiferSystem": "Floridan",
+      "docUrl": "https://pubs.usgs.gov/ds/584/",
+      "dataUrls": [
+        "https://pubs.usgs.gov/ds/584/"
+      ],
+      "imageUrls": [],
+      "notes": "Scanned structural contours and unit extents. Fallback when DS 926 subset unavailable; still structure-only (no hydrology time series)."
+    },
+    {
+      "id": "fl-fgs-subsidence-karst-incidents",
+      "title": "FGS / FDEP — Subsidence & karst incident reports (statewide GIS)",
+      "year": 2025,
+      "category": "karst_geomorphology",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/FGS_SUBSIDENCE/MapServer",
+      "dataUrls": [
+        "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/FGS_SUBSIDENCE/MapServer",
+        "https://geodata.dep.state.fl.us/search?layout=grid&tags=karst"
+      ],
+      "imageUrls": [],
+      "notes": "Reported sinkholes and subsidence polygons — use as collapse pocket / choke point seeds. Filter to target counties; do not model standing water in depressions."
+    },
+    {
+      "id": "fl-fgdl-karst-open-data",
+      "title": "FDEP GeoData — karst-tagged layers",
+      "year": 2025,
+      "category": "karst_geomorphology",
+      "provenInProduction": true,
+      "region": "florida-panhandle",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://geodata.dep.state.fl.us/search?layout=grid&tags=karst",
+      "dataUrls": [
+        "https://geodata.dep.state.fl.us/",
+        "https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites"
+      ],
+      "imageUrls": [],
+      "notes": "DEP open karst/subsidence-related layers. Western panhandle has fewer exposed karst features (thick sediment) — combine with bare-earth LiDAR for entrance relief."
+    },
+    {
+      "id": "fl-fgs-ofms104-lidar-karst-geomorph",
+      "title": "FGS OFMS 104 — LiDAR geomorphology (springs/sinkholes/caves on DEM)",
+      "year": 2014,
+      "category": "karst_geomorphology",
+      "provenInProduction": true,
+      "region": "florida",
+      "caveStructureOnly": true,
+      "docUrl": "https://ufdcimages.uflib.ufl.edu/AA/00/03/84/30/00001/OFR98_FINAL.pdf",
+      "dataUrls": [
+        "https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites"
+      ],
+      "imageUrls": [],
+      "notes": "Methodology: LiDAR DEM + kriged top-of-rock for overburden thickness; plate 3 geomorphology with spring/sinkhole/cave locations. Apply workflow to panhandle tiles — map voids and collapse, not spring discharge volumes."
+    },
+    {
+      "id": "fl-panhandle-lidar-bare-earth-class2",
+      "title": "2018 FL Panhandle LiDAR — Class 2 ground (cave mouth structure)",
+      "year": 2018,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida-panhandle",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://www.fisheries.noaa.gov/inport/item/58332",
+      "dataUrls": [
+        "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/FL_Panhandle_LAS_2018_8942/index.html",
+        "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html"
+      ],
+      "imageUrls": [],
+      "notes": "Use classified ground (class 2) LAS/DEM for surface walk-in and ceiling height reference. Ignore class 9 water, hydro breaklines, and inundation products for underground tube layout."
+    },
+    {
+      "id": "fl-usgs-3dep-elevation-structure",
+      "title": "USGS 3DEP — bare-earth elevation (aquifer mouth alignment)",
+      "year": 2025,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida-panhandle",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://www.usgs.gov/3d-elevation-program",
+      "dataUrls": [
+        "https://apps.nationalmap.gov/downloader/",
+        "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer"
+      ],
+      "imageUrls": [
+        "https://www.usgs.gov/sites/default/files/styles/full_width/public/thumbnail/images/3DEP_0.png"
+      ],
+      "notes": "National seamless DEM fallback. Subset per county bbox; hillshade PNGs under ResearchCache/images/fl-{county}-hillshade/."
+    },
+    {
+      "id": "fl-nwfwmd-gis-hydrogeology",
+      "title": "NWFWMD — GIS / hydrogeology data portal (panhandle districts)",
+      "year": 2025,
+      "category": "aquifer_structure",
+      "provenInProduction": true,
+      "region": "inland-panhandle",
+      "counties": [
+        "Washington",
+        "Jackson",
+        "Calhoun",
+        "Bay"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://www.nwfwmd.state.fl.us/data-gis",
+      "dataUrls": [
+        "https://www.nwfwmd.state.fl.us/data-gis"
+      ],
+      "imageUrls": [],
+      "notes": "District aquifer and geology layers for Jackson/Calhoun/Washington corridors. Prefer unit boundaries and potentiometric structure maps over surface-water features."
+    },
+    {
+      "id": "fl-usgs-water-science-floridan",
+      "title": "USGS Caribbean-Florida Water Science Center — Floridan aquifer publications",
+      "year": 2025,
+      "category": "aquifer_structure",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "aquiferSystem": "Floridan",
+      "docUrl": "https://fl.water.usgs.gov/",
+      "dataUrls": [
+        "https://fl.water.usgs.gov/",
+        "https://data.usgs.gov/datacatalog/"
+      ],
+      "imageUrls": [],
+      "notes": "Regional studies on framework and karst; use cross-sections and structure maps for tube gradient, not spring monitoring hydrographs."
+    },
+    {
+      "id": "fl-statewide-lidar-assessment",
+      "title": "Florida statewide LiDAR assessment (FGIO / DEP)",
+      "year": 2024,
+      "category": "lidar_terrain",
+      "provenInProduction": true,
+      "region": "florida",
+      "counties": [
+        "Bay",
+        "Washington",
+        "Jackson",
+        "Calhoun"
+      ],
+      "caveStructureOnly": true,
+      "docUrl": "https://www.fgdl.org/metadataexplorer/",
+      "dataUrls": [
+        "https://www.fgdl.org/",
+        "https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites"
+      ],
+      "imageUrls": [],
+      "notes": "Index for county LAS/DEM coverage; links to 2018 panhandle delivery and LABINS. Structure-only: DEM/LAZ for rock relief, not bathymetric surfaces."
+    }
+  ],
+  "researchCache": {
+    "indexPath": "Assets/EnvironmentKit/ResearchCache/index.json",
+    "generatedPointer": "Assets/EnvironmentKit/Generated/CaveBuildResearchCache.json"
+  },
+  "floridaTerrain": {
+    "policy": "Cave structure only: bare-earth LiDAR (class 2), Floridan aquifer structural surfaces (USGS DS 926), karst/subsidence polygons. Do not use water table, TDS, bathymetry, inundation DEMs, or spring discharge for underground void layout.",
+    "counties": [
+      "Bay",
+      "Washington",
+      "Jackson",
+      "Calhoun"
+    ],
+    "countyIds": [
+      "bay",
+      "washington",
+      "jackson",
+      "calhoun"
+    ],
+    "aquiferEntryIds": [
+      "fl-aquifer-ds926-structural-surfaces",
+      "fl-aquifer-pp1807-framework",
+      "fl-aquifer-ds584-legacy-surfaces",
+      "fl-fgs-subsidence-karst-incidents",
+      "fl-fgdl-karst-open-data",
+      "fl-fgs-ofms104-lidar-karst-geomorph",
+      "fl-nwfwmd-gis-hydrogeology",
+      "fl-usgs-water-science-floridan"
+    ],
+    "panhandleEntryIds": [
+      "fl-panhandle-lidar-dem-2018",
+      "fl-panhandle-inundation-dem-east",
+      "fl-bay-county-panama-city-dem",
+      "fl-pensacola-escambia-dem",
+      "fl-jackson-calhoun-nwf-lidar",
+      "fl-usgs-3dep-elevation",
+      "fl-usgs-3dep-elevation-structure",
+      "fl-panhandle-lidar-bare-earth-class2",
+      "fl-statewide-lidar-assessment"
+    ],
+    "hillshadeIndexPath": "Assets/EnvironmentKit/ResearchCache/images/florida-hillshades-index.json",
+    "hillshades": [],
+    "bulkDemUrl": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html",
+    "syncCommands": [
+      "npm run sync-research-pull",
+      "npm run sync-research-cache",
+      "npm run sync-florida-hillshades"
+    ]
+  },
+  "dataAttribution": "Packages/com.cursor.environment-authoring-kit/docs/RESEARCH_DATA_ATTRIBUTION.md",
+  "stats": {
+    "labCount": 18,
+    "paperCount": 45,
+    "visualRefCount": 44,
+    "floridaAquiferRefs": 11
+  }
+}

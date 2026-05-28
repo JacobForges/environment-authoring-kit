@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad05a3fedb4a490d86cf1a30d6436f1, type: 3}
+  m_Name: CaveBuildCursorSettings
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor::EnvironmentAuthoringKit.Editor.Blockout.CaveBuildCursorSettings
+  hubProjectRoot: /Users/jacob/Hub
+  nodeExecutablePath: 
+  nodeBinDirectory: 
+  modelId: auto
+  aiProvider: 0
+  openAiCompatibleBaseUrl: http://localhost:11434/v1
+  googleModelId: gemini-2.5-flash
+  anthropicModelId: claude-3-7-sonnet-latest
+  openAiModelId: gpt-4.1-mini
+  openRouterModelId: openai/gpt-4.1-mini
+  ollamaModelId: qwen2.5-coder:14b
+  lmStudioModelId: local-model
+  customProviderLabel: Custom Endpoint
+  allowExternalProviderEdits: 0
+  externalProviderEditsDryRun: 1
+  autoInvokeAfterEveryBuild: 0
+  autoInvokeOnDud: 1
+  autoRebuildAfterAgentSuccess: 0
+  autoInvokeEachMeatLoopPass: 0
+  suppressMeatLoopCursorInvokes: 0
+  autoInvokePreBuildWorkflow: 1
+  enforcePreBuildGate: 1
+  preBuildReloopUntilPass: 1
+  maxPreBuildReloopAttempts: 12
+  skipResearchNetworkSyncWhenCachePresent: 1
+  autoContinueAfterPreBuildCursor: 1
+  usePhasedCaveBuild: 1
+  showLiveScenePlacement: 0
+  useIncrementalLadder: 1
+  constrainBotToResearchOnFailure: 1
+  autoRunPlaytestBotAfterBuild: 0
+  enableBatchMode: 0
+  batchJobCount: 3
+  batchDelaySeconds: 0.5
+  batchSeedIncrement: 10007
+  runPostBuildResearchPhase: 1
+  invokeCursorOnResearchPhase: 1
+  autoInvokeTerrainAfterSurfaceBuild: 0
+  autoRebuildSurfaceAfterTerrainAgent: 0
+  suggestTerrainGradeWatcher: 1
+  stabilizationMode: 1
+  queuedStepTimeoutSeconds: 180
+  waitForTerrainBeforeCaveMeat: 1
+  caveMeatTerrainWaitTimeoutSeconds: 900
+  enableAutonomousUntilShip: 0
+  maxAutonomousIterations: 8
+  autonomousIterationCooldownSeconds: 4
+  suppressMidBuildDialogs: 1
+  showReloopDialog: 0
+  exportGenerationPrefabWhenFinished: 1
+  enableEnhancementPhases: 1
+  demSupersampleTargetDim: 128
+  requirePreflightBeforeFullWorldBuild: 0
+  hardwareBudget: 0
+  editorQueueLightBase: 0.05
+  editorQueueNormalMultiplier: 3
+  editorQueueHeavyMultiplier: 12
+  editorQueueLoadStepPerItem: 0.08
+  editorQueueMaxLoadMultiplier: 2.5
+  editorQueueBatchSize: 5
+  mirrorPacedBuildLogsToConsole: 0

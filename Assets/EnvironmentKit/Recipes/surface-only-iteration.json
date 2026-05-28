@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1",
+  "id": "surface-only-iteration",
+  "title": "Surface only — fast trail/terrain iteration",
+  "productScope": "Florida karst surface + lava-tube cave for Unity XR",
+  "description": "Surface terrain, trails, and NavMesh only — no cave geometry, no pre-build gate, no autonomous polish",
+  "seed": 7721001,
+  "pinSeedWhileDebugging": true,
+  "surfaceScope": "SurfaceOnly",
+  "surfaceExtentMeters": 220,
+  "surfaceDirectionCount": 8,
+  "surfaceIncludeMountains": true,
+  "surfaceIncludeWater": true,
+  "surfaceIncludeRoads": true,
+  "surfaceIncludeTrails": true,
+  "biome": "Cave",
+  "caveMode": "None",
+  "useLayoutPrototype": false,
+  "useIncrementalLadder": true,
+  "showLiveScenePlacement": true,
+  "skipAutonomousPolishLoop": true,
+  "enforcePreBuildGate": false,
+  "allowedResearchEntryIds": [
+    "world-gen-pipeline-ladder-best-practices",
+    "ubisoft-farcry5-freshwater-cliff-biome-order",
+    "sidefx-houdini-heightfield-ladder",
+    "fl-usgs-3dep-elevation-structure"
+  ],
+  "floridaCounties": ["Bay", "Washington", "Jackson", "Calhoun"]
+}

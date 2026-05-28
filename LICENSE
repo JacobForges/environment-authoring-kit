@@ -1,0 +1,12 @@
+# Hub repository license notice
+
+The **Environment Authoring Kit** package (`Packages/com.cursor.environment-authoring-kit/`) is licensed under the terms in:
+
+**[Packages/com.cursor.environment-authoring-kit/LICENSE.md](Packages/com.cursor.environment-authoring-kit/LICENSE.md)**
+
+Summary:
+
+- **Educational and personal non-commercial use** — free.
+- **Commercial use** (selling access, paid products, paid training built on the kit, etc.) — requires a **separate commercial license** from the copyright holder.
+
+Other Hub content may use different licenses. Geospatial research cache data is **not** placed in the public domain — see the kit’s `docs/RESEARCH_DATA_ATTRIBUTION.md`.

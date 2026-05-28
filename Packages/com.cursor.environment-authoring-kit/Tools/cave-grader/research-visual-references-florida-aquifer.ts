@@ -1,0 +1,198 @@
+/**
+ * Florida Floridan aquifer + karst structure references for cave generation.
+ * Policy: use bedrock / void / thickness / geomorphology structure only — ignore water surfaces,
+ * TDS boundaries, springs discharge, and bathymetry when sculpting underground caves.
+ */
+
+import type { VisualReference } from "./research-visual-references.js";
+
+export const FLORIDA_AQUIFER_VISUAL_REFERENCES: VisualReference[] = [
+  {
+    id: "fl-aquifer-ds926-structural-surfaces",
+    title: "USGS DS 926 — Floridan aquifer structural surfaces & unit thickness (GIS rasters)",
+    year: 2015,
+    category: "aquifer_structure",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    aquiferSystem: "Floridan",
+    docUrl: "https://pubs.usgs.gov/ds/0926/",
+    dataUrls: [
+      "https://pubs.usgs.gov/ds/0926/downloads/ds926_ASCII_rasters.zip",
+      "https://pubs.usgs.gov/ds/0926/downloads/ds926.gdb.zip",
+      "https://pubs.usgs.gov/ds/0926/downloads/ds926_shapefiles.zip",
+    ],
+    imageUrls: [
+      "https://www.usgs.gov/sites/default/files/styles/full_width/public/thumbnail/images/3DEP_0.png",
+    ],
+    notes:
+      "Top/base of aquifer system and major hydrogeologic units — use thickness rasters and structural contours for cave void scale and ceiling depth. Skip 10,000 mg/L TDS (saline) boundary and any water-table symbology.",
+  },
+  {
+    id: "fl-aquifer-pp1807-framework",
+    title: "USGS PP 1807 — Revised Floridan aquifer hydrogeologic framework",
+    year: 2015,
+    category: "aquifer_structure",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    aquiferSystem: "Floridan",
+    docUrl: "https://pubs.usgs.gov/publication/pp1807",
+    dataUrls: ["https://pubs.usgs.gov/publication/pp1807"],
+    imageUrls: [],
+    notes:
+      "Companion report to DS 926: unit boundaries, faults, and framework plates. Map underground unit contacts to tube segmentation — not spring flow or heads.",
+  },
+  {
+    id: "fl-aquifer-ds584-legacy-surfaces",
+    title: "USGS DS 584 — Floridan aquifer digital surfaces (legacy RASA)",
+    year: 2006,
+    category: "aquifer_structure",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    aquiferSystem: "Floridan",
+    docUrl: "https://pubs.usgs.gov/ds/584/",
+    dataUrls: ["https://pubs.usgs.gov/ds/584/"],
+    imageUrls: [],
+    notes:
+      "Scanned structural contours and unit extents. Fallback when DS 926 subset unavailable; still structure-only (no hydrology time series).",
+  },
+  {
+    id: "fl-fgs-subsidence-karst-incidents",
+    title: "FGS / FDEP — Subsidence & karst incident reports (statewide GIS)",
+    year: 2025,
+    category: "karst_geomorphology",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    docUrl: "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/FGS_SUBSIDENCE/MapServer",
+    dataUrls: [
+      "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/FGS_SUBSIDENCE/MapServer",
+      "https://geodata.dep.state.fl.us/search?layout=grid&tags=karst",
+    ],
+    imageUrls: [],
+    notes:
+      "Reported sinkholes and subsidence polygons — use as collapse pocket / choke point seeds. Filter to target counties; do not model standing water in depressions.",
+  },
+  {
+    id: "fl-fgdl-karst-open-data",
+    title: "FDEP GeoData — karst-tagged layers",
+    year: 2025,
+    category: "karst_geomorphology",
+    provenInProduction: true,
+    region: "florida-panhandle",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    docUrl: "https://geodata.dep.state.fl.us/search?layout=grid&tags=karst",
+    dataUrls: ["https://geodata.dep.state.fl.us/", "https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites"],
+    imageUrls: [],
+    notes:
+      "DEP open karst/subsidence-related layers. Western panhandle has fewer exposed karst features (thick sediment) — combine with bare-earth LiDAR for entrance relief.",
+  },
+  {
+    id: "fl-fgs-ofms104-lidar-karst-geomorph",
+    title: "FGS OFMS 104 — LiDAR geomorphology (springs/sinkholes/caves on DEM)",
+    year: 2014,
+    category: "karst_geomorphology",
+    provenInProduction: true,
+    region: "florida",
+    caveStructureOnly: true,
+    docUrl: "https://ufdcimages.uflib.ufl.edu/AA/00/03/84/30/00001/OFR98_FINAL.pdf",
+    dataUrls: ["https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites"],
+    imageUrls: [],
+    notes:
+      "Methodology: LiDAR DEM + kriged top-of-rock for overburden thickness; plate 3 geomorphology with spring/sinkhole/cave locations. Apply workflow to panhandle tiles — map voids and collapse, not spring discharge volumes.",
+  },
+  {
+    id: "fl-panhandle-lidar-bare-earth-class2",
+    title: "2018 FL Panhandle LiDAR — Class 2 ground (cave mouth structure)",
+    year: 2018,
+    category: "lidar_terrain",
+    provenInProduction: true,
+    region: "florida-panhandle",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    docUrl: "https://www.fisheries.noaa.gov/inport/item/58332",
+    dataUrls: [
+      "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/laz/FL_Panhandle_LAS_2018_8942/index.html",
+      "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html",
+    ],
+    imageUrls: [],
+    notes:
+      "Use classified ground (class 2) LAS/DEM for surface walk-in and ceiling height reference. Ignore class 9 water, hydro breaklines, and inundation products for underground tube layout.",
+  },
+  {
+    id: "fl-usgs-3dep-elevation-structure",
+    title: "USGS 3DEP — bare-earth elevation (aquifer mouth alignment)",
+    year: 2025,
+    category: "lidar_terrain",
+    provenInProduction: true,
+    region: "florida-panhandle",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    docUrl: "https://www.usgs.gov/3d-elevation-program",
+    dataUrls: [
+      "https://apps.nationalmap.gov/downloader/",
+      "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer",
+    ],
+    imageUrls: [
+      "https://www.usgs.gov/sites/default/files/styles/full_width/public/thumbnail/images/3DEP_0.png",
+    ],
+    notes:
+      "National seamless DEM fallback. Subset per county bbox; hillshade PNGs under ResearchCache/images/fl-{county}-hillshade/.",
+  },
+  {
+    id: "fl-nwfwmd-gis-hydrogeology",
+    title: "NWFWMD — GIS / hydrogeology data portal (panhandle districts)",
+    year: 2025,
+    category: "aquifer_structure",
+    provenInProduction: true,
+    region: "inland-panhandle",
+    counties: ["Washington", "Jackson", "Calhoun", "Bay"],
+    caveStructureOnly: true,
+    docUrl: "https://www.nwfwmd.state.fl.us/data-gis",
+    dataUrls: ["https://www.nwfwmd.state.fl.us/data-gis"],
+    imageUrls: [],
+    notes:
+      "District aquifer and geology layers for Jackson/Calhoun/Washington corridors. Prefer unit boundaries and potentiometric structure maps over surface-water features.",
+  },
+  {
+    id: "fl-usgs-water-science-floridan",
+    title: "USGS Caribbean-Florida Water Science Center — Floridan aquifer publications",
+    year: 2025,
+    category: "aquifer_structure",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    aquiferSystem: "Floridan",
+    docUrl: "https://fl.water.usgs.gov/",
+    dataUrls: ["https://fl.water.usgs.gov/", "https://data.usgs.gov/datacatalog/"],
+    imageUrls: [],
+    notes:
+      "Regional studies on framework and karst; use cross-sections and structure maps for tube gradient, not spring monitoring hydrographs.",
+  },
+  {
+    id: "fl-statewide-lidar-assessment",
+    title: "Florida statewide LiDAR assessment (FGIO / DEP)",
+    year: 2024,
+    category: "lidar_terrain",
+    provenInProduction: true,
+    region: "florida",
+    counties: ["Bay", "Washington", "Jackson", "Calhoun"],
+    caveStructureOnly: true,
+    docUrl: "https://www.fgdl.org/metadataexplorer/",
+    dataUrls: [
+      "https://www.fgdl.org/",
+      "https://floridadep.gov/fgs/data-maps/content/fgs-external-data-sites",
+    ],
+    imageUrls: [],
+    notes:
+      "Index for county LAS/DEM coverage; links to 2018 panhandle delivery and LABINS. Structure-only: DEM/LAZ for rock relief, not bathymetric surfaces.",
+  },
+];

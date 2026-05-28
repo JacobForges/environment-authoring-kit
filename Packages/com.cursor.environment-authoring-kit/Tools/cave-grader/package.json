@@ -1,0 +1,46 @@
+{
+  "name": "@cursor/environment-kit-cave-grader",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "doctor": "node --import tsx agent-doctor.ts",
+    "grade-and-fix": "node --import tsx grade-and-fix.ts --auto",
+    "grade-and-fix:stream": "node --import tsx grade-and-fix.ts --auto --stream",
+    "terrain-grade-and-fix": "node --import tsx grade-and-fix.ts --auto --workflow=terrain",
+    "terrain-grade-and-fix:stream": "node --import tsx grade-and-fix.ts --auto --stream --workflow=terrain",
+    "watch-grade": "node --import tsx watch-grade.ts",
+    "watch-terrain-grade": "node --import tsx watch-terrain-grade.ts",
+    "run": "bash run-grade-and-fix.sh --auto --stream",
+    "run-terrain": "bash run-terrain-grade-and-fix.sh --auto --stream --use-exported-prompt",
+    "export-terrain-rung-prompt": "node --import tsx export-terrain-rung-prompt.ts",
+    "sync-research-catalog": "node --import tsx export-research-catalog.ts",
+    "sync-research-cache": "node --import tsx research-cache-sync.ts",
+    "audit-research-cache": "node --import tsx research-cache-audit.ts",
+    "audit-research-cache:dry": "node --import tsx research-cache-audit.ts --dry-run",
+    "audit-research-cache:keep-legacy": "node --import tsx research-cache-audit.ts --no-policy-delete",
+    "research-maintenance-bot": "node --import tsx research-cache-audit.ts --daemon --interval-min=30",
+    "sync-research-cache:images": "node --import tsx research-cache-sync.ts --fetch-images",
+    "sync-research-pull": "node --import tsx research-cache-sync.ts && node --import tsx research-cache-audit.ts && node --import tsx florida-lidar-hillshade.ts && node --import tsx export-research-catalog.ts && node --import tsx export-research-execution-brief.ts",
+    "export-research-execution-brief": "node --import tsx export-research-execution-brief.ts",
+    "sync-florida-hillshades": "node --import tsx florida-lidar-hillshade.ts",
+    "backfill-elevation-grids": "node --import tsx florida-lidar-hillshade.ts --elev-grid-only --elev-grid=32",
+    "elev-grids-from-hillshade": "node --import tsx florida-lidar-hillshade.ts --elev-from-hillshade --elev-grid=32",
+    "sync-florida-terrain": "node --import tsx research-cache-sync.ts && node --import tsx florida-lidar-hillshade.ts",
+    "export-rung-prompt": "node --import tsx export-rung-prompt.ts",
+    "generate-phase-prompts": "node --import tsx generate-phase-prompts.ts",
+    "generate-unified-agent-prompt": "node --import tsx generate-unified-agent-prompt.ts",
+    "generate-autonomous-brief": "node --import tsx generate-autonomous-brief.ts",
+    "generate-meat-pass-plan": "node --import tsx generate-meat-pass-plan.ts",
+    "generate-research-action-plan": "node --import tsx generate-research-action-plan.ts",
+    "generate-research-agent-prompt": "node --import tsx generate-research-agent-prompt.ts"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

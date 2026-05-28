@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1",
+  "id": "showcase-florida-karst-xr",
+  "title": "Showcase — Florida Karst surface + lava tube (XR)",
+  "productScope": "Florida karst surface + lava-tube cave for Unity XR",
+  "description": "Panhandle karst hills, walkable trail to cave mouth, full lava-tube adventure for VITURE XR — demo reel vertical",
+  "seed": 7721001,
+  "pinSeedWhileDebugging": true,
+  "surfaceScope": "FullWorld",
+  "surfaceExtentMeters": 220,
+  "surfaceDirectionCount": 8,
+  "surfaceIncludeMountains": true,
+  "surfaceIncludeWater": true,
+  "surfaceIncludeRoads": true,
+  "surfaceIncludeTrails": true,
+  "biome": "Cave",
+  "caveMode": "FullSystem",
+  "useLayoutPrototype": false,
+  "useIncrementalLadder": true,
+  "showLiveScenePlacement": true,
+  "skipAutonomousPolishLoop": false,
+  "enforcePreBuildGate": true,
+  "allowedResearchEntryIds": [
+    "world-gen-pipeline-ladder-best-practices",
+    "ubisoft-farcry5-freshwater-cliff-biome-order",
+    "guerrilla-horizon-gpu-procedural-placement",
+    "sidefx-houdini-heightfield-ladder",
+    "hello-games-nms-deterministic-seed-pipeline",
+    "nvidia-fly-fail-fix-iterative-pcg-repair",
+    "fl-usgs-3dep-elevation-structure"
+  ],
+  "floridaCounties": ["Bay", "Washington", "Jackson", "Calhoun"]
+}
