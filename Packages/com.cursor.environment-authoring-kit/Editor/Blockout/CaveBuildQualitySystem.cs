@@ -35,6 +35,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (refreshNavMeshBeforeGrade)
                 TryRefreshNavMeshBeforeGrade(caveRoot, request, buildReport);
 
+            if (caveRoot != null)
+            {
+                CaveSceneMaterialRepair.RepairCaveRoot(caveRoot);
+                if (CaveGeometryPaths.IsAdventureCave(caveRoot))
+                    CavePlayabilityFix.EnsureSingleUndergroundAtmosphere(caveRoot);
+            }
+
             var report = CaveBuildQualityGrader.BuildStageReport(caveRoot, ground, request, buildReport);
             report.GradingVersion = GradingVersion;
             report.GradingMode = gradingMode;

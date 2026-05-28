@@ -1094,6 +1094,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 g.AddIssue("Cave root depth error — world integration not ship-ready.");
             }
 
+            if (CaveSurfaceEntranceBuilder.HasDescentWalk(caveRoot))
+                g.Score = Mathf.Min(100, g.Score + 8);
+
             g.Score = Mathf.Clamp(g.Score, 0, 100);
             return g;
         }

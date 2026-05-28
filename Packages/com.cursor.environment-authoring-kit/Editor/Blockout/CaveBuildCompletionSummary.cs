@@ -236,16 +236,55 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 pass = buildReport.QualityAcceptable;
             }
 
+            var qualityNote = quality != null
+                ? "\n(This score is the cave quality rubric — not terrain build %. Beta+ ≈ 85, Ship ≈ 95.)\n" +
+                  FormatTopFailingStages(quality)
+                : string.Empty;
+
             return
                 $"Scene '{sceneName}' — {(pass ? "PASS" : "NEEDS WORK")}\n" +
                 $"Grade: {grade}\n" +
+                qualityNote +
                 $"{buildReport.Message}\n\n" +
                 $"Pieces: {buildReport.PieceCount}, shell: {buildReport.ShellPieceCount}, " +
                 $"NavMesh: {buildReport.NavMeshBuilt}\n\n" +
                 $"Full debug readout (paths, file:// URLs, failing stages, prompts):\n" +
                 $"{ToFileUrl(ReadoutRelativePath)}\n\n" +
                 $"Finder: {readoutPath}\n\n" +
-                "Menu: Cave Build → Diagnostics → Open Last Build Completion Readout";
+                "Menu: Cave Build → Diagnostics → Open Last Build Completion Readout\n" +
+                "Pipeline Console → Re-grade Scene for live breakdown.";
+        }
+
+        static string FormatTopFailingStages(CaveBuildQualityReport quality)
+        {
+            if (quality == null)
+                return string.Empty;
+
+            var failing = CaveBuildQualityRubric.GetFailingStages(quality);
+            if (failing.Count == 0 && quality.ShipBlockers.Count == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            sb.AppendLine("\nTop blockers:");
+            var shown = 0;
+            foreach (var stage in failing)
+            {
+                if (stage == null || shown >= 4)
+                    break;
+                var issue = stage.Issues.Count > 0 ? stage.Issues[0] : "below pass threshold";
+                sb.AppendLine($"• {stage.StageName}: {stage.Score}/100 — {issue}");
+                shown++;
+            }
+
+            foreach (var blocker in quality.ShipBlockers)
+            {
+                if (shown >= 5)
+                    break;
+                sb.AppendLine($"• {blocker}");
+                shown++;
+            }
+
+            return sb.ToString();
         }
 
         static string BuildReadoutMarkdown(
