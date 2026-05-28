@@ -61,8 +61,16 @@ The Environment Authoring Kit grades every cave build with **commercial producti
    ```
 
    Unity: **Window → Environment Kit → Cave Build → Sync API Key from .env** (copies into EditorPrefs for builds).
-   
-   > Provider note: Hub stores multiple provider keys and model ids, but the built-in `grade-and-fix.ts` runtime currently executes via Cursor SDK (`CURSOR_API_KEY`).
+
+### AI providers (Hub → `grade-and-fix.ts`)
+
+| Provider | Required credential | Runtime |
+|----------|---------------------|---------|
+| **Cursor** (default) | `CURSOR_API_KEY` | `@cursor/sdk` local or cloud agent |
+| **Google / Anthropic / OpenAI / OpenRouter / Custom** | `CAVE_ACTIVE_API_KEY` (exported from Hub) + model/base URL | HTTP API in `grade-and-fix.ts` |
+| **File edits (non-Cursor)** | `CAVE_EXTERNAL_APPLY_EDITS=1` in Hub | Model returns JSON edit block; dry-run by default |
+
+Set provider in **Environment Kit → Hub → Settings**. Unity exports `CAVE_AI_PROVIDER` when spawning the grader process.
 
 4. Optional: open `CaveBuildCursorSettings` for Hub root, model id. If Unity cannot find Node, set **Node Executable** to `/usr/local/bin/node`.
 

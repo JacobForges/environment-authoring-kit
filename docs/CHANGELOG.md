@@ -8,6 +8,12 @@ Format: **date** — short title — details.
 
 ## 2026-05-28
 
+### License + provider docs correction (user-facing accuracy)
+
+- Removed **incorrect CC0 / dual-license** wording from `THIRD_PARTY_AND_LICENSE_SCOPE.md`, `PUBLIC_REPO_SCOPE.md`, and READMEs. **Single terms:** educational/personal non-commercial free; **commercial use requires permission or purchase from copyright holder** ([LICENSE.md](../Packages/com.cursor.environment-authoring-kit/LICENSE.md)).
+- Fixed **FLOW-AUDIT** and **CaveGradingAndCursor**: non-Cursor providers **do** run in `grade-and-fix.ts` (HTTP APIs), not “config only.”
+- Grader: fail fast when non-Cursor provider is selected but API key is missing.
+
 ### Documentation accuracy pass (public GitHub)
 
 - Added **[PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md)** — single source of truth for committed vs gitignored paths, XR honesty, 120-step pipeline, licenses.

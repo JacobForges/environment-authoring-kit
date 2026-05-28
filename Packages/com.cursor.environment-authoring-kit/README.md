@@ -13,7 +13,7 @@ Built for **Unity 6 (6000.x)** and **URP**. XR support = **editor optimization p
 | **XR** | Configure OpenXR / device SDK in **your** project; kit applies `VitureXRPro` **budget** preset when present |
 | **Node (optional)** | 18+ for `Tools/cave-grader` |
 | **Version** | **0.3.0** — see `package.json` |
-| **License** | [LICENSE.md](LICENSE.md) (educational free / commercial license); consuming Hub repo may also use [CC0](../../LICENSE) for originals — see [THIRD_PARTY](../../docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) |
+| **License** | [LICENSE.md](LICENSE.md) — **educational/personal non-commercial free**; **commercial use requires license or purchase from copyright holder** (not CC0) |
 
 ---
 
@@ -141,7 +141,9 @@ npm run doctor
 ./run-grade-and-fix.sh --auto --stream
 ```
 
-Full setup: [docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md). Non-Cursor provider keys in Hub are **exported** to the process; see [FLOW-AUDIT-2026-05-27.md](docs/FLOW-AUDIT-2026-05-27.md) for current `grade-and-fix.ts` behavior.
+Full setup: [docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md).
+
+**Providers:** Hub sets `CAVE_AI_PROVIDER`. **Cursor** → `@cursor/sdk` + `CURSOR_API_KEY`. **Other providers** → direct API calls in `grade-and-fix.ts` + `CAVE_ACTIVE_API_KEY` / provider keys (optional JSON file edits when enabled).
 
 ---
 

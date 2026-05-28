@@ -23,7 +23,9 @@ Commercial use includes, without limitation:
 - Using the kit in paid client work where the deliverable is substantially this tooling
 - Offering paid training whose primary materials are this kit, unless covered by a written educational exemption from the author
 
-The author **reserves the right** to offer paid licenses, support, sponsorship, and commercial terms at their sole discretion. Contact the repository owner to request a commercial license.
+**Any monetary gain or public commercial use without a written license or purchase from the author is not permitted.**
+
+The author **reserves the right** to approve commercial use, offer paid licenses, support, and sponsorship at their sole discretion. Contact the repository owner (Jacob) to request permission or purchase a commercial license.
 
 ## No warranty
 

@@ -1,57 +1,38 @@
-# Flow audit — 2026-05-27
+# Flow audit — 2026-05-27 (updated 2026-05-28)
 
-This audit reviews Hub/pipeline consistency after the 120-step migration and Hub/provider work.
+Reviews Hub/pipeline consistency after the 120-step migration and Hub/provider work.
 
 ## Scope checked
 
 - Build entry points (Hub + menu)
 - Run status and generated artifact paths
-- Provider key/model settings vs runtime execution path
-- Messaging consistency (120-step wording, provider hints)
+- Provider key/model settings vs **`grade-and-fix.ts` runtime**
+- Messaging consistency (120-step wording, provider hints, license docs)
 
-## Mismatches found and fixed
+## Resolved
 
-1. **Outdated 63-step docs** — **resolved 2026-05-28**
-   - Repo-wide pass: [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md), root/package READMEs, REQUIREMENTS, Recipes README, `research-workflow.md`, Hub `docs/CHANGELOG.md`.
-   - Pipeline total = **120** (`CaveBuildQueuedPipelineSchedule.Total`); step index **63** = meat loop only.
+1. **63-step docs** — repo-wide pass; pipeline total = **120** (`CaveBuildQueuedPipelineSchedule.Total`); step index **63** = meat loop only.
 
-2. **Provider confusion in UI warnings**
-   - Several windows previously hardcoded `CURSOR_API_KEY not set`.
-   - Updated key warnings to use a centralized hint:
-     `CaveBuildCursorSettings.CursorWorkflowCredentialHint()`.
+2. **Provider UI warnings** — centralized `CaveBuildCursorSettings.CursorWorkflowCredentialHint()`.
 
-3. **Hub/provider configuration visibility**
-   - Hub now shows provider selection, per-provider keys, base URL, and model IDs in one place.
-   - Added flow audit panel in Hub Data tab for immediate mismatch warnings.
+3. **Hub provider settings** — selection, keys, base URL, model IDs; flow audit panel on Data tab.
 
-4. **Process environment mismatch risk**
-   - Process bootstrap now exports provider routing vars:
-     - `CAVE_AI_PROVIDER`
-     - `CAVE_ACTIVE_MODEL`
-     - `CAVE_ACTIVE_BASE_URL`
-     - `CAVE_ACTIVE_API_KEY`
-     - provider-specific key vars (`GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+4. **Process env export** — `CAVE_AI_PROVIDER`, `CAVE_ACTIVE_MODEL`, `CAVE_ACTIVE_BASE_URL`, `CAVE_ACTIVE_API_KEY`, provider-specific keys.
 
-5. **.env discoverability**
-   - `.env.example` now includes optional provider key placeholders and provider/base-url notes.
+5. **Non-Cursor runtime (was mis-documented)** — **`grade-and-fix.ts` routes non-Cursor providers** to HTTP APIs (`invokeExternalProvider`: Anthropic, Gemini, OpenAI-compatible / OpenRouter / custom base URL). Only **Cursor** uses `@cursor/sdk` and **`CURSOR_API_KEY`**. Hub exports `CAVE_AI_PROVIDER` from your selection.
 
-## Current intentional limitation (important)
+6. **License docs (was mis-documented)** — kit is **not CC0**. Single terms: [LICENSE.md](../LICENSE.md) — educational/personal non-commercial free; **commercial use requires separate license or purchase from copyright holder**. [THIRD_PARTY_AND_LICENSE_SCOPE.md](../../../../docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) updated to match.
 
-The built-in `Tools/cave-grader/grade-and-fix.ts` runtime still executes through **Cursor SDK** and requires `CURSOR_API_KEY` for automation.
+## Current limitations (accurate)
 
-Provider toggles/keys in Hub are fully configurable and exported for external routing, but non-Cursor providers are currently treated as:
+| Topic | Limitation |
+|-------|------------|
+| **Cursor provider** | Needs `CURSOR_API_KEY`; local agent needs Cursor app; cloud needs `CAVE_CURSOR_REPO_URL` |
+| **Non-Cursor providers** | Need `CAVE_ACTIVE_API_KEY` (or provider env var); file edits via JSON execution layer only (not Cursor agent workspace) |
+| **External edits** | Opt-in (`CAVE_EXTERNAL_APPLY_EDITS`); dry-run default |
+| **In-editor build** | Does not require any LLM API |
 
-- **configuration-ready**, not fully runtime-switched inside `grade-and-fix.ts`.
+## Optional hardening (not required for accuracy)
 
-Hub Flow Audit warns when this mismatch is present (e.g., non-Cursor provider selected while Cursor automation toggles are enabled).
-
-## Recommended next hardening step
-
-If true runtime provider switching is required, introduce a provider abstraction in `Tools/cave-grader`:
-
-- `cursor-runner.ts` (existing)
-- `openai-compatible-runner.ts` (for OpenAI-compatible, OpenRouter, local endpoints)
-- `anthropic-runner.ts`
-- `gemini-runner.ts`
-
-and route from `grade-and-fix.ts` using `CAVE_AI_PROVIDER`.
+- Stricter validation when non-Cursor provider is selected but API key is empty
+- Split grader runners into separate modules for easier testing

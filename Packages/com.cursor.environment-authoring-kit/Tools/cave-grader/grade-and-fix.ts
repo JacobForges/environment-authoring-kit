@@ -353,9 +353,13 @@ async function main(): Promise<void> {
       process.env.GOOGLE_API_KEY?.trim() ||
       process.env.OPENROUTER_API_KEY?.trim() ||
       process.env.CUSTOM_API_KEY?.trim();
-  if (isCursorProvider && !apiKey) {
-    console.error("CURSOR_API_KEY is required (.env or environment).");
-    console.error("Unity: Window → Environment Kit → Cave Build → Sync API Key from .env");
+  if (!apiKey) {
+    const keyHint = isCursorProvider
+      ? "CURSOR_API_KEY is required (.env or environment)."
+      : `API key required for provider '${provider}' (CAVE_ACTIVE_API_KEY or provider-specific key in .env; set in Hub → Settings).`;
+    console.error(keyHint);
+    if (isCursorProvider)
+      console.error("Unity: Window → Environment Kit → Cave Build → Sync API Key from .env");
     writeLastRunDiagnostics(workflowMode, {
       exitCode: 1,
       error: "missing_api_key",

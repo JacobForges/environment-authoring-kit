@@ -63,24 +63,28 @@ This file is the **accuracy contract** for what is on GitHub vs what you must su
 
 ---
 
-## AI / Cursor automation (honest)
+## AI / automation (honest — updated to match code)
 
-| Works | Limitation |
-|-------|------------|
-| In-editor grading, Hub, exported prompts | `grade-and-fix.ts` **requires `CURSOR_API_KEY`** for Cursor SDK runs |
-| Hub stores multiple provider keys | Non-Cursor providers: config exported; full runtime routing in grader is **evolving** — see [FLOW-AUDIT-2026-05-27.md](../Packages/com.cursor.environment-authoring-kit/docs/FLOW-AUDIT-2026-05-27.md) |
-| External file edits | **Opt-in** in Hub (`allowExternalProviderEdits`; dry-run default) |
+| Provider | How `grade-and-fix.ts` runs |
+|----------|-----------------------------|
+| **Cursor** (default) | `@cursor/sdk` — needs **`CURSOR_API_KEY`**; local or cloud agent |
+| **Google / Anthropic / OpenAI-compatible / OpenRouter / Custom** | Direct HTTP APIs via `CAVE_AI_PROVIDER` + **`CAVE_ACTIVE_API_KEY`** (and model/base URL from Hub export) |
+| **All providers** | In-editor grading, Hub, exported prompts work without any API |
+
+**Non-Cursor file edits:** models return JSON edit blocks; applied only if `CAVE_EXTERNAL_APPLY_EDITS=1` (Hub: *Allow external provider edits*; dry-run default).
+
+**Earlier docs were wrong** when they said non-Cursor was “config only.” Runtime switching **is implemented** in `Tools/cave-grader/grade-and-fix.ts`. Cursor-specific features (local agent, cloud repo URL, `npm run doctor` SQLITE checks) apply only when provider = Cursor.
 
 ---
 
-## License (two files — both intentional)
+## License (one terms file — not CC0)
 
-| File | Applies to |
-|------|------------|
-| Root [`LICENSE`](../LICENSE) | **CC0 1.0** — original repo kit code & docs the affirmer owns |
-| Package [`LICENSE.md`](../Packages/com.cursor.environment-authoring-kit/LICENSE.md) | **Educational free / commercial by agreement** when distributing the UPM package |
+| File | Meaning |
+|------|---------|
+| [`LICENSE.md`](../Packages/com.cursor.environment-authoring-kit/LICENSE.md) | **Educational / personal non-commercial — free.** **Commercial use (monetary gain, public sale, paid products built on the kit) requires a separate license or purchase from the copyright holder (Jacob).** |
+| Root [`LICENSE`](../LICENSE) | Points to the same `LICENSE.md` |
 
-Third-party Unity, npm, Cursor, store assets, and government geodata are **never** CC0 — see [THIRD_PARTY_AND_LICENSE_SCOPE.md](THIRD_PARTY_AND_LICENSE_SCOPE.md).
+**Not public domain. Not CC0.** Third-party Unity, npm, Cursor, store assets, and government geodata stay under their own terms — [THIRD_PARTY_AND_LICENSE_SCOPE.md](THIRD_PARTY_AND_LICENSE_SCOPE.md).
 
 ---
 

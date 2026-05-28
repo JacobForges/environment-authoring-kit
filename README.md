@@ -130,18 +130,19 @@ Details: [CaveGradingAndCursor.md](Packages/com.cursor.environment-authoring-kit
 | [Package README](Packages/com.cursor.environment-authoring-kit/README.md) | Install, pipeline, grader |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | Hub project requirements |
 | [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains vs what you add locally |
-| [docs/THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) | What CC0 covers vs store assets |
+| [docs/THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) | Kit license vs Unity, store assets, APIs |
 | [Package docs index](Packages/com.cursor.environment-authoring-kit/docs/README.md) | Pipeline, grading, attribution |
 
 ---
 
 ## License
 
-**Kit code and repo docs:** [CC0 1.0](LICENSE) (see [third-party scope](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md)).
+**Educational and personal non-commercial use — free.**  
+**Commercial use** (selling access, paid products/services built on the kit, paid training, etc.) **requires a separate license or purchase from the copyright holder.**
 
-**Unity, UPM packages, your `Assets/` art, government geodata, and Cursor/npm deps** — each under its own terms.
+Full text: [Packages/com.cursor.environment-authoring-kit/LICENSE.md](Packages/com.cursor.environment-authoring-kit/LICENSE.md) · [THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md)
 
-Package also ships [LICENSE.md](Packages/com.cursor.environment-authoring-kit/LICENSE.md) (educational free / commercial license) for the UPM package when published separately.
+**Not CC0 / not public domain.** Unity, UPM packages, your `Assets/` art, LLM APIs, and geodata remain under their own terms.
 
 ---
 
