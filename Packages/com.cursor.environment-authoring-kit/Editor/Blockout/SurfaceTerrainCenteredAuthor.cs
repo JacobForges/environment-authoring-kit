@@ -372,6 +372,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     $"[Surface] terrain pass {passNum}/{state.PassCount} (world FBM blend)");
             }
 
+            if (state.PassRowStart == 0 || state.PassRowStart % Mathf.Max(16, state.Res / 8) == 0)
+            {
+                CaveBuildRunStatusPublisher.PulseSubOperation(
+                    "terrain sculpt",
+                    $"pass {passNum}/{state.PassCount} rows {state.PassRowStart}/{state.Res}");
+            }
+
             var chunk = RowChunkSizeFor(state.Res);
             var rowBandStart = Mathf.Max(0, state.PassRowStart - chunk);
             var passFinished = state.RunRowChunk();

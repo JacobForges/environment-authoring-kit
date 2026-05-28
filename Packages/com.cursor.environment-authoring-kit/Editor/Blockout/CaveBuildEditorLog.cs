@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
@@ -65,6 +66,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 ? label
                 : $"{weightSummary} — {label}";
             CaveBuildPipelineLog.Info(msg, "Cave-Queue");
+            CaveBuildRunStatusPublisher.RecordActivity("queue", msg);
+            if (!string.IsNullOrEmpty(label) && label.IndexOf("run [", StringComparison.Ordinal) >= 0)
+                CaveBuildRunStatusPublisher.PulseSubOperation("editor queue", label);
+
             if (MirrorPacedLogsToConsole)
                 Debug.Log($"{CaveBuildPipelineDomains.Cave} Queue {msg}");
         }

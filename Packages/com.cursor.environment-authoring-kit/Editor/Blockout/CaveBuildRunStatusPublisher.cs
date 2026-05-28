@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using EnvironmentAuthoringKit.Cave;
@@ -12,6 +13,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     public static class CaveBuildRunStatusPublisher
     {
         public const string LiveStatusRel = CaveBuildAgentContextExporter.Folder + "/CaveBuildLiveRunStatus.md";
+        const int MaxActivityLines = 64;
+
+        public readonly struct ActivityEntry
+        {
+            public readonly float ElapsedSeconds;
+            public readonly string Category;
+            public readonly string Text;
+
+            public ActivityEntry(float elapsedSeconds, string category, string text)
+            {
+                ElapsedSeconds = elapsedSeconds;
+                Category = category ?? string.Empty;
+                Text = text ?? string.Empty;
+            }
+        }
+
+        static readonly List<ActivityEntry> Activity = new();
 
         static string _phase = "idle";
         static string _detail = string.Empty;
@@ -25,12 +43,86 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static int CurrentQueuedStep => _queuedStep;
 
         public static int QueuedStepTotal => _queuedTotal;
+
+        public static string Phase => _phase;
+
+        public static string Detail => _detail;
+
+        public static string SubOperation => _subOperation;
+
+        public static string SubOperationDetail => _subOperationDetail;
+
+        public static string BuildMode => _buildMode;
+
+        public static string ResearchNote => _researchNote;
+
+        public static float ElapsedSeconds =>
+            _startedAt > 0 ? (float)(EditorApplication.timeSinceStartup - _startedAt) : 0f;
+
+        public static bool HasActiveSession =>
+            _startedAt > 0 && !string.Equals(_phase, "idle", StringComparison.Ordinal);
+
+        public static IReadOnlyList<ActivityEntry> RecentActivity => Activity;
+
         static double _startedAt;
         static double _lastPublishTime;
         static bool _caveOnlySession;
 
+        public static void ClearActivityFeed() => Activity.Clear();
+
+        public static void RecordActivity(string category, string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            var elapsed = _startedAt > 0 ? (float)(EditorApplication.timeSinceStartup - _startedAt) : 0f;
+            Activity.Add(new ActivityEntry(elapsed, category, text.Trim()));
+            while (Activity.Count > MaxActivityLines)
+                Activity.RemoveAt(0);
+        }
+
+        public static string FormatActivityFeedForHub(int maxLines = 36)
+        {
+            if (Activity.Count == 0)
+                return "(waiting for first activity — build is starting or queue is idle)";
+
+            var start = Mathf.Max(0, Activity.Count - maxLines);
+            var sb = new StringBuilder();
+            for (var i = start; i < Activity.Count; i++)
+            {
+                var e = Activity[i];
+                sb.Append('[').Append(e.ElapsedSeconds.ToString("F0")).Append("s] ");
+                if (!string.IsNullOrEmpty(e.Category))
+                    sb.Append('(').Append(e.Category).Append(") ");
+                sb.AppendLine(e.Text);
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        public static string FormatMainActionSummary()
+        {
+            if (_queuedStep >= 0)
+            {
+                return $"Build {_queuedStep + 1}/{_queuedTotal} — {_detail}";
+            }
+
+            return string.IsNullOrEmpty(_detail) ? _phase : $"{_phase} — {_detail}";
+        }
+
+        public static string FormatSubActionSummary()
+        {
+            if (string.IsNullOrEmpty(_subOperation) && string.IsNullOrEmpty(_subOperationDetail))
+                return string.Empty;
+
+            return string.IsNullOrEmpty(_subOperationDetail)
+                ? _subOperation
+                : $"{_subOperation} — {_subOperationDetail}";
+        }
+
         public static void BeginSession(string sceneName, int seed, bool additiveSurface)
         {
+            ClearActivityFeed();
             _caveOnlySession = false;
             _startedAt = EditorApplication.timeSinceStartup;
             _phase = "starting";
@@ -38,6 +130,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _researchNote = "Pending pre-placement research…";
             _buildMode = additiveSurface ? "[Surface] additive on existing land" : "[Surface] full world replace";
             _queuedStep = 0;
+            RecordActivity("session", $"Build started — {_buildMode}, seed {seed}");
             Publish();
             CaveBuildLiveSceneFeedback.BeginBuildSession();
             CaveBuildPipelineLog.Info(
@@ -48,6 +141,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void BeginCaveContinuationSession(string sceneName, int seed)
         {
+            ClearActivityFeed();
             _caveOnlySession = true;
             _startedAt = EditorApplication.timeSinceStartup;
             _phase = "cave_continuation";
@@ -55,6 +149,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _researchNote = "Skipped — pre-build + surface already complete.";
             _buildMode = "[Cave] only — surface frozen (no terrain edits)";
             _queuedStep = 0;
+            RecordActivity("session", $"Cave continuation — seed {seed}");
             Publish();
             CaveBuildLiveSceneFeedback.BeginBuildSession();
             CaveBuildPipelineLog.Info(
@@ -88,6 +183,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _ =>
                     "Research sync failed — check Console for node/tsx/npm errors.",
             };
+            RecordActivity("research", _detail);
             Publish();
             if (_caveOnlySession)
                 return;
@@ -101,6 +197,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _subOperation = operation ?? string.Empty;
             _subOperationDetail = detail ?? string.Empty;
+            RecordActivity("sub", FormatSubActionSummary());
             Publish(force: true);
         }
 
@@ -108,8 +205,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _subOperation = operation ?? string.Empty;
             _subOperationDetail = detail ?? string.Empty;
+            RecordActivity("sub", FormatSubActionSummary());
             var now = EditorApplication.timeSinceStartup;
-            if (now - _lastPublishTime < 0.4)
+            if (now - _lastPublishTime < 0.25)
                 return;
             Publish(force: true);
         }
@@ -127,6 +225,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _phase = "pipeline";
             _detail = label;
             ClearSubOperation();
+            RecordActivity("step", $"Build {step + 1}/{total}: {label}");
             Publish(force: true);
             CaveBuildPipelineLog.Info($"Step {step + 1}/{total}: {label}", _caveOnlySession ? "Cave-Pipeline" : "Pipeline");
 
@@ -158,6 +257,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _phase = phase;
             _detail = detail;
+            RecordActivity("main", FormatMainActionSummary());
             Publish();
         }
 
@@ -203,9 +303,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             sb.AppendLine("- compile_gate: ignore stale errors in CaveBuildCompileDiagnostics.json");
             sb.AppendLine();
+            sb.AppendLine("## Activity feed (sub-steps)");
+            sb.AppendLine("```");
+            sb.AppendLine(FormatActivityFeedForHub(40));
+            sb.AppendLine("```");
+            sb.AppendLine();
             sb.AppendLine("## Recent log (tail)");
             sb.AppendLine("```");
-            var tail = CaveBuildPipelineLog.GetRecentText(24);
+            var tail = CaveBuildPipelineLog.GetRecentText(32);
             sb.AppendLine(string.IsNullOrEmpty(tail) ? "(no log yet)" : tail);
             sb.AppendLine("```");
             sb.AppendLine();

@@ -118,7 +118,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         void OnEditorUpdate()
         {
-            var interval = LavaTubeCaveBuilder.IsBuildInProgress ? 0.4 : 1.2;
+            var buildActive =
+                LavaTubeCaveBuilder.IsBuildInProgress ||
+                CaveBuildStartupCoordinator.IsActive ||
+                CaveBuildRunStatusPublisher.HasActiveSession;
+            var interval = _tab == Tab.Build && buildActive ? 0.2 : buildActive ? 0.4 : 1.2;
             if (EditorApplication.timeSinceStartup < _nextRefreshAt)
                 return;
 
@@ -189,13 +193,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         void DrawBuildTab()
         {
-            var inProgress = LavaTubeCaveBuilder.IsBuildInProgress;
+            var inProgress =
+                LavaTubeCaveBuilder.IsBuildInProgress ||
+                CaveBuildStartupCoordinator.IsActive ||
+                CaveBuildRunStatusPublisher.HasActiveSession;
             var mode = inProgress ? "Running" : "Idle";
             var current = CaveBuildRunStatusPublisher.CurrentQueuedStep;
             var total = CaveBuildRunStatusPublisher.QueuedStepTotal;
             var stepText = current >= 0 ? $"{current + 1}/{Mathf.Max(1, total)}" : "n/a";
 
             EditorGUILayout.LabelField($"Pipeline: {mode}  |  Step: {stepText}", EditorStyles.boldLabel);
+            if (inProgress)
+                DrawBuildLiveActivityPanel();
             var aiNote = CaveBuildSessionPreset.HasUsableAiProvider
                 ? $"AI: {CaveBuildCursorSettings.ResolveActiveProvider()} (grading enabled when steps need it)"
                 : CaveBuildSessionPreset.HasLocalResearchCache
@@ -256,22 +265,65 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Space(8f);
-            DrawLiveStatusPreview();
+            if (!inProgress)
+                DrawLiveStatusPreview();
+        }
+
+        void DrawBuildLiveActivityPanel()
+        {
+            var elapsed = CaveBuildRunStatusPublisher.ElapsedSeconds;
+            EditorGUILayout.LabelField($"Elapsed: {elapsed:F0}s", EditorStyles.miniLabel);
+
+            EditorGUILayout.LabelField("Main action", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(CaveBuildRunStatusPublisher.FormatMainActionSummary(), MessageType.None);
+
+            var sub = CaveBuildRunStatusPublisher.FormatSubActionSummary();
+            if (!string.IsNullOrEmpty(sub))
+            {
+                EditorGUILayout.LabelField("Sub-action (right now)", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox(sub, MessageType.Info);
+            }
+
+            if (!string.IsNullOrEmpty(CaveBuildRunStatusPublisher.BuildMode))
+            {
+                EditorGUILayout.LabelField(
+                    CaveBuildRunStatusPublisher.BuildMode,
+                    EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Activity feed (updates ~5×/sec while Hub is open)", EditorStyles.boldLabel);
+            EditorGUILayout.TextArea(
+                CaveBuildRunStatusPublisher.FormatActivityFeedForHub(40),
+                GUILayout.MinHeight(200f));
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Pipeline log (latest)", EditorStyles.boldLabel);
+            EditorGUILayout.TextArea(
+                CaveBuildPipelineLog.GetRecentText(14),
+                GUILayout.MinHeight(100f));
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Open Pipeline Console"))
+                CaveBuildPipelineConsoleWindow.Open();
+            if (GUILayout.Button("Reveal status file"))
+                RevealRelativeFile(CaveBuildRunStatusPublisher.LiveStatusRel);
+            EditorGUILayout.EndHorizontal();
         }
 
         void DrawLiveStatusPreview()
         {
             var text = LoadFilePreview(CaveBuildRunStatusPublisher.LiveStatusRel, 1800, out var exists, out _);
-            EditorGUILayout.LabelField("Live build status (from Generated markdown)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Last build status (markdown snapshot)", EditorStyles.boldLabel);
             if (!exists)
             {
                 EditorGUILayout.HelpBox(
-                    "No live status yet. Start a build and this section will auto-refresh with phase + step details.",
+                    "No status file yet. Start Build Complete Cave — live activity appears above while running.",
                     MessageType.Info);
                 return;
             }
 
-            EditorGUILayout.TextArea(text, GUILayout.MinHeight(180f));
+            EditorGUILayout.TextArea(text, GUILayout.MinHeight(120f));
             if (GUILayout.Button("Reveal full live status file"))
                 RevealRelativeFile(CaveBuildRunStatusPublisher.LiveStatusRel);
         }
