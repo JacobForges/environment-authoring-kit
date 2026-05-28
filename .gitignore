@@ -122,6 +122,8 @@ node_modules/
 /Assets/EnvironmentKit/ResearchCache/
 /Assets/EnvironmentKit/Generated.meta
 /Assets/EnvironmentKit/ResearchCache.meta
+/Assets/EnvironmentKit/.DS_Store
+/Assets/EnvironmentKit/**/.DS_Store
 
 # Exclude local/native SDK artifacts not needed for shared Unity setup.
 /GlassesGateway
