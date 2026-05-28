@@ -13,7 +13,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     public static class CaveBuildRunStatusPublisher
     {
         public const string LiveStatusRel = CaveBuildAgentContextExporter.Folder + "/CaveBuildLiveRunStatus.md";
+
+        /// <summary>Live updates during builds — outside Assets so Unity does not re-import every pulse.</summary>
+        public const string LiveStatusLibraryRel = "Library/EnvironmentKit/CaveBuildLiveRunStatus.md";
+
         const int MaxActivityLines = 64;
+        const double MinPublishIntervalSeconds = 0.35;
+        const double MinAssetsMirrorIntervalSeconds = 8.0;
+        const double MinForcedAssetsMirrorIntervalSeconds = 3.0;
 
         public readonly struct ActivityEntry
         {
@@ -66,7 +73,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static double _startedAt;
         static double _lastPublishTime;
+        static double _lastAssetsMirrorTime;
         static bool _caveOnlySession;
+
+        /// <summary>Prefer Library snapshot (live); fall back to Generated copy for older runs.</summary>
+        public static string GetLiveStatusReadRel()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var library = Path.Combine(hub, LiveStatusLibraryRel);
+            return File.Exists(library) ? LiveStatusLibraryRel : LiveStatusRel;
+        }
 
         public static void ClearActivityFeed() => Activity.Clear();
 
@@ -207,7 +223,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _subOperationDetail = detail ?? string.Empty;
             RecordActivity("sub", FormatSubActionSummary());
             var now = EditorApplication.timeSinceStartup;
-            if (now - _lastPublishTime < 0.25)
+            if (now - _lastPublishTime < 0.5)
                 return;
             Publish(force: true);
         }
@@ -264,7 +280,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void Publish(bool force = false)
         {
             var now = EditorApplication.timeSinceStartup;
-            if (!force && now - _lastPublishTime < 0.35)
+            if (!force && now - _lastPublishTime < MinPublishIntervalSeconds)
                 return;
             _lastPublishTime = now;
 
@@ -317,9 +333,28 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             sb.AppendLine("Open **Cave Build → Diagnostics → Pipeline Console** for full stream.");
 
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
-            var path = Path.Combine(hub, LiveStatusRel);
-            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? hub);
-            File.WriteAllText(path, sb.ToString());
+            var text = sb.ToString();
+
+            var libraryPath = Path.Combine(hub, LiveStatusLibraryRel);
+            Directory.CreateDirectory(Path.GetDirectoryName(libraryPath) ?? hub);
+            File.WriteAllText(libraryPath, text);
+
+            var mirrorAssets = now - _lastAssetsMirrorTime >= MinAssetsMirrorIntervalSeconds ||
+                               (force && now - _lastAssetsMirrorTime >= MinForcedAssetsMirrorIntervalSeconds);
+            if (!mirrorAssets)
+                return;
+
+            _lastAssetsMirrorTime = now;
+            var assetsPath = Path.Combine(hub, LiveStatusRel);
+            Directory.CreateDirectory(Path.GetDirectoryName(assetsPath) ?? hub);
+            try
+            {
+                File.WriteAllText(assetsPath, text);
+            }
+            catch (IOException)
+            {
+                // Unity may have the asset open for import — Library copy remains authoritative.
+            }
         }
     }
 }

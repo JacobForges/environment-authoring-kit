@@ -37,7 +37,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static readonly ArtifactItem[] Artifacts =
         {
-            new("Live status", CaveBuildRunStatusPublisher.LiveStatusRel),
+            new("Live status", CaveBuildRunStatusPublisher.LiveStatusLibraryRel),
             new("Quality report", CaveBuildQualityReport.DefaultExportPath),
             new("Surface quality report", SurfaceTerrainQualityGrader.QualityReportPath),
             new("Phase contracts", CaveBuildPhaseContractRegistry.ContractsExportRel),
@@ -342,13 +342,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (GUILayout.Button("Open Pipeline Console"))
                 CaveBuildPipelineConsoleWindow.Open();
             if (GUILayout.Button("Reveal status file"))
-                RevealRelativeFile(CaveBuildRunStatusPublisher.LiveStatusRel);
+                RevealRelativeFile(CaveBuildRunStatusPublisher.GetLiveStatusReadRel());
             EditorGUILayout.EndHorizontal();
         }
 
         void DrawLiveStatusPreview()
         {
-            var text = LoadFilePreview(CaveBuildRunStatusPublisher.LiveStatusRel, 1800, out var exists, out _);
+            var text = LoadFilePreview(CaveBuildRunStatusPublisher.GetLiveStatusReadRel(), 1800, out var exists, out _);
             EditorGUILayout.LabelField("Last build status (markdown snapshot)", EditorStyles.boldLabel);
             if (!exists)
             {
@@ -360,7 +360,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             EditorGUILayout.TextArea(text, GUILayout.MinHeight(120f));
             if (GUILayout.Button("Reveal full live status file"))
-                RevealRelativeFile(CaveBuildRunStatusPublisher.LiveStatusRel);
+                RevealRelativeFile(CaveBuildRunStatusPublisher.GetLiveStatusReadRel());
         }
 
         void DrawSettingsTab()
@@ -611,7 +611,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (activeNeedsKey && !hasCreds)
                 issues.Add($"Active provider {provider} requires an API key but none is configured.");
 
-            if (!File.Exists(ToAbsolute(CaveBuildRunStatusPublisher.LiveStatusRel)) &&
+            if (!File.Exists(ToAbsolute(CaveBuildRunStatusPublisher.GetLiveStatusReadRel())) &&
                 LavaTubeCaveBuilder.IsBuildInProgress)
             {
                 issues.Add("Build is active but live status file is missing.");

@@ -29,8 +29,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static int _queuedPassesActive;
         static int _progressThrottle;
         static double _sculptWatchdogAt;
+        static double _sculptWatchdogLastWarnAt;
         static int _sculptWatchdogPass;
         static int _sculptWatchdogRow;
+        static bool _sculptWatchdogKickoffDone;
+
+        static double SculptWatchdogStallSeconds =>
+            EnvironmentKitHardwareBudget.Active.ConserveGpuMemory ? 120.0 : 90.0;
 
         public static int ResolvePassCount(int requestedPassCount)
         {
@@ -296,6 +301,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 _queuedPassesActive++;
                 _sculptWatchdogAt = EditorApplication.timeSinceStartup;
+                _sculptWatchdogLastWarnAt = 0;
+                _sculptWatchdogKickoffDone = false;
                 _sculptWatchdogPass = 0;
                 _sculptWatchdogRow = 0;
                 EditorApplication.update -= SculptPassWatchdog;
@@ -325,13 +332,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            if (EditorApplication.timeSinceStartup - _sculptWatchdogAt < 45.0)
+            // Paced sculpt waits on the editor queue — not a stall.
+            if (CaveBuildActionPacing.IsBusy || CaveBuildActionPacing.QueuedCount > 0)
+            {
+                _sculptWatchdogAt = EditorApplication.timeSinceStartup;
+                return;
+            }
+
+            var now = EditorApplication.timeSinceStartup;
+            if (now - _sculptWatchdogAt < SculptWatchdogStallSeconds)
                 return;
 
+            if (now - _sculptWatchdogLastWarnAt < SculptWatchdogStallSeconds)
+                return;
+
+            _sculptWatchdogLastWarnAt = now;
+            _sculptWatchdogAt = now;
             CaveBuildEditorLog.LogSurfaceWarning(
-                "[Surface] Sculpt queue stalled >45s — resetting pass counter and prioritizing remaining rows.");
-            _sculptWatchdogAt = EditorApplication.timeSinceStartup;
-            CaveBuildActionPacing.PreparePipelineChainKickoff();
+                $"[Surface] Sculpt queue idle >{SculptWatchdogStallSeconds:F0}s with empty editor queue — nudging pipeline once.");
+            if (!_sculptWatchdogKickoffDone)
+            {
+                _sculptWatchdogKickoffDone = true;
+                CaveBuildActionPacing.PreparePipelineChainKickoff();
+            }
         }
 
         static void RunQueuedPass(QueuedPassState state)

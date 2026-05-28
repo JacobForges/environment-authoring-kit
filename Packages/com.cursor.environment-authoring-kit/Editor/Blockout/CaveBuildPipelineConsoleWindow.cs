@@ -54,7 +54,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         void DrawRunStatusPanel()
         {
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
-            var path = System.IO.Path.Combine(hub, CaveBuildRunStatusPublisher.LiveStatusRel);
+            var path = System.IO.Path.Combine(hub, CaveBuildRunStatusPublisher.GetLiveStatusReadRel());
             if (!System.IO.File.Exists(path))
             {
                 EditorGUILayout.HelpBox(
