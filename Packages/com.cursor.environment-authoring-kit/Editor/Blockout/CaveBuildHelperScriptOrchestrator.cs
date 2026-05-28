@@ -439,7 +439,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             switch (moment)
             {
                 case Moment.BuildSessionStart:
-                    steps.Add(new ScriptStep("verify-package-tooling.ts", waitMs: 30_000, extraEnvs: BaseEnvs()));
+                    if (!CaveBuildProjectSetup.IsTsxInstalled())
+                        steps.Add(new ScriptStep("verify-package-tooling.ts", waitMs: 30_000, extraEnvs: BaseEnvs()));
                     break;
 
                 case Moment.PreBuildGateComplete:

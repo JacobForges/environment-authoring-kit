@@ -93,10 +93,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Build startup queued — watch progress bar & Pipeline Console.",
                 forceUnityConsole: true);
 
+            CaveBuildPipelineConsoleWindow.Open();
             CaveBuildHelperScriptOrchestrator.Queue(
                 CaveBuildHelperScriptOrchestrator.Moment.BuildSessionStart,
                 CaveBuildHelperScriptOrchestrator.MakeContext(null),
-                (_, _) => ScheduleStep());
+                OnBuildSessionHelpersComplete);
+        }
+
+        static void OnBuildSessionHelpersComplete(bool ok, string message)
+        {
+            if (!ok)
+            {
+                CaveBuildEditorLog.LogCaveWarning("[Startup] Helper scripts failed: " + message);
+                Complete(false);
+                return;
+            }
+
+            CaveBuildEditorLog.LogCave(
+                "[Startup] Tooling check done — continuing scene prep (watch progress bar + Pipeline Console).",
+                forceUnityConsole: true);
+            CaveBuildRunStatusPublisher.SetPhase("startup", "Scene prep & layout roll");
+
+            EditorApplication.delayCall += () =>
+            {
+                if (!_active)
+                    return;
+                ScheduleStep();
+            };
         }
 
         static void ScheduleStep()
@@ -117,7 +140,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            CaveBuildActionPacing.ScheduleHeavy(RunStep, queueLabel);
+            var weight = _step == StartupStep.PrepareScene || _step == StartupStep.LayoutRoll
+                ? CaveBuildActionPacing.ActionWeight.Light
+                : CaveBuildActionPacing.ActionWeight.Heavy;
+            CaveBuildActionPacing.SchedulePipelineFirstStep(RunStep, queueLabel, weight);
         }
 
         static void RunStep()

@@ -195,6 +195,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var stepText = current >= 0 ? $"{current + 1}/{Mathf.Max(1, total)}" : "n/a";
 
             EditorGUILayout.LabelField($"Pipeline: {mode}  |  Step: {stepText}", EditorStyles.boldLabel);
+            if (CaveBuildStartupCoordinator.IsActive)
+            {
+                EditorGUILayout.HelpBox(
+                    "Startup in progress (tooling → scene → surface → cave). Watch the editor progress bar and " +
+                    "Cave Build → Diagnostics → Pipeline Console. First surface pass can take several minutes.",
+                    MessageType.Info);
+            }
+
             EditorGUILayout.Space(4f);
 
             using (new EditorGUI.DisabledScope(inProgress))
