@@ -680,9 +680,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                                 out vegRoot,
                                 out var beginMsg))
                         {
-                            CaveBuildEditorLog.LogSurfaceWarning(
-                                $"[Surface] Props {cat}: {beginMsg}",
-                                forceUnityConsole: true);
+                            CaveBuildEditorLog.LogSurfaceWarning($"[Surface] Props {cat}: {beginMsg}");
                             state.PropPlacementSession = null;
                             state.PropCategoryIndex++;
                             ScheduleSurfacePropCategory(state);
