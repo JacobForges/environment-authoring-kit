@@ -21,6 +21,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _fullPipelineJustFinished = true;
             _postBuildCursorStartedForThisBuild = false;
+            CaveBuildAutomatedFullWorldBootstrap.MarkFullWorldCompletedOnce();
         }
 
         public static bool ShouldSuppressPostBuildCursorInvoke() =>

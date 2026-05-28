@@ -11,10 +11,32 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     /// </summary>
     public static class CaveBuildAutomatedFullWorldBootstrap
     {
+        const string PrefFullWorldCompletedOnce = "CaveBuild_FullWorldCompletedOnce";
+
         /// <summary>Applied to the active build session request (startup + queued pipeline).</summary>
         public static bool SessionActive { get; private set; }
 
         public static int SessionDemSupersampleDim { get; private set; } = 128;
+
+        /// <summary>First-time / empty-scene builds get AAA-style invalidate without a separate button.</summary>
+        public static bool ShouldAutoInvalidateEntireLadder(SceneGroundInfo ground)
+        {
+            if (!EditorPrefs.GetBool(PrefFullWorldCompletedOnce, false))
+                return true;
+            if (!CaveBuildPhaseContractRegistry.HasPlayableCaveLayoutInScene())
+                return true;
+            return false;
+        }
+
+        public static void MarkFullWorldCompletedOnce()
+        {
+            if (EditorPrefs.GetBool(PrefFullWorldCompletedOnce, false))
+                return;
+            EditorPrefs.SetBool(PrefFullWorldCompletedOnce, true);
+            CaveBuildEditorLog.LogCave(
+                "First FullWorld completed — later builds may reuse incremental ladder steps unless you use Full AAA Rebuild.",
+                forceUnityConsole: true);
+        }
 
         /// <summary>
         /// FullWorld automated prep: preset, preflight, ladder hygiene, enhancement session flags.
@@ -54,20 +76,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return false;
             }
 
-            if (invalidateEntireLadder)
+            var fullInvalidate = invalidateEntireLadder || ShouldAutoInvalidateEntireLadder(ground);
+            if (fullInvalidate)
+            {
                 CaveBuildPhaseContractRegistry.InvalidateAll();
-            else if (!CaveBuildPhaseContractRegistry.HasPlayableCaveLayoutInScene() ||
-                     !CaveBuildPhaseContractRegistry.IsRungComplete(
+                if (!invalidateEntireLadder)
+                {
+                    CaveBuildEditorLog.LogCave(
+                        "[CaveBuild] First run or empty scene — cleared incremental cache automatically " +
+                        "(same as Full AAA Rebuild; use Build Complete Cave only).",
+                        forceUnityConsole: true);
+                }
+            }
+            else if (!CaveBuildPhaseContractRegistry.IsRungComplete(
                          CaveBuildPhaseContractRegistry.RungCaveLayout,
                          layoutSeed))
             {
                 CaveBuildPhaseContractRegistry.InvalidateCaveGeometryLadderRungs();
-                if (!CaveBuildPhaseContractRegistry.HasPlayableCaveLayoutInScene())
-                {
-                    Debug.LogWarning(
-                        "[CaveBuild] Scene has no full cave (blocks/shell/tube) — cave_layout ladder invalidated; " +
-                        "queued geo will rebuild underground layout.");
-                }
             }
 
             SessionActive = true;

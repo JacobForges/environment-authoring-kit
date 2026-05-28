@@ -53,6 +53,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         CaveBuildCursorSettings _settings;
         UnityEditor.Editor _settingsEditor;
         bool _showAdvancedSettings;
+        bool _showRecoveryBuild;
         string _apiKey;
         string _googleApiKey;
         string _anthropicApiKey;
@@ -209,6 +210,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     MessageType.Info);
             }
 
+            if (!inProgress)
+            {
+                EditorGUILayout.HelpBox(
+                    "Start here: Build Complete Cave (120). Works on a fresh empty scene with no API keys — " +
+                    "you do not need Full AAA Rebuild first (first run clears cache automatically).",
+                    MessageType.Info);
+            }
+
             EditorGUILayout.Space(4f);
 
             using (new EditorGUI.DisabledScope(inProgress))
@@ -222,14 +231,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene);
                 EditorGUILayout.EndHorizontal();
 
-                if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
-                    DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
+                _showRecoveryBuild = EditorGUILayout.Foldout(
+                    _showRecoveryBuild,
+                    "Stuck or half-built? Force full rebuild (AAA)");
+                if (_showRecoveryBuild)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Only if a normal build stopped mid-way or reuses bad geometry. Same 120 steps as above, " +
+                        "but always clears incremental cache.",
+                        MessageType.None);
+                    if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
+                        DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
+                }
             }
-
-            EditorGUILayout.HelpBox(
-                "Full AAA Rebuild = same 120-step FullWorld as above, but clears incremental ladder cache " +
-                "(forces fresh geo + surface). Use when a normal build reuses stale steps or the scene is half-built.",
-                MessageType.None);
 
             EditorGUILayout.Space(8f);
             EditorGUILayout.BeginHorizontal();

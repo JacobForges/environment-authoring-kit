@@ -55,11 +55,11 @@ See [consumer README](../../README.md#first-build-after-clone).
 
 ## Quick start
 
-1. **Build Complete Cave Level (Active Scene)** (setup runs automatically if needed).
+1. **Hub → Build Complete Cave (120)** (or menu **Build Complete Cave Level**) — first run on an empty scene is enough; cache clears automatically.
 2. Watch **Diagnostics → Pipeline Console** until **120/120**.
-5. Optional: **Cave Build Grader** + automation ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
+3. Optional: **Cave Build Grader** + automation ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
 
-Ramp-only / no tunnels? **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.
+**Full AAA Rebuild** is only for recovery (build stopped halfway or stale geometry) — under Hub → **Stuck or half-built?**
 
 ---
 
@@ -74,7 +74,7 @@ All under **Window → Environment Kit**:
 | **Build Surface World Only (Active Scene)** | `SurfaceOnly` | Surface / terrain ladder only |
 | **Build Cave Only — Align to Surface (Active Scene)** | `CaveOnly` | Underground only |
 | **Rebuild Complete Cave (MainScene)** | `FullWorld` | Opens **`MainScene`** if it exists in **your** project, then full build |
-| **Build Complete Cave — Full AAA Rebuild (invalidate ladder)** | `FullWorld` | Clears incremental cache; forces full geo + surface |
+| **Build Complete Cave — Full AAA Rebuild** (Advanced / Hub recovery foldout) | `FullWorld` | Recovery only — always clears incremental cache |
 | **Build Layout Prototype (Interview)** | prototype | Fast maze preview — not shipping quality |
 | **Terrain Build Grader** / **Cave Build Grader** | — | Surface / cave quality reports |
 
