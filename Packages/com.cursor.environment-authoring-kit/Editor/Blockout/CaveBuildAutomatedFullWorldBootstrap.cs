@@ -34,15 +34,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!string.IsNullOrEmpty(setupLog))
                 Debug.Log("[CaveBuild] " + setupLog.Replace("\n", "\n[CaveBuild] "));
 
-            if (CaveBuildCursorSettings.HasCredentialsForActiveProvider())
-            {
-                CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
-                EnsureAutomatedAgentInvokesEnabled();
-            }
-            else
-            {
-                CaveBuildOutOfBoxPreset.Apply(savePrefs: true);
-            }
+            CaveBuildSessionPreset.ApplyAutomaticForFullWorld();
 
             var request = new WorldGenerationRequest
             {
@@ -115,37 +107,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         public static void ClearSession() => SessionActive = false;
-
-        /// <summary>Enable agent invokes when credentials exist; otherwise stay procedural-only.</summary>
-        static void EnsureAutomatedAgentInvokesEnabled()
-        {
-            var settings = CaveBuildCursorSettings.LoadOrCreate();
-            settings.LoadFromPrefs();
-
-            if (!CaveBuildCursorSettings.HasCredentialsForActiveProvider())
-            {
-                settings.suppressMeatLoopCursorInvokes = true;
-                settings.autoInvokeEachMeatLoopPass = false;
-                settings.autoInvokeTerrainAfterSurfaceBuild = false;
-                settings.autoInvokePreBuildWorkflow = false;
-                settings.preBuildReloopUntilPass = false;
-                settings.invokeCursorOnResearchPhase = false;
-                settings.SaveToPrefs();
-                EditorUtility.SetDirty(settings);
-                Debug.LogWarning(
-                    "[CaveBuild] No credentials for active AI provider — FullWorld runs procedural steps only. " +
-                    "Hub → Apply Offline (No API) preset, or set provider + keys / local Ollama.");
-                return;
-            }
-
-            settings.suppressMeatLoopCursorInvokes = false;
-            settings.autoInvokeEachMeatLoopPass = true;
-            settings.autoInvokeTerrainAfterSurfaceBuild = true;
-            settings.autoRebuildSurfaceAfterTerrainAgent = false;
-            settings.invokeCursorOnResearchPhase = true;
-            settings.SaveToPrefs();
-            EditorUtility.SetDirty(settings);
-        }
     }
 }
 #endif

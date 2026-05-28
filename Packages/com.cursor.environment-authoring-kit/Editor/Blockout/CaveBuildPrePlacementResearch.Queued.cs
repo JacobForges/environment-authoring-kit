@@ -27,6 +27,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            if (request != null &&
+                CaveBuildSessionPreset.AllowProceduralTerrainWithoutResearch &&
+                !CaveBuildResearchCacheBridge.HasUsableLocalResearchCache() &&
+                TryPassProceduralResearchFallback(
+                    additiveSurface,
+                    request.Seed,
+                    "skipped network research — fresh clone",
+                    out var proceduralMsg))
+            {
+                onComplete(true, proceduralMsg);
+                return;
+            }
+
             var state = new QueuedResearchState
             {
                 Request = request,
@@ -212,6 +225,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     {
                         if (!CaveBuildResearchCacheBridge.HasUsableLocalResearchCache())
                         {
+                            if (TryPassProceduralResearchFallback(additiveSurface, seed, message, out message))
+                                return true;
+
                             WriteGate(false, message, additiveSurface, seed);
                             CaveBuildRunStatusPublisher.SetResearchPhase(
                                 message,
@@ -244,6 +260,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     {
                         if (!CaveBuildResearchCacheBridge.HasLocalFloridaHillshades())
                         {
+                            if (TryPassProceduralResearchFallback(
+                                    additiveSurface,
+                                    seed,
+                                    accumulatedMessage + " | hillshades: " + message,
+                                    out message))
+                                return true;
+
                             WriteGate(false, accumulatedMessage + " | hillshades: " + message, additiveSurface, seed);
                             CaveBuildRunStatusPublisher.SetResearchPhase(
                                 message,
@@ -271,6 +294,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     {
                         if (!CaveBuildResearchCacheBridge.HasUsableLocalResearchCache())
                         {
+                            if (TryPassProceduralResearchFallback(
+                                    additiveSurface,
+                                    seed,
+                                    accumulatedMessage + " | catalog: " + message,
+                                    out message))
+                                return true;
+
                             WriteGate(false, accumulatedMessage + " | catalog: " + message, additiveSurface, seed);
                             CaveBuildRunStatusPublisher.SetResearchPhase(
                                 message,

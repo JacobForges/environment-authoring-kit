@@ -73,6 +73,41 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            void QueueResearchThenBuild()
+            {
+                CaveBuildPrePlacementResearch.QueueRunBeforeAnyPlacement(
+                    ground,
+                    request,
+                    !replaceSurface,
+                    (researchOk, researchMsg) =>
+                    {
+                        if (!researchOk)
+                        {
+                            var fail = new SurfaceWorldBuildReport { Success = false, Message = researchMsg };
+                            CaveBuildSurfaceCompletionGate.MarkSurfacePipelineFailed(request);
+                            onComplete?.Invoke(fail);
+                            return;
+                        }
+
+                        if (!string.IsNullOrEmpty(researchMsg))
+                            Debug.Log("[CaveBuild] " + researchMsg);
+
+                        QueueSurfaceWorldBuildAfterResearch(ground, request, replaceSurface, onComplete);
+                    });
+            }
+
+            var skipNetworkResearchHelpers =
+                CaveBuildSessionPreset.AllowProceduralTerrainWithoutResearch &&
+                !CaveBuildResearchCacheBridge.HasUsableLocalResearchCache();
+            if (skipNetworkResearchHelpers)
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[Startup] No API / no ResearchCache — skipping tsx research sync; procedural terrain.",
+                    forceUnityConsole: true);
+                QueueResearchThenBuild();
+                return;
+            }
+
             var helperCtx = CaveBuildHelperScriptOrchestrator.MakeContext(request);
             helperCtx.PhaseId = "research";
             helperCtx.Rung = "terrain_integration";
@@ -94,27 +129,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         return;
                     }
 
-                    CaveBuildPrePlacementResearch.QueueRunBeforeAnyPlacement(
-                        ground,
-                        request,
-                        !replaceSurface,
-                        (researchOk, researchMsg) =>
-                        {
-                            if (!researchOk)
-                            {
-                                var fail = new SurfaceWorldBuildReport { Success = false, Message = researchMsg };
-                                CaveBuildSurfaceCompletionGate.MarkSurfacePipelineFailed(request);
-                                onComplete?.Invoke(fail);
-                                return;
-                            }
+                    if (!string.IsNullOrEmpty(helperMsg))
+                        Debug.Log("[CaveBuild] " + helperMsg);
 
-                            if (!string.IsNullOrEmpty(helperMsg))
-                                Debug.Log("[CaveBuild] " + helperMsg);
-                            if (!string.IsNullOrEmpty(researchMsg))
-                                Debug.Log("[CaveBuild] " + researchMsg);
-
-                            QueueSurfaceWorldBuildAfterResearch(ground, request, replaceSurface, onComplete);
-                        });
+                    QueueResearchThenBuild();
                 });
         }
 

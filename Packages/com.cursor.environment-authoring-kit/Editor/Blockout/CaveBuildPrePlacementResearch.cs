@@ -78,7 +78,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 if (!CaveBuildResearchCacheBridge.HasUsableLocalResearchCache())
                 {
-                    message = "Pre-placement research sync failed: " + syncMsg;
+                    if (TryPassProceduralResearchFallback(additiveSurface, seed, syncMsg, out message))
+                        return true;
+
                     WriteGate(false, message, additiveSurface, seed);
                     CaveBuildRunStatusPublisher.SetResearchPhase(
                         message,
@@ -106,6 +108,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 message,
                 CaveBuildRunStatusPublisher.ResearchGateState.Passed);
             Debug.Log("[CaveBuild] Pre-placement research gate PASSED — placement may begin.");
+            return true;
+        }
+
+        internal static bool TryPassProceduralResearchFallback(
+            bool additiveSurface,
+            int seed,
+            string reason,
+            out string message)
+        {
+            message = string.Empty;
+            if (!CaveBuildSessionPreset.AllowProceduralTerrainWithoutResearch)
+                return false;
+
+            message =
+                "Procedural terrain (no API, no ResearchCache) — Florida/DEM defaults. " +
+                (string.IsNullOrEmpty(reason) ? "" : reason);
+            WriteGate(true, message, additiveSurface, seed);
+            CaveBuildRunStatusPublisher.SetResearchPhase(
+                message,
+                CaveBuildRunStatusPublisher.ResearchGateState.Passed);
+            Debug.LogWarning("[CaveBuild] Pre-placement research: " + message);
             return true;
         }
 

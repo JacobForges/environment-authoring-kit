@@ -9,7 +9,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     {
         public const string ProfileId = "offline_no_api";
 
-        public static void Apply(bool savePrefs = true)
+        public static void Apply(bool savePrefs = true, bool log = true)
         {
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
@@ -35,9 +35,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 settings.SaveToPrefs();
 
             CaveBuildEnhancementRunner.ExportCatalogJson();
-            Debug.Log(
-                "[CaveBuild] Offline / no-API preset — 120-step procedural pipeline only (no grade-and-fix agent). " +
-                "For local LLM grading use Hub → Active provider → Local Ollama + run Ollama on your machine.");
+            if (log)
+            {
+                Debug.Log(
+                    "[CaveBuild] Offline / no-API preset — 120-step procedural pipeline only (no grade-and-fix agent). " +
+                    "For local LLM grading use Hub → Active provider → Local Ollama + run Ollama on your machine.");
+            }
         }
     }
 }

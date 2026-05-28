@@ -195,6 +195,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var stepText = current >= 0 ? $"{current + 1}/{Mathf.Max(1, total)}" : "n/a";
 
             EditorGUILayout.LabelField($"Pipeline: {mode}  |  Step: {stepText}", EditorStyles.boldLabel);
+            var aiNote = CaveBuildSessionPreset.HasUsableAiProvider
+                ? $"AI: {CaveBuildCursorSettings.ResolveActiveProvider()} (grading enabled when steps need it)"
+                : CaveBuildSessionPreset.HasLocalResearchCache
+                    ? "AI: none — procedural build + on-disk research data"
+                    : "AI: none — procedural build only (import ResearchCache optional)";
+            EditorGUILayout.LabelField(aiNote, EditorStyles.miniLabel);
             if (CaveBuildStartupCoordinator.IsActive)
             {
                 EditorGUILayout.HelpBox(
@@ -216,16 +222,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene);
                 EditorGUILayout.EndHorizontal();
 
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
+                if (GUILayout.Button("Full AAA Rebuild (invalidate ladder)", GUILayout.Height(24f)))
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
-                if (GUILayout.Button("Apply MacBook Air Budget", GUILayout.Height(24f)))
-                    DeferGuiAction(LavaTubeCaveBuilder.ApplyMacBookAirHardwareBudgetMenu);
-                if (GUILayout.Button("Out-of-Box (No API)", GUILayout.Height(24f)))
-                    DeferGuiAction(() => CaveBuildOutOfBoxPreset.Apply(savePrefs: true));
-                if (GUILayout.Button("FullWorld + AI", GUILayout.Height(24f)))
-                    DeferGuiAction(() => CaveBuildReliableFullWorldPreset.Apply(savePrefs: true));
-                EditorGUILayout.EndHorizontal();
             }
 
             EditorGUILayout.Space(8f);

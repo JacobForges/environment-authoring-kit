@@ -553,9 +553,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void AdvancePastPreBuildGate()
         {
-            CaveBuildHelperScriptOrchestrator.Queue(
-                CaveBuildHelperScriptOrchestrator.Moment.PreBuildGateComplete,
-                CaveBuildHelperScriptOrchestrator.MakeContext(_request));
+            if (CaveBuildSessionPreset.HasUsableAiProvider)
+            {
+                CaveBuildHelperScriptOrchestrator.Queue(
+                    CaveBuildHelperScriptOrchestrator.Moment.PreBuildGateComplete,
+                    CaveBuildHelperScriptOrchestrator.MakeContext(_request));
+            }
+            else
+            {
+                CaveBuildEditorLog.LogCave(
+                    "[Startup] No API — skipping pre-build prompt exports, continuing to cave pipeline.",
+                    forceUnityConsole: true);
+            }
 
             if (CaveBuildAaaProductionBootstrap.IsFullProductionBuild(_pending.SurfaceScope, _pending.LayoutPrototype))
                 CaveBuildAaaProductionBootstrap.OnPreBuildGatePassed(_roll.Seed);

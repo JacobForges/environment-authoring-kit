@@ -12,9 +12,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     {
         public const string ProfileId = "out_of_box";
 
-        public static void Apply(bool savePrefs = true)
+        public static void Apply(bool savePrefs = true, bool log = true)
         {
-            CaveBuildOfflineNoApiPreset.Apply(savePrefs: false);
+            CaveBuildOfflineNoApiPreset.Apply(savePrefs: false, log: false);
 
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
@@ -28,9 +28,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 settings.SaveToPrefs();
 
             CaveBuildEnhancementRunner.ExportCatalogJson();
-            Debug.Log(
-                "[CaveBuild] Out-of-box preset — FullWorld runs procedurally to 120/120 with no API keys. " +
-                "Optional: Hub → Active provider (Ollama/Gemini/etc.) + keys for AI grading passes.");
+            if (log)
+            {
+                Debug.Log(
+                    "[CaveBuild] Out-of-box preset — FullWorld runs procedurally to 120/120 with no API keys. " +
+                    "Optional: Hub → Active provider (Ollama/Gemini/etc.) + keys for AI grading passes.");
+            }
         }
     }
 }
