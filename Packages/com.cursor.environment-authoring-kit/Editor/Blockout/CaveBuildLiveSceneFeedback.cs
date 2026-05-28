@@ -38,11 +38,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             get
             {
                 RefreshSettingsCacheIfNeeded();
-                return _enabledCached;
+                return _enabledCached || _sessionActive;
             }
         }
 
         public static bool SessionActive => _sessionActive && Enabled;
+
+        /// <summary>Pushes terrain/scene changes to Scene view and Game view without blocking the editor.</summary>
+        public static void FlushWorldView(Terrain terrain = null)
+        {
+            if (!Enabled && !_sessionActive)
+                return;
+
+            if (terrain != null)
+                terrain.Flush();
+
+            EditorApplication.QueuePlayerLoopUpdate();
+            _lastRepaintAt = 0;
+            SceneView.RepaintAll();
+        }
 
         public static void BeginBuildSession()
         {
