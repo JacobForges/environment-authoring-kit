@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -75,16 +76,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var upgraded = 0;
-            var guids = AssetDatabase.FindAssets("t:Material", new[] { PackRoot });
-            foreach (var guid in guids)
+            var searched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var root in LavaTubePrefabCatalog.GetModuleAssetRoots())
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-                if (mat == null)
+                if (!searched.Add(root))
                     continue;
 
-                if (UpgradeMaterial(mat, urpLit))
-                    upgraded++;
+                var guids = AssetDatabase.FindAssets("t:Material", new[] { root });
+                foreach (var guid in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                    if (mat == null)
+                        continue;
+
+                    if (UpgradeMaterial(mat, urpLit))
+                        upgraded++;
+                }
             }
 
             if (upgraded > 0)
@@ -204,8 +212,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (string.IsNullOrEmpty(baseName))
                 return null;
 
-            var path = $"{PackRoot}/Texture/T_{baseName}{suffix}.png";
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            foreach (var root in LavaTubePrefabCatalog.GetModuleAssetRoots())
+            {
+                var candidates = new[]
+                {
+                    $"{root}/Texture/T_{baseName}{suffix}.png",
+                    $"{root}/Textures/T_{baseName}{suffix}.png",
+                    $"{root}/Material/T_{baseName}{suffix}.png",
+                    $"{root}/Materials/T_{baseName}{suffix}.png",
+                    $"{PackRoot}/Texture/T_{baseName}{suffix}.png",
+                };
+
+                foreach (var path in candidates)
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                    if (tex != null)
+                        return tex;
+                }
+            }
+
+            return null;
         }
 
         static string MaterialNameToTextureBase(string materialName)

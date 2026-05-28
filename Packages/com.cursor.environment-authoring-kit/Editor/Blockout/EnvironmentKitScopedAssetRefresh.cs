@@ -102,6 +102,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static int ImportMaterialsPackNow()
         {
             var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var root in LavaTubePrefabCatalog.GetModuleAssetRoots())
+                CollectAssetsUnder(root, "t:Material", paths);
             CollectAssetsUnder(LavaTubeMaterialUpgrader.PackRoot, "t:Material", paths);
             CollectAssetsUnder(LavaTubePrefabCatalog.MaterialsRoot, "t:Material", paths);
 

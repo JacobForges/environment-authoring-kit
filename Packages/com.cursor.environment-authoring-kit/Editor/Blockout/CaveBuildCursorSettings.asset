@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dad05a3fedb4a490d86cf1a30d6436f1, type: 3}
   m_Name: CaveBuildCursorSettings
   m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor::EnvironmentAuthoringKit.Editor.Blockout.CaveBuildCursorSettings
-  hubProjectRoot: /Users/jacob/Hub
+  hubProjectRoot: 
   nodeExecutablePath: 
   nodeBinDirectory: 
   modelId: auto

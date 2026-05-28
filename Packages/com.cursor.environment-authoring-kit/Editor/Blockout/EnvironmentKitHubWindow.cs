@@ -250,8 +250,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Type paths or drag folders from the Project window onto the fields below (hold multiple drops to add with ;). " +
-                "Preflight needs floor, wall, and ceiling modules in the first field. " +
+                "Drag any licensed environment module folder from Project (floors/walls/ceilings — any naming). " +
+                "Kit classifies by name + mesh shape, upgrades materials under that pack to URP, and fills missing roles when possible. " +
                 "Default if empty: Assets/BillemotdonggulLavaTubePack/Prefabs/",
                 MessageType.None);
             _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
@@ -260,7 +260,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
             {
                 SavePrefabFolderPrefs();
-                LavaTubePrefabCatalog.Load(forceRefresh: true);
+                RefreshModulePrefabCatalogAndMaterials();
             }
 
             _showApiKey = EditorGUILayout.Toggle("Show API key", _showApiKey);
@@ -304,6 +304,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
                 _settings.SaveToPrefs();
                 SavePrefabFolderPrefs();
+                RefreshModulePrefabCatalogAndMaterials();
                 EditorUtility.SetDirty(_settings);
                 AssetDatabase.SaveAssets();
             }
@@ -681,6 +682,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EnvironmentKitSettings.CaveLavaPrefabFolders = _caveLavaFolders;
             EnvironmentKitSettings.CavePropPrefabFolders = _cavePropFolders;
             EnvironmentKitSettings.CaveScanAllAssets = _caveScanAllAssets;
+        }
+
+        static void RefreshModulePrefabCatalogAndMaterials()
+        {
+            var catalog = LavaTubePrefabCatalog.Load(forceRefresh: true);
+            LavaTubeMaterialUpgrader.UpgradeAllPackMaterials();
+            EnvironmentKitScopedAssetRefresh.ImportMaterialsPackNow();
+            if (!catalog.IsValid)
+                Debug.LogWarning(
+                    "[EnvironmentKit] Prefab catalog missing floor/wall/ceiling — check Console for [CaveCatalog] counts.");
         }
     }
 }

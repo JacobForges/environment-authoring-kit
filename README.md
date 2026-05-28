@@ -48,9 +48,9 @@ Default scan path if Hub fields are empty:
 
 `Assets/BillemotdonggulLavaTubePack/Prefabs/`
 
-You need **floor, wall, and ceiling** module prefabs there (or set your own paths). Without them, preflight **blocks** with *Prefab catalog empty*.
+You need **floor, wall, and ceiling** module prefabs (any pack naming — the kit classifies by keywords and mesh shape). Without them, preflight **blocks** on the catalog check.
 
-Import your licensed packs into `Assets/`, then **Hub → Settings → Prefab folders** → **Prefab folders for environment modules** / **Prefab folders for props** → **Save Hub Settings**. Same fields on **Window → Environment Kit**.
+Import your licensed packs into `Assets/`, then **Hub → Settings → Prefab folders** → drag your module folder onto **Prefab folders for environment modules** → **Save Hub Settings** → **Refresh prefab catalog**. Materials under that pack are upgraded to URP automatically. Set **Hub project root** to this Unity project folder so `Generated/` reports land here, not another clone.
 
 ### After setup
 

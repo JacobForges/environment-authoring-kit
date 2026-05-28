@@ -179,7 +179,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (mat != null)
             {
                 var path = AssetDatabase.GetAssetPath(mat);
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(LavaTubeMaterialUpgrader.PackRoot))
+                if (!string.IsNullOrEmpty(path) &&
+                    (LavaTubePrefabCatalog.IsUnderModuleAssetRoots(path) ||
+                     path.StartsWith(LavaTubeMaterialUpgrader.PackRoot, System.StringComparison.Ordinal)))
                 {
                     if (LavaTubeMaterialUpgrader.IsBrokenMaterial(mat))
                         LavaTubeMaterialUpgrader.UpgradeMaterial(mat, urpLit);
@@ -240,19 +242,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (string.IsNullOrEmpty(id))
                 return null;
 
-            var candidates = new[]
+            foreach (var root in LavaTubePrefabCatalog.GetModuleAssetRoots())
             {
-                $"{LavaTubeMaterialUpgrader.PackRoot}/Material/MI_{id}.mat",
-                $"{LavaTubeMaterialUpgrader.PackRoot}/Mesh/Materials/MI_{id}.mat",
-                $"{LavaTubeMaterialUpgrader.PackRoot}/Material/M_{id}.mat",
-                $"{LavaTubeMaterialUpgrader.PackRoot}/Mesh/Materials/M_{id}.mat"
-            };
+                var candidates = new[]
+                {
+                    $"{root}/Material/MI_{id}.mat",
+                    $"{root}/Materials/MI_{id}.mat",
+                    $"{root}/Mesh/Materials/MI_{id}.mat",
+                    $"{root}/Material/M_{id}.mat",
+                    $"{root}/Materials/M_{id}.mat",
+                    $"{root}/Mesh/Materials/M_{id}.mat",
+                    $"{LavaTubeMaterialUpgrader.PackRoot}/Material/MI_{id}.mat",
+                    $"{LavaTubeMaterialUpgrader.PackRoot}/Mesh/Materials/MI_{id}.mat",
+                };
 
-            foreach (var path in candidates)
-            {
-                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-                if (mat != null)
-                    return mat;
+                foreach (var path in candidates)
+                {
+                    var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                    if (mat != null)
+                        return mat;
+                }
             }
 
             return null;

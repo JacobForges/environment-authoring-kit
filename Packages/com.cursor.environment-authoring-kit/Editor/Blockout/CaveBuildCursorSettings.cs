@@ -44,7 +44,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const string PrefQueuedStepTimeoutSeconds = "CaveBuild_QueuedStepTimeoutSeconds";
 
         [Tooltip("Unity project root (Hub repo) for Cursor SDK local cwd.")]
-        public string hubProjectRoot = "/Users/jacob/Hub";
+        public string hubProjectRoot = "";
 
         [Tooltip("Optional full path to node binary (e.g. /usr/local/bin/node). Leave empty to auto-detect.")]
         public string nodeExecutablePath = "";

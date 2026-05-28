@@ -56,7 +56,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var catalog = LavaTubePrefabCatalog.Load();
             Add(list, "prefab_catalog", "Environment module prefab catalog", catalog.IsValid ? Severity.Pass : Severity.Block,
-                catalog.IsValid ? "Catalog valid." : "Prefab catalog empty — add module folders in Hub → Settings → Prefab folders.");
+                catalog.IsValid
+                    ? $"Catalog valid ({catalog.Floors.Count} floor, {catalog.Walls.Count} wall, {catalog.Ceilings.Count} ceiling)."
+                    : "Need module prefabs with floor + wall + ceiling (any pack) in Hub → Prefab folders for environment modules.");
 
             Add(list, "phased_build", "Phased cave build enabled",
                 settings.usePhasedCaveBuild ? Severity.Pass : Severity.Block,
