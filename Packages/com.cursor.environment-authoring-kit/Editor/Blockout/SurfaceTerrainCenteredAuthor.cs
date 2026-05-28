@@ -385,7 +385,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!passFinished && LivePreviewEachRowChunk && state.PassRowStart > 0)
             {
                 state.FlushCommitRows(rowBandStart, state.PassRowStart);
-                CaveBuildLiveSceneFeedback.FlushWorldView(state.Terrain);
+                CaveBuildLiveSceneFlushUtility.FlushWorldView(state.Terrain);
             }
 
             if (passFinished)
@@ -499,7 +499,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var yEnd = Mathf.Min(state.Res, state.CommitRowStart + chunk);
             state.FlushCommitRows(state.CommitRowStart, yEnd);
             state.CommitRowStart = yEnd;
-            CaveBuildLiveSceneFeedback.FlushWorldView(state.Terrain);
+            CaveBuildLiveSceneFlushUtility.FlushWorldView(state.Terrain);
 
             if (state.CommitRowStart < state.Res)
             {

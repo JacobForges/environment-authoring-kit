@@ -16,7 +16,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const int PingEveryNthPlacement = 5;
         const double MinRepaintIntervalSeconds = 0.12;
         const double MinRepaintIntervalIdleSeconds = 0.6;
-        const double MinFlushIntervalSeconds = 0.18;
         const double SettingsRefreshSeconds = 2.0;
 
         static string _banner = string.Empty;
@@ -28,7 +27,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool _enabledCached = true;
         static bool _allowCameraHijackCached = true;
         static double _nextSettingsRefreshAt;
-        static double _lastFlushAt;
 
         static CaveBuildLiveSceneFeedback()
         {
@@ -47,22 +45,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static bool SessionActive => _sessionActive && Enabled;
 
         /// <summary>Pushes terrain/scene changes to Scene view and Game view without blocking the editor.</summary>
-        public static void FlushWorldView(Terrain terrain = null)
-        {
-            if (!Enabled && !_sessionActive)
-                return;
-
-            var now = EditorApplication.timeSinceStartup;
-            if (now - _lastFlushAt < MinFlushIntervalSeconds)
-                return;
-            _lastFlushAt = now;
-
-            if (terrain != null)
-                terrain.Flush();
-
-            EditorApplication.QueuePlayerLoopUpdate();
-            RepaintViews();
-        }
+        public static void FlushWorldView(Terrain terrain = null) =>
+            CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
 
         public static void BeginBuildSession()
         {

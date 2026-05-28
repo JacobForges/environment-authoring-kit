@@ -338,7 +338,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 placedThisChunk++;
 
                 if (session.Placed % 6 == 0)
-                    CaveBuildLiveSceneFeedback.FlushWorldView(terrain);
+                    CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
             }
 
             if (session.Placed < session.MaxCount && session.Cursor >= slots.Count)
@@ -459,7 +459,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             message =
                 $"Placed {session.Placed}/{session.MaxCount} {category} on {session.TileCount} terrain(s) " +
                 $"({tilesAtMin}/{session.PerTileCounts.Count} tiles at ≥{minPerTile} each).";
-            CaveBuildLiveSceneFeedback.FlushWorldView(terrain);
+            CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
             return session.Placed > 0;
         }
 

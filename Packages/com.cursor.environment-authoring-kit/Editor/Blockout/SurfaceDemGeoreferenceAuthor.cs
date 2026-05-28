@@ -505,7 +505,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var yEnd = Mathf.Min(session.Res, session.CommitRowY + chunk);
             FlushHeightRows(session, session.CommitRowY, yEnd);
             session.CommitRowY = yEnd;
-            CaveBuildLiveSceneFeedback.FlushWorldView(session.Terrain);
+            CaveBuildLiveSceneFlushUtility.FlushWorldView(session.Terrain);
 
             if (session.CommitRowY < session.Res)
             {
