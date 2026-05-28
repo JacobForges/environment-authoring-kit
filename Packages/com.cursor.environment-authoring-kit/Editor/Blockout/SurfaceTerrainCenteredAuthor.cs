@@ -19,7 +19,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Push sculpted rows to Terrain after each pass so Scene view updates (not only at end).</summary>
         const bool PreviewEachPassOnTerrain = true;
         /// <summary>Upload each row band during a pass so sculpt changes are visible while the pass runs.</summary>
-        const bool LivePreviewEachRowChunk = false;
+        const bool LivePreviewEachRowChunk = true;
         /// <summary>Outer-band hydro only — kept outside playable grader annulus (0.08–0.72× extent).</summary>
         const float SculptWaterBowlAmplitude = 0.00035f;
         const float SculptRoadCutAmplitude = 0.025f;
@@ -385,7 +385,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!passFinished && LivePreviewEachRowChunk && state.PassRowStart > 0)
             {
                 state.FlushCommitRows(rowBandStart, state.PassRowStart);
-                EditorApplication.QueuePlayerLoopUpdate();
+                CaveBuildLiveSceneFeedback.FlushWorldView(state.Terrain);
             }
 
             if (passFinished)
@@ -499,6 +499,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var yEnd = Mathf.Min(state.Res, state.CommitRowStart + chunk);
             state.FlushCommitRows(state.CommitRowStart, yEnd);
             state.CommitRowStart = yEnd;
+            CaveBuildLiveSceneFeedback.FlushWorldView(state.Terrain);
 
             if (state.CommitRowStart < state.Res)
             {

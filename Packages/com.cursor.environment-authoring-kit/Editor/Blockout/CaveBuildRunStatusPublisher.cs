@@ -250,7 +250,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var liveLabel = $"{CaveBuildPipelineDomains.CaveLive} Step {step + 1}/{total}: {label}";
-            CaveBuildLiveSceneFeedback.NotifyStep(liveLabel, focus, frameScene: step % 3 == 0);
+            CaveBuildLiveSceneFeedback.NotifyStep(liveLabel, focus, frameScene: true);
         }
 
         public static void SetPhase(string phase, string detail)

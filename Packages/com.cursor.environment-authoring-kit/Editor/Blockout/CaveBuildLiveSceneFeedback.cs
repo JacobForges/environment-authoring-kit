@@ -13,8 +13,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     static class CaveBuildLiveSceneFeedback
     {
         const double BannerSeconds = 12.0;
-        const int PingEveryNthPlacement = 20;
-        const double MinRepaintIntervalSeconds = 0.6;
+        const int PingEveryNthPlacement = 5;
+        const double MinRepaintIntervalSeconds = 0.12;
+        const double MinRepaintIntervalIdleSeconds = 0.6;
         const double SettingsRefreshSeconds = 2.0;
 
         static string _banner = string.Empty;
@@ -83,7 +84,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     TryFrameBuildArea();
             }
 
-            RepaintViews();
+            FlushWorldView();
             if (!label.StartsWith("[", System.StringComparison.Ordinal))
                 label = CaveBuildPipelineDomains.CaveLive + " " + label;
             CaveBuildEditorLog.LogLiveStep(label);
@@ -95,15 +96,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             _placementSerial++;
-            var showPing = _placementSerial <= 4 || _placementSerial % PingEveryNthPlacement == 0;
-            if (!showPing)
-            {
-                RepaintViews();
-                return;
-            }
-
-            // Non-intrusive live mode: never steal selection/camera during active build.
-            // This keeps user camera controls responsive while the build is running.
+            var showPing = _placementSerial <= 12 || _placementSerial % PingEveryNthPlacement == 0;
 
             _banner = $"Placed {kind}";
             _subBanner = instance.name;
@@ -161,7 +154,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static void RepaintViews()
         {
             var now = EditorApplication.timeSinceStartup;
-            if (now - _lastRepaintAt < MinRepaintIntervalSeconds)
+            var minInterval = _sessionActive ? MinRepaintIntervalSeconds : MinRepaintIntervalIdleSeconds;
+            if (now - _lastRepaintAt < minInterval)
                 return;
             _lastRepaintAt = now;
 

@@ -19,7 +19,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             settings.editorQueueBatchSize = 1;
-            settings.showLiveScenePlacement = false;
+            settings.showLiveScenePlacement = true;
             settings.mirrorPacedBuildLogsToConsole = false;
         }
 

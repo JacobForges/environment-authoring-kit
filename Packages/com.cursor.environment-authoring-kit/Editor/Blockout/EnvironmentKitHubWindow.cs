@@ -255,6 +255,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             EditorGUILayout.Space(8f);
+            DrawExperienceSection(inProgress);
+
+            EditorGUILayout.Space(8f);
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Open Pipeline Console"))
                 CaveBuildPipelineConsoleWindow.Open();
@@ -267,6 +270,38 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(8f);
             if (!inProgress)
                 DrawLiveStatusPreview();
+        }
+
+        void DrawExperienceSection(bool buildInProgress)
+        {
+            EditorGUILayout.LabelField("Scene view & playtest", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            _settings.showLiveScenePlacement = EditorGUILayout.Toggle(
+                "Show each edit in Scene view (live terrain + placements)",
+                _settings.showLiveScenePlacement);
+            _settings.autoRunPlaytestBotAfterBuild = EditorGUILayout.Toggle(
+                "Auto-run playtest bot when build finishes",
+                _settings.autoRunPlaytestBotAfterBuild);
+            if (EditorGUI.EndChangeCheck())
+            {
+                _settings.SaveToPrefs();
+                EditorUtility.SetDirty(_settings);
+            }
+
+            EditorGUILayout.HelpBox(
+                "Keep Scene view visible while building — terrain rows and cave pieces update as each paced step runs. " +
+                "Playtest bot: Window → Environment Kit → Cave Build → Play Mode → Run Cave Playtest Bot.",
+                MessageType.None);
+
+            using (new EditorGUI.DisabledScope(buildInProgress))
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Run Playtest Bot (Play Mode)"))
+                    DeferGuiAction(CavePlaytestRouteBotBridge.RunPlayModeBotMenu);
+                if (GUILayout.Button("Run Batch Cave Builds"))
+                    DeferGuiAction(LavaTubeCaveBuilder.RunBatchCaveBuildsActiveScene);
+                EditorGUILayout.EndHorizontal();
+            }
         }
 
         void DrawBuildLiveActivityPanel()

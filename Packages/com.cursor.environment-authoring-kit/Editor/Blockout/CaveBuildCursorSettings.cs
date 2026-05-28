@@ -128,7 +128,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public bool usePhasedCaveBuild = true;
 
         [Tooltip("Scene-view LIVE BUILD banner only (non-intrusive). Camera framing/selection ping stay off in stabilization mode.")]
-        public bool showLiveScenePlacement = false;
+        public bool showLiveScenePlacement = true;
 
         [Header("AAA ladder (incremental + contracts)")]
         [Tooltip("Skip ladder rungs whose output artifacts already exist for this seed (invalidate downstream only).")]

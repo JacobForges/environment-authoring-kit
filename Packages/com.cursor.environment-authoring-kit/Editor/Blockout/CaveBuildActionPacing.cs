@@ -557,6 +557,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             CaveBuildDeferredAssetRefresh.Flush();
             CaveBuildEditorResponsiveness.OnQueueStepCompleted();
+            CaveBuildLiveSceneFeedback.FlushWorldView();
             EnsurePolling();
         }
 

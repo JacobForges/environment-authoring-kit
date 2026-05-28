@@ -154,21 +154,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             RecordJob(report);
-
-            _active.Index++;
-            if (_active.Index >= _active.JobCount)
-            {
-                CompleteBatch(userCallback, report);
-                return true;
-            }
-
             Debug.Log(
-                $"[CaveBuild] Batch job {_active.Index}/{_active.JobCount} done — " +
+                $"[CaveBuild] Batch job {_active.Index + 1}/{_active.JobCount} done — " +
                 $"next in {_active.DelaySeconds:F2}s.");
-            CaveBuildActionPacing.PostponeNextRun(_active.DelaySeconds);
-            CaveBuildActionPacing.ScheduleHeavy(
-                RunNextJob,
-                $"batch job {_active.Index + 1}/{_active.JobCount}");
+            ScheduleNextBatchJobAfterDelay(report, userCallback);
             return true;
         }
 
@@ -184,6 +173,34 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             else
                 Debug.Log($"[CaveBuild] Batch job {_active.Index + 1}/{_active.JobCount} seed={seed}");
 
+            EditorPrefs.SetBool("CaveBuild_RandomizeEachTime", false);
+            EditorPrefs.SetInt("CaveBuild_FixedSeed", seed);
+
+            if (request.SurfaceScope == SurfaceBuildScope.FullWorld)
+            {
+                if (!CaveBuildAutomatedFullWorldBootstrap.Prepare(
+                        _active.Ground,
+                        seed,
+                        invalidateEntireLadder: _active.Index > 0,
+                        out var blockMsg))
+                {
+                    Debug.LogWarning("[CaveBuild] Batch FullWorld job skipped — " + blockMsg);
+                    RecordJob(new LavaTubeCaveBuildReport { Message = blockMsg });
+                    ScheduleNextBatchJobAfterDelay(null);
+                    return;
+                }
+
+                CaveBuildEditorLog.LogCave(
+                    $"Batch FullWorld job {_active.Index + 1}/{_active.JobCount} — terrain-first startup (same as Hub build).",
+                    forceUnityConsole: true);
+                LavaTubeCaveBuilder.BuildInActiveScene(
+                    openMainSceneFirst: false,
+                    hideLegacyBlockout: _active.HideLegacy,
+                    skipDialogs: _active.SkipDialogs,
+                    surfaceScope: SurfaceBuildScope.FullWorld);
+                return;
+            }
+
             LavaTubeCaveBuildPipeline.QueueRun(
                 _active.GroundAnchor,
                 _active.Ground,
@@ -191,6 +208,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _active.XrProfile,
                 showProgress: true,
                 report => TryHandleBuildComplete(report, null));
+        }
+
+        static void ScheduleNextBatchJobAfterDelay(
+            LavaTubeCaveBuildReport report,
+            Action<LavaTubeCaveBuildReport> userCallback = null)
+        {
+            if (_active == null)
+                return;
+
+            _active.Index++;
+            if (_active.Index >= _active.JobCount)
+            {
+                CompleteBatch(userCallback, report);
+                return;
+            }
+
+            CaveBuildActionPacing.PostponeNextRun(_active.DelaySeconds);
+            CaveBuildActionPacing.ScheduleHeavy(
+                RunNextJob,
+                $"batch job {_active.Index + 1}/{_active.JobCount}");
         }
 
         static WorldGenerationRequest CloneRequest(WorldGenerationRequest template, int seed)

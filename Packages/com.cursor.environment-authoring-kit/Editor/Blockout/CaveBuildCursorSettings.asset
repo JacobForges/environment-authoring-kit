@@ -39,7 +39,7 @@ MonoBehaviour:
   skipResearchNetworkSyncWhenCachePresent: 1
   autoContinueAfterPreBuildCursor: 1
   usePhasedCaveBuild: 1
-  showLiveScenePlacement: 0
+  showLiveScenePlacement: 1
   useIncrementalLadder: 1
   constrainBotToResearchOnFailure: 1
   autoRunPlaytestBotAfterBuild: 0
