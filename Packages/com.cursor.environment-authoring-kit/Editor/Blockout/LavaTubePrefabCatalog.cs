@@ -430,7 +430,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Ceiling,
         }
 
-        internal static ModuleShapeRole ClassifyByMeshShape(GameObject prefab)
+        static ModuleShapeRole ClassifyByMeshShape(GameObject prefab)
         {
             if (!TryGetMeshExtents(prefab, out var size))
                 return ModuleShapeRole.Unknown;
