@@ -715,13 +715,32 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return !ProviderNeedsApiKey(provider) || !string.IsNullOrWhiteSpace(ResolveActiveApiKey());
         }
 
-        public static string CursorWorkflowCredentialHint()
+        public static string CursorWorkflowCredentialHint() => GraderCredentialHint();
+
+        public static string GraderCredentialHint()
         {
             var provider = ResolveActiveProvider();
-            if (provider == EnvironmentKitAiProvider.Cursor)
-                return "Set CURSOR_API_KEY in environment or Hub Settings.";
-            return
-                $"Active provider is {provider}. Built-in grade-and-fix runtime currently uses Cursor SDK; set CURSOR_API_KEY or switch provider to Cursor.";
+            return provider switch
+            {
+                EnvironmentKitAiProvider.Cursor =>
+                    "Set CURSOR_API_KEY in environment or Hub Settings (or switch provider).",
+                EnvironmentKitAiProvider.GoogleGemini =>
+                    "Set GOOGLE_API_KEY in Hub Settings or environment.",
+                EnvironmentKitAiProvider.AnthropicClaude =>
+                    "Set ANTHROPIC_API_KEY in Hub Settings or environment.",
+                EnvironmentKitAiProvider.OpenAICompatible =>
+                    "Set OPENAI_API_KEY (or compatible base URL + key) in Hub Settings.",
+                EnvironmentKitAiProvider.OpenRouter =>
+                    "Set OPENROUTER_API_KEY in Hub Settings or environment.",
+                EnvironmentKitAiProvider.LocalOllama =>
+                    "Run Ollama locally (ollama serve) with model " +
+                    $"{LoadOrCreate().ollamaModelId} — no cloud API key required.",
+                EnvironmentKitAiProvider.LocalLmStudio =>
+                    "Run LM Studio local server on http://localhost:1234/v1 — no cloud API key required.",
+                EnvironmentKitAiProvider.CustomEndpoint =>
+                    "Set CUSTOM_API_KEY and base URL for your endpoint in Hub Settings.",
+                _ => "Configure AI provider credentials in Hub Settings.",
+            };
         }
 
         public static string ResolveActiveModelId()

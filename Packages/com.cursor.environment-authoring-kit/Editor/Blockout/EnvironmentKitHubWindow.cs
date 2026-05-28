@@ -221,6 +221,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
                 if (GUILayout.Button("Apply MacBook Air Budget", GUILayout.Height(24f)))
                     DeferGuiAction(LavaTubeCaveBuilder.ApplyMacBookAirHardwareBudgetMenu);
+                if (GUILayout.Button("Apply Offline (No API)", GUILayout.Height(24f)))
+                    DeferGuiAction(() => CaveBuildOfflineNoApiPreset.Apply(savePrefs: true));
                 EditorGUILayout.EndHorizontal();
             }
 
@@ -272,7 +274,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Optional: limit scanning to specific folders. When empty, the kit scans all of Assets/ and picks floor/wall/ceiling prefabs by name + mesh shape. " +
-                "Texture-only packs and 2D tile sprites cannot be used as cave modules.",
+                "Texture-only packs and 2D tile sprites cannot be used as cave modules.\n\n" +
+                "AI: Active provider can be Cursor, Gemini, Claude, OpenAI, OpenRouter, Ollama, or LM Studio — not Cursor-only. " +
+                "No API? Use Build tab → Apply Offline (No API) for procedural-only runs.",
                 MessageType.None);
             _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
             _cavePropFolders = DrawPrefabFolderField("Prefab folders for props", _cavePropFolders);
@@ -483,25 +487,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             var issues = new List<string>();
             var provider = _settings != null ? _settings.aiProvider : CaveBuildCursorSettings.ResolveActiveProvider();
-            var cursorKeyPresent = !string.IsNullOrWhiteSpace(CaveBuildCursorSettings.ResolveApiKey());
             var activeNeedsKey = CaveBuildCursorSettings.ProviderNeedsApiKey(provider);
-            var activeKeyPresent = !string.IsNullOrWhiteSpace(CaveBuildCursorSettings.ResolveActiveApiKey());
+            var hasCreds = CaveBuildCursorSettings.HasCredentialsForActiveProvider();
+            var automationOn = _settings != null &&
+                               (_settings.autoInvokeAfterEveryBuild ||
+                                _settings.autoInvokeOnDud ||
+                                _settings.autoInvokePreBuildWorkflow ||
+                                _settings.autoInvokeEachMeatLoopPass);
 
-            if (_settings != null &&
-                (_settings.autoInvokeAfterEveryBuild || _settings.autoInvokeOnDud || _settings.autoInvokePreBuildWorkflow) &&
-                !cursorKeyPresent)
-            {
-                issues.Add("Automation is enabled but CURSOR_API_KEY is missing; Cursor workflow invokes will skip.");
-            }
-
-            if (provider != EnvironmentKitAiProvider.Cursor &&
-                (_settings?.autoInvokeAfterEveryBuild == true || _settings?.autoInvokePreBuildWorkflow == true))
+            if (automationOn && !hasCreds)
             {
                 issues.Add(
-                    "Active provider is not Cursor while automation is on. Current grader runtime executes via Cursor SDK.");
+                    $"Agent automation is on but {provider} is not ready — " +
+                    CaveBuildCursorSettings.GraderCredentialHint());
             }
 
-            if (activeNeedsKey && !activeKeyPresent)
+            if (activeNeedsKey && !hasCreds)
                 issues.Add($"Active provider {provider} requires an API key but none is configured.");
 
             if (!File.Exists(ToAbsolute(CaveBuildRunStatusPublisher.LiveStatusRel)) &&

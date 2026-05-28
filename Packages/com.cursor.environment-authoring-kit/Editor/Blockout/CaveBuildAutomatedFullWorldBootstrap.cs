@@ -109,11 +109,28 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void ClearSession() => SessionActive = false;
 
-        /// <summary>FullWorld bootstrap must never leave Cursor automation off (reliable preset used to disable it).</summary>
+        /// <summary>Enable agent invokes when credentials exist; otherwise stay procedural-only.</summary>
         static void EnsureAutomatedCursorInvokesEnabled()
         {
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
+
+            if (!CaveBuildCursorSettings.HasCredentialsForActiveProvider())
+            {
+                settings.suppressMeatLoopCursorInvokes = true;
+                settings.autoInvokeEachMeatLoopPass = false;
+                settings.autoInvokeTerrainAfterSurfaceBuild = false;
+                settings.autoInvokePreBuildWorkflow = false;
+                settings.preBuildReloopUntilPass = false;
+                settings.invokeCursorOnResearchPhase = false;
+                settings.SaveToPrefs();
+                EditorUtility.SetDirty(settings);
+                Debug.LogWarning(
+                    "[CaveBuild] No credentials for active AI provider — FullWorld runs procedural steps only. " +
+                    "Hub → Apply Offline (No API) preset, or set provider + keys / local Ollama.");
+                return;
+            }
+
             settings.suppressMeatLoopCursorInvokes = false;
             settings.autoInvokeEachMeatLoopPass = true;
             settings.autoInvokeTerrainAfterSurfaceBuild = true;

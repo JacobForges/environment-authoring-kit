@@ -27,7 +27,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             new("package_tooling", 18, critical: true),
             new("scene_ground", 16, critical: true),
             new("prefab_catalog", 14, critical: true),
-            new("cursor_api", 10, critical: false),
+            new("ai_provider", 10, critical: false),
             new("research_manifest", 10, critical: false),
             new("scene_portal", 7, critical: false),
             new("prior_cave_state", 5, critical: false),
@@ -191,8 +191,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 case "prefab_catalog":
                     GradePrefabCatalog(g, layoutPrototype);
                     break;
+                case "ai_provider":
                 case "cursor_api":
-                    GradeCursorApi(g);
+                    GradeAiProvider(g);
                     break;
                 case "research_manifest":
                     GradeResearchManifest(g);
@@ -301,14 +302,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
         }
 
-        static void GradeCursorApi(PreBuildStageGrade g)
+        static void GradeAiProvider(PreBuildStageGrade g)
         {
-            if (!CaveBuildCursorAgentBridge.HasApiKey)
-            {
-                g.Score = 60;
-                g.Issues.Add(CaveBuildCursorSettings.CursorWorkflowCredentialHint());
-                g.Fixes.Add("Window → Environment Kit → Cave Build → Sync API Key from .env");
-            }
+            if (CaveBuildCursorSettings.HasCredentialsForActiveProvider())
+                return;
+
+            g.Score = 60;
+            g.Issues.Add(CaveBuildCursorSettings.GraderCredentialHint());
+            g.Fixes.Add("Hub → Settings → pick provider + key, or Build → Apply Offline (No API) for procedural-only.");
         }
 
         static void GradeResearchManifest(PreBuildStageGrade g)
@@ -376,7 +377,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "package_tooling" => "Package & grader tooling",
                 "scene_ground" => "Scene ground anchor",
                 "prefab_catalog" => "Prefab catalog",
-                "cursor_api" => "Cursor API readiness",
+                "ai_provider" => "AI provider readiness",
+                "cursor_api" => "AI provider readiness",
                 "research_manifest" => "Research manifest on disk",
                 "scene_portal" => "Cave portal assignment",
                 "prior_cave_state" => "Prior cave state (cleanup)",
