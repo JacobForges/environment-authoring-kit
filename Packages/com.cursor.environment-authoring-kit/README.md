@@ -47,7 +47,7 @@ Or publish to a Git URL / registry. Open the project in Unity and let scripts co
 
 1. Unity **6** + URP — open this repo.
 2. **Node 18+** on the machine.
-3. **Hub → Build Complete Cave (120)** — first click runs **clone setup** (starter scene, placeholder modules, `npm install`).
+3. **Hub → Build Complete Cave (120)** — completes **without API keys** (procedural). Optional **FullWorld + AI** when you have provider credentials.
 
 See [consumer README](../../README.md#first-build-after-clone).
 

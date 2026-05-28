@@ -221,8 +221,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
                 if (GUILayout.Button("Apply MacBook Air Budget", GUILayout.Height(24f)))
                     DeferGuiAction(LavaTubeCaveBuilder.ApplyMacBookAirHardwareBudgetMenu);
-                if (GUILayout.Button("Apply Offline (No API)", GUILayout.Height(24f)))
-                    DeferGuiAction(() => CaveBuildOfflineNoApiPreset.Apply(savePrefs: true));
+                if (GUILayout.Button("Out-of-Box (No API)", GUILayout.Height(24f)))
+                    DeferGuiAction(() => CaveBuildOutOfBoxPreset.Apply(savePrefs: true));
+                if (GUILayout.Button("FullWorld + AI", GUILayout.Height(24f)))
+                    DeferGuiAction(() => CaveBuildReliableFullWorldPreset.Apply(savePrefs: true));
                 EditorGUILayout.EndHorizontal();
             }
 

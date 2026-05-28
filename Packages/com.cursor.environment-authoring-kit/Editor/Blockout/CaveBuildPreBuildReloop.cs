@@ -73,9 +73,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.LoadFromPrefs();
             if (settings.preBuildReloopUntilPass)
                 return true;
-            if (CaveBuildAutomatedFullWorldBootstrap.SessionActive)
-                return true;
-            return CaveBuildStartupCoordinator.IsActive;
+
+            if (!CaveBuildCursorSettings.HasCredentialsForActiveProvider())
+                return false;
+
+            return settings.autoInvokePreBuildWorkflow &&
+                   (CaveBuildAutomatedFullWorldBootstrap.SessionActive || CaveBuildStartupCoordinator.IsActive);
         }
 
         public static int ResolveMaxLocalAttempts(CaveBuildCursorSettings settings)

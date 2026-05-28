@@ -78,7 +78,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             else
                 Line("cave-grader tsx already installed.");
 
-            CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
+            if (CaveBuildCursorSettings.HasCredentialsForActiveProvider())
+                CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
+            else
+                CaveBuildOutOfBoxPreset.Apply(savePrefs: true);
             EditorPrefs.SetInt(PrefSetupVersion, SetupVersion);
             AssetDatabase.SaveAssets();
 

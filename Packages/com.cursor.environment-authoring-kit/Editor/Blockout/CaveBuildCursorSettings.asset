@@ -33,8 +33,8 @@ MonoBehaviour:
   autoInvokeEachMeatLoopPass: 0
   suppressMeatLoopCursorInvokes: 0
   autoInvokePreBuildWorkflow: 1
-  enforcePreBuildGate: 1
-  preBuildReloopUntilPass: 1
+  enforcePreBuildGate: 0
+  preBuildReloopUntilPass: 0
   maxPreBuildReloopAttempts: 12
   skipResearchNetworkSyncWhenCachePresent: 1
   autoContinueAfterPreBuildCursor: 1

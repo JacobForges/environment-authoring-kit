@@ -1,8 +1,8 @@
 # Environment Authoring Kit (Unity)
 
-**Clone → open in Unity → Build Complete Cave.** First run creates a starter scene, placeholder modules if needed, and runs `npm install` automatically.
+**Clone → open in Unity → Build Complete Cave.** First run sets up the project and runs the **full 120-step procedural pipeline with no API keys**.
 
-AI-assisted **terrain + cave pipeline** for Unity 6. Replace starter cubes with your licensed art when ready.
+AI grading (Cursor, Gemini, Ollama, etc.) is **optional** — turn on via Hub → **FullWorld + AI** when you have keys or local Ollama.
 
 This repository is the **shareable Unity project + UPM package** (`com.cursor.environment-authoring-kit`). It does **not** include third-party Asset Store props, store cave meshes, sample scenes, or the VITURE native SDK — those stay on your machine under separate licenses.
 

@@ -71,6 +71,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
 
+            if (!CaveBuildCursorSettings.HasCredentialsForActiveProvider() && !settings.enforcePreBuildGate)
+            {
+                Debug.Log(
+                    "[CaveBuild] No AI credentials — pre-build advisory only; continuing procedural pipeline.");
+                return true;
+            }
+
             var useCursorPreBuild = settings.autoInvokePreBuildWorkflow && CaveBuildCursorAgentBridge.HasApiKey;
             var deferCursorToReloop = CaveBuildPreBuildReloop.ShouldReloop(settings);
 

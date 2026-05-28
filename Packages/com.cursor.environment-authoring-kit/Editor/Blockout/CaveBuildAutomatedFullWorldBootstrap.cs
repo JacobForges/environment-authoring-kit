@@ -34,8 +34,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!string.IsNullOrEmpty(setupLog))
                 Debug.Log("[CaveBuild] " + setupLog.Replace("\n", "\n[CaveBuild] "));
 
-            CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
-            EnsureAutomatedCursorInvokesEnabled();
+            if (CaveBuildCursorSettings.HasCredentialsForActiveProvider())
+            {
+                CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
+                EnsureAutomatedAgentInvokesEnabled();
+            }
+            else
+            {
+                CaveBuildOutOfBoxPreset.Apply(savePrefs: true);
+            }
 
             var request = new WorldGenerationRequest
             {
@@ -110,7 +117,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void ClearSession() => SessionActive = false;
 
         /// <summary>Enable agent invokes when credentials exist; otherwise stay procedural-only.</summary>
-        static void EnsureAutomatedCursorInvokesEnabled()
+        static void EnsureAutomatedAgentInvokesEnabled()
         {
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
