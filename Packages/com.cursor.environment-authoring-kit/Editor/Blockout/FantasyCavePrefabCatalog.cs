@@ -33,7 +33,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             "pickup_truck", "car_", "vehicle", "sign_", "billboard"
         };
 
-        public static void Populate(LavaTubePrefabCatalog catalog)
+        /// <summary>Legacy entry — module scan is automatic; this only enriches prop lists.</summary>
+        public static void Populate(LavaTubePrefabCatalog catalog) => PopulateProps(catalog);
+
+        public static void PopulateProps(LavaTubePrefabCatalog catalog)
         {
             var guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" });
             foreach (var guid in guids)
@@ -47,6 +50,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (prefab == null || !HasRenderableMesh(prefab))
+                    continue;
+
+                if (LavaTubePrefabCatalog.IsAlreadyInCatalog(catalog, prefab))
                     continue;
 
                 var name = prefab.name;

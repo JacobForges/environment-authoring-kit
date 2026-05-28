@@ -63,26 +63,22 @@ namespace EnvironmentAuthoringKit.Editor
         /// <summary>Semicolon-separated prefab folders for primary cave modules (floors/walls/ceilings).</summary>
         public static string CaveLavaPrefabFolders
         {
-            get => EditorPrefs.GetString(
-                PrefsPrefix + "CaveLavaPrefabFolders",
-                "Assets/BillemotdonggulLavaTubePack/Prefabs/");
+            get => EditorPrefs.GetString(PrefsPrefix + "CaveLavaPrefabFolders", string.Empty);
             set => EditorPrefs.SetString(PrefsPrefix + "CaveLavaPrefabFolders", value ?? string.Empty);
         }
 
-        /// <summary>Semicolon-separated prefab folders for cave props/details.</summary>
+        /// <summary>Semicolon-separated prefab folders for cave props/details (optional; empty = scan all Assets).</summary>
         public static string CavePropPrefabFolders
         {
-            get => EditorPrefs.GetString(
-                PrefsPrefix + "CavePropPrefabFolders",
-                "Assets/PolitePenguin/LPMagicalForest/Prefabs/");
+            get => EditorPrefs.GetString(PrefsPrefix + "CavePropPrefabFolders", string.Empty);
             set => EditorPrefs.SetString(PrefsPrefix + "CavePropPrefabFolders", value ?? string.Empty);
         }
 
-        /// <summary>When enabled, scans all Assets for extra cave props (can pull noisy content).</summary>
+        /// <summary>Legacy toggle; module/prop discovery always scans Assets/.</summary>
         public static bool CaveScanAllAssets
         {
-            get => EditorPrefs.GetBool(PrefsPrefix + "CaveScanAllAssets", false);
-            set => EditorPrefs.SetBool(PrefsPrefix + "CaveScanAllAssets", value);
+            get => true;
+            set { }
         }
     }
 }

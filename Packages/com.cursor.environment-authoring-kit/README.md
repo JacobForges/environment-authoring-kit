@@ -51,7 +51,7 @@ FullWorld runs **preflight** first. Missing requirements → build blocked → s
 |----------|--------|
 | Scene + **`Ground`** tag | Walkable anchor for terrain/cave |
 | **`PortalFive`** | Cave entrance placement |
-| **Prefabs** in `Assets/` (modules + props) | Default modules path: `Assets/BillemotdonggulLavaTubePack/Prefabs/` — **not in git**; set folders in Hub → Settings |
+| **3D mesh prefabs** in `Assets/` | Auto-scanned (floor/wall/ceiling by name + mesh shape); optional Hub folder limits — **not in git** |
 | **`npm install`** in `Tools/cave-grader` | Node 18+; preflight checks `tsx` is installed |
 
 Hub: **Diagnostics → View Preflight Report** after setup. Warnings are OK; **BLOCK** must be fixed.

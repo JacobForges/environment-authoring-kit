@@ -250,13 +250,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Drag any licensed environment module folder from Project (floors/walls/ceilings — any naming). " +
-                "Kit classifies by name + mesh shape, upgrades materials under that pack to URP, and fills missing roles when possible. " +
-                "Default if empty: Assets/BillemotdonggulLavaTubePack/Prefabs/",
+                "Optional: limit scanning to specific folders. When empty, the kit scans all of Assets/ and picks floor/wall/ceiling prefabs by name + mesh shape. " +
+                "Texture-only packs and 2D tile sprites cannot be used as cave modules.",
                 MessageType.None);
             _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
             _cavePropFolders = DrawPrefabFolderField("Prefab folders for props", _cavePropFolders);
-            _caveScanAllAssets = EditorGUILayout.Toggle("Scan all Assets for props", _caveScanAllAssets);
+            EditorGUILayout.LabelField("Asset scan", "All of Assets/ (automatic)", EditorStyles.miniLabel);
             if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
             {
                 SavePrefabFolderPrefs();

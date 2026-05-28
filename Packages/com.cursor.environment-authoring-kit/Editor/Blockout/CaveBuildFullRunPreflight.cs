@@ -45,6 +45,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             var list = new List<CheckResult>();
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var projectRoot = Path.GetDirectoryName(Application.dataPath) ?? hub;
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
 
@@ -54,11 +55,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 ? $"Anchor: {ground.Anchor?.name ?? "ok"}"
                 : "Tag walkable floor as Ground or assign on Environment Root.");
 
-            var catalog = LavaTubePrefabCatalog.Load();
+            var catalog = LavaTubePrefabCatalog.Load(forceRefresh: true);
             Add(list, "prefab_catalog", "Environment module prefab catalog", catalog.IsValid ? Severity.Pass : Severity.Block,
                 catalog.IsValid
-                    ? $"Catalog valid ({catalog.Floors.Count} floor, {catalog.Walls.Count} wall, {catalog.Ceilings.Count} ceiling)."
-                    : "Need module prefabs with floor + wall + ceiling (any pack) in Hub → Prefab folders for environment modules.");
+                    ? $"Auto-discovered {catalog.Floors.Count} floor, {catalog.Walls.Count} wall, {catalog.Ceilings.Count} ceiling prefab(s) under Assets/."
+                    : "No 3D floor+wall+ceiling mesh prefabs found in Assets/. Import a modular cave/dungeon pack (mesh prefabs, not texture-only or 2D sprites).");
 
             Add(list, "phased_build", "Phased cave build enabled",
                 settings.usePhasedCaveBuild ? Severity.Pass : Severity.Block,
@@ -86,11 +87,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Add(list, "node_tsx", "Node + tsx (cave-grader)",
                 nodeOk ? Severity.Pass : Severity.Block, nodeOk ? "Node resolved." : nodeMsg ?? "Missing node");
 
-            var toolsDir = Path.Combine(hub, CaveBuildCursorAgentBridge.ToolsRelativePath);
+            var toolsDir = Path.Combine(projectRoot, CaveBuildCursorAgentBridge.ToolsRelativePath);
             var tsx = Path.Combine(toolsDir, "node_modules", "tsx", "dist", "cli.mjs");
             Add(list, "tsx_installed", "tsx in Tools/cave-grader",
                 File.Exists(tsx) ? Severity.Pass : Severity.Block,
-                File.Exists(tsx) ? tsx : "Run npm install in Tools/cave-grader.");
+                File.Exists(tsx)
+                    ? tsx
+                    : $"Run: cd \"{toolsDir}\" && npm install");
 
             Add(list, "incremental_ladder", "Incremental ladder",
                 !settings.useIncrementalLadder ? Severity.Pass : Severity.Warn,

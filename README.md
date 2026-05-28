@@ -39,18 +39,18 @@ That is **expected** — open the report and fix every row marked **BLOCK**.
 |---|------------------|-----|
 | 1 | **Unity scene** with a walkable surface tagged **`Ground`** | Preflight: *Ground tag / anchor* |
 | 2 | GameObject **`PortalFive`** (cave entrance anchor) | Cave mouth placement |
-| 3 | **Licensed prefabs** under `Assets/` (environment modules + props) | Preflight: *Environment module prefab catalog* — repo ships **no** store art |
+| 3 | **3D mesh prefabs** somewhere under `Assets/` (auto-discovered; modular cave/dungeon/rock packs) | Preflight: *Environment module prefab catalog* — **not** 2D sprites or texture-only folders |
 | 4 | **Node 18+** and **`npm install`** in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader` | Preflight: *Node + tsx* — automated FullWorld expects the grader tools installed |
 
-### Default module prefab folder (optional)
+### Prefabs (automatic discovery)
 
-Default scan path if Hub fields are empty:
+On every preflight/build, the kit **scans all of `Assets/`** for 3D prefabs with meshes and classifies them into floor / wall / ceiling (by name, path, and mesh shape). Hub prefab folder fields are **optional** — use them only to limit or prioritize folders.
 
-`Assets/BillemotdonggulLavaTubePack/Prefabs/`
+**Will not work as cave modules:** texture-only packs (PNG materials with no prefabs), 2D tilemap sprite packs, UI prefabs.
 
-You need **floor, wall, and ceiling** module prefabs (any pack naming — the kit classifies by keywords and mesh shape). Without them, preflight **blocks** on the catalog check.
+Import licensed **3D modular** content into `Assets/`, then **Save Hub Settings** or run preflight. Materials under discovered packs are upgraded to URP when possible.
 
-Import your licensed packs into `Assets/`, then **Hub → Settings → Prefab folders** → drag your module folder onto **Prefab folders for environment modules** → **Save Hub Settings** → **Refresh prefab catalog**. Materials under that pack are upgraded to URP automatically. Set **Hub project root** to this Unity project folder so `Generated/` reports land here, not another clone.
+Leave **Hub project root** empty so reports and `npm` paths resolve to **this** Unity project (not another folder on your machine).
 
 ### After setup
 
