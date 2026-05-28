@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -249,12 +250,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Semicolon-separated paths under Assets/. Surface + underground builds use these scans. " +
+                "Type paths or drag folders from the Project window onto the fields below (hold multiple drops to add with ;). " +
                 "Preflight needs floor, wall, and ceiling modules in the first field. " +
                 "Default if empty: Assets/BillemotdonggulLavaTubePack/Prefabs/",
                 MessageType.None);
-            _caveLavaFolders = EditorGUILayout.TextField("Prefab folders for environment modules", _caveLavaFolders);
-            _cavePropFolders = EditorGUILayout.TextField("Prefab folders for props", _cavePropFolders);
+            _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
+            _cavePropFolders = DrawPrefabFolderField("Prefab folders for props", _cavePropFolders);
             _caveScanAllAssets = EditorGUILayout.Toggle("Scan all Assets for props", _caveScanAllAssets);
             if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
             {
@@ -544,6 +545,128 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
             EditorUtility.RevealInFinder(path);
+        }
+
+        static string DrawPrefabFolderField(string label, string value)
+        {
+            var rect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+            var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
+            var fieldRect = new Rect(
+                rect.x + EditorGUIUtility.labelWidth,
+                rect.y,
+                rect.width - EditorGUIUtility.labelWidth,
+                rect.height);
+
+            EditorGUI.LabelField(labelRect, label);
+            var next = EditorGUI.TextField(fieldRect, value ?? string.Empty);
+            HandlePrefabFolderDragDrop(rect, ref next);
+            return next;
+        }
+
+        static void HandlePrefabFolderDragDrop(Rect dropRect, ref string fieldValue)
+        {
+            var evt = Event.current;
+            if (evt == null || !dropRect.Contains(evt.mousePosition))
+                return;
+
+            if (evt.type != EventType.DragUpdated && evt.type != EventType.DragPerform)
+                return;
+
+            if (!TryResolveDroppedPrefabFolder(out var folderPath))
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Rejected;
+                evt.Use();
+                return;
+            }
+
+            DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+            if (evt.type == EventType.DragPerform)
+            {
+                DragAndDrop.AcceptDrag();
+                fieldValue = AppendPrefabFolderPath(fieldValue, folderPath);
+                GUI.changed = true;
+            }
+
+            evt.Use();
+        }
+
+        static bool TryResolveDroppedPrefabFolder(out string folderPath)
+        {
+            folderPath = null;
+            foreach (var obj in DragAndDrop.objectReferences)
+            {
+                if (obj == null)
+                    continue;
+
+                var path = AssetDatabase.GetAssetPath(obj);
+                if (string.IsNullOrEmpty(path))
+                    continue;
+
+                if (AssetDatabase.IsValidFolder(path))
+                {
+                    folderPath = NormalizeAssetsFolderPath(path);
+                    return true;
+                }
+
+                var parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
+                if (!string.IsNullOrEmpty(parent) && parent.StartsWith("Assets", StringComparison.Ordinal))
+                {
+                    folderPath = NormalizeAssetsFolderPath(parent);
+                    return true;
+                }
+            }
+
+            var assetsRoot = Application.dataPath.Replace('\\', '/');
+            if (DragAndDrop.paths == null)
+                return false;
+
+            foreach (var raw in DragAndDrop.paths)
+            {
+                if (string.IsNullOrWhiteSpace(raw))
+                    continue;
+
+                var absolute = Path.GetFullPath(raw).Replace('\\', '/');
+                if (!absolute.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var rel = "Assets" + absolute.Substring(assetsRoot.Length);
+                if (AssetDatabase.IsValidFolder(rel))
+                {
+                    folderPath = NormalizeAssetsFolderPath(rel);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static string NormalizeAssetsFolderPath(string path)
+        {
+            var p = (path ?? string.Empty).Replace('\\', '/').Trim();
+            if (!p.StartsWith("Assets", StringComparison.Ordinal))
+                return p;
+            return p.EndsWith("/", StringComparison.Ordinal) ? p : p + "/";
+        }
+
+        static string AppendPrefabFolderPath(string existing, string folder)
+        {
+            folder = NormalizeAssetsFolderPath(folder).TrimEnd('/');
+            if (string.IsNullOrEmpty(folder))
+                return existing ?? string.Empty;
+
+            var parts = string.IsNullOrWhiteSpace(existing)
+                ? new List<string>()
+                : existing
+                    .Split(';')
+                    .Select(p => NormalizeAssetsFolderPath(p).TrimEnd('/'))
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .ToList();
+
+            if (parts.Any(p => string.Equals(p, folder, StringComparison.OrdinalIgnoreCase)))
+                return string.Join(";", parts);
+
+            parts.Add(folder);
+            return string.Join(";", parts);
         }
 
         void LoadPrefabFolderPrefs()
