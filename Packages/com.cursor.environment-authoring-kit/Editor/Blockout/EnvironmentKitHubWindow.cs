@@ -143,20 +143,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(6f);
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
-            switch (_tab)
+            try
             {
-                case Tab.Build:
-                    DrawBuildTab();
-                    break;
-                case Tab.Settings:
-                    DrawSettingsTab();
-                    break;
-                case Tab.Data:
-                    DrawDataTab();
-                    break;
+                switch (_tab)
+                {
+                    case Tab.Build:
+                        DrawBuildTab();
+                        break;
+                    case Tab.Settings:
+                        DrawSettingsTab();
+                        break;
+                    case Tab.Data:
+                        DrawDataTab();
+                        break;
+                }
             }
+            finally
+            {
+                EditorGUILayout.EndScrollView();
+            }
+        }
 
-            EditorGUILayout.EndScrollView();
+        /// <summary>IMGUI requires balanced layout; never start builds inside button handlers.</summary>
+        static void DeferGuiAction(Action action)
+        {
+            if (action == null)
+                return;
+            EditorApplication.delayCall += () => action();
         }
 
         void DrawHeader()
@@ -188,18 +201,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Build Complete Cave (120)", GUILayout.Height(30f)))
-                    LavaTubeCaveBuilder.BuildCompleteCaveActiveScene();
+                    DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveActiveScene);
                 if (GUILayout.Button("Build Surface Only", GUILayout.Height(30f)))
-                    LavaTubeCaveBuilder.BuildSurfaceWorldOnlyActiveScene();
+                    DeferGuiAction(LavaTubeCaveBuilder.BuildSurfaceWorldOnlyActiveScene);
                 if (GUILayout.Button("Build Cave Only", GUILayout.Height(30f)))
-                    LavaTubeCaveBuilder.BuildCaveOnlyActiveScene();
+                    DeferGuiAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene);
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
-                    LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild();
+                    DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
                 if (GUILayout.Button("Apply MacBook Air Budget", GUILayout.Height(24f)))
-                    LavaTubeCaveBuilder.ApplyMacBookAirHardwareBudgetMenu();
+                    DeferGuiAction(LavaTubeCaveBuilder.ApplyMacBookAirHardwareBudgetMenu);
                 EditorGUILayout.EndHorizontal();
             }
 
@@ -258,8 +271,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.LabelField("Asset scan", "All of Assets/ (automatic)", EditorStyles.miniLabel);
             if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
             {
-                SavePrefabFolderPrefs();
-                RefreshModulePrefabCatalogAndMaterials();
+                DeferGuiAction(() =>
+                {
+                    SavePrefabFolderPrefs();
+                    RefreshModulePrefabCatalogAndMaterials();
+                });
             }
 
             _showApiKey = EditorGUILayout.Toggle("Show API key", _showApiKey);
@@ -295,17 +311,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Save Hub Settings", GUILayout.Height(26f)))
             {
-                _settings.SetApiKey(_apiKey);
-                _settings.SetApiKey(EnvironmentKitAiProvider.GoogleGemini, _googleApiKey);
-                _settings.SetApiKey(EnvironmentKitAiProvider.AnthropicClaude, _anthropicApiKey);
-                _settings.SetApiKey(EnvironmentKitAiProvider.OpenAICompatible, _openAiApiKey);
-                _settings.SetApiKey(EnvironmentKitAiProvider.OpenRouter, _openRouterApiKey);
-                _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
-                _settings.SaveToPrefs();
-                SavePrefabFolderPrefs();
-                RefreshModulePrefabCatalogAndMaterials();
-                EditorUtility.SetDirty(_settings);
-                AssetDatabase.SaveAssets();
+                DeferGuiAction(() =>
+                {
+                    _settings.SetApiKey(_apiKey);
+                    _settings.SetApiKey(EnvironmentKitAiProvider.GoogleGemini, _googleApiKey);
+                    _settings.SetApiKey(EnvironmentKitAiProvider.AnthropicClaude, _anthropicApiKey);
+                    _settings.SetApiKey(EnvironmentKitAiProvider.OpenAICompatible, _openAiApiKey);
+                    _settings.SetApiKey(EnvironmentKitAiProvider.OpenRouter, _openRouterApiKey);
+                    _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
+                    _settings.SaveToPrefs();
+                    SavePrefabFolderPrefs();
+                    RefreshModulePrefabCatalogAndMaterials();
+                    EditorUtility.SetDirty(_settings);
+                    AssetDatabase.SaveAssets();
+                });
             }
 
             if (GUILayout.Button("Reload From Prefs", GUILayout.Height(26f)))
