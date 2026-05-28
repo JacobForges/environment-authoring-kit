@@ -27,7 +27,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         void OnEditorUpdate()
         {
-            var interval = LavaTubeCaveBuilder.IsBuildInProgress ? 0.2 : 0.5;
+            var interval = LavaTubeCaveBuilder.IsBuildInProgress ? 1.0 : 0.5;
             if (EditorApplication.timeSinceStartup < _nextRefresh)
                 return;
             _nextRefresh = EditorApplication.timeSinceStartup + interval;

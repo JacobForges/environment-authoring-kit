@@ -467,6 +467,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            CaveBuildActionPacing.ScheduleNextEditorFrame(() => BeginStampHeightmapUpload(session));
+        }
+
+        static void BeginStampHeightmapUpload(StampSession session)
+        {
+            if (session?.Terrain == null)
+            {
+                session?.OnComplete?.Invoke("LiDAR stamp aborted.");
+                return;
+            }
+
             SurfaceTerrainHeightSmoothing.DeCheckerboardHeights(
                 session.Heights,
                 session.Res,
@@ -475,7 +486,32 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 session.ExtentMeters,
                 strength: 0.18f);
 
-            session.Terrain.terrainData.SetHeights(0, 0, session.Heights);
+            session.CommitRowY = 0;
+            ScheduleStampHeightmapUpload(session);
+        }
+
+        static void ScheduleStampHeightmapUpload(StampSession session) =>
+            CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunStampHeightmapUpload(session));
+
+        static void RunStampHeightmapUpload(StampSession session)
+        {
+            if (session?.Terrain == null)
+            {
+                session?.OnComplete?.Invoke("LiDAR stamp aborted.");
+                return;
+            }
+
+            var chunk = StampRowChunkSize(session.Res) * 4;
+            var yEnd = Mathf.Min(session.Res, session.CommitRowY + chunk);
+            FlushHeightRows(session, session.CommitRowY, yEnd);
+            session.CommitRowY = yEnd;
+
+            if (session.CommitRowY < session.Res)
+            {
+                ScheduleStampHeightmapUpload(session);
+                return;
+            }
+
             session.Terrain.Flush();
             EditorApplication.QueuePlayerLoopUpdate();
 

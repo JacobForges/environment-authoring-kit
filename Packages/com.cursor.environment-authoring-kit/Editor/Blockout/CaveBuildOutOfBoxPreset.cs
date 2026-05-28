@@ -22,7 +22,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.useIncrementalLadder = false;
             settings.enableEnhancementPhases = true;
             settings.demSupersampleTargetDim = 96;
-            settings.mirrorPacedBuildLogsToConsole = true;
+            CaveBuildEditorResponsiveness.ApplyForActiveBuild(settings);
 
             if (savePrefs)
                 settings.SaveToPrefs();

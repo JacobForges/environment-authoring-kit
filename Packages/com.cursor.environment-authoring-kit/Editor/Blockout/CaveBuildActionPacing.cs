@@ -173,6 +173,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             get
             {
+                if (CaveBuildEditorResponsiveness.IsLongBuildActive)
+                    return 1;
+
                 var configured = CaveBuildCursorSettings.ResolveQueuePacing().batchSize;
                 return CaveBuildPipelineScope.CaveOnlyContinuation
                     ? 1
@@ -530,6 +533,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            CaveBuildProgressUI.ClearIfShown();
+
             var completedWeight = ActionWeight.Light;
             for (var i = 0; i < ArmedBatch.Count; i++)
                 completedWeight = Heavier(completedWeight, ArmedBatch[i].Weight);
@@ -551,7 +556,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _globalEarliestRunAt = EditorApplication.timeSinceStartup + ResolveCooldown(batchWeight);
 
             CaveBuildDeferredAssetRefresh.Flush();
-            EnvironmentKitHardwareBudget.OnQueueStepCompleted();
+            CaveBuildEditorResponsiveness.OnQueueStepCompleted();
             EnsurePolling();
         }
 

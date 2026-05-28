@@ -359,7 +359,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             if (++_progressThrottle % ProgressBarEveryNChunks == 0 || state.PassRowStart == 0)
             {
-                EditorUtility.DisplayProgressBar(
+                CaveBuildProgressUI.ShowThrottled(
                     "Environment Kit",
                     $"[Surface] sculpt pass {passNum}/{state.PassCount} rows {state.PassRowStart}/{state.Res}",
                     0.2f + 0.55f * ((state.PassIndex + state.PassRowStart / (float)Mathf.Max(1, state.Res)) /
@@ -433,7 +433,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var polishYMax = state.Res - 2;
             var chunk = Mathf.Max(1, RowChunkSizeFor(state.Res) * 2);
             var yEnd = Mathf.Min(polishYMax, state.PolishRowY + chunk - 1);
-            EditorUtility.DisplayProgressBar(
+            CaveBuildProgressUI.ShowThrottled(
                 "Environment Kit",
                 $"[Surface] sculpt polish rows {state.PolishRowY}/{polishYMax}",
                 0.78f);
@@ -482,7 +482,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             if (state.CommitRowStart == 0)
             {
-                EditorUtility.DisplayProgressBar(
+                CaveBuildProgressUI.ShowThrottled(
                     "Environment Kit",
                     "[Surface] uploading sculpted heightmap…",
                     0.82f);

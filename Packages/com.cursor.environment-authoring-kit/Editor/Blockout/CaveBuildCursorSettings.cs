@@ -240,7 +240,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public float editorQueueMaxLoadMultiplier = 2.5f;
 
         [Tooltip("Light/normal items to run back-to-back per batch before the batch cooldown sleep (1–2 keeps the editor responsive).")]
-        public int editorQueueBatchSize = 2;
+        public int editorQueueBatchSize = 1;
 
         [Tooltip(
             "Echo every paced queue/live step to Unity Console. Off avoids Console overload and GUILayout glitches during long builds.")]

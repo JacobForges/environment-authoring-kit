@@ -17,10 +17,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Called at start of every FullWorld build (Hub button or menu).</summary>
         public static void ApplyAutomaticForFullWorld()
         {
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            settings.LoadFromPrefs();
+
             if (HasUsableAiProvider)
             {
                 CaveBuildReliableFullWorldPreset.Apply(savePrefs: false);
-                var settings = CaveBuildCursorSettings.LoadOrCreate();
+                settings.LoadFromPrefs();
                 settings.suppressMeatLoopCursorInvokes = false;
                 settings.autoInvokeEachMeatLoopPass = true;
                 settings.autoInvokeTerrainAfterSurfaceBuild = true;

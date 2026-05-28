@@ -382,6 +382,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildPipelineCompletion.OnUserStartedBuild();
             CaveBuildSurfaceCompletionGate.ResetForNewBuildSession();
             CaveTerrainPipelineOrchestrator.ResetWaitState();
+            var buildSettings = CaveBuildCursorSettings.LoadOrCreate();
+            buildSettings.LoadFromPrefs();
+            CaveBuildEditorResponsiveness.ApplyForActiveBuild(buildSettings);
+            buildSettings.SaveToPrefs();
             EnvironmentKitHardwareBudget.BeginEditorSession();
             _buildInProgress = true;
             CaveBuildStartupCoordinator.QueueBuild(

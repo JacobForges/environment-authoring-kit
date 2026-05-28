@@ -87,8 +87,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _surfaceReport = null;
             CaveBuildPreBuildReloop.ResetSession();
 
-            EditorUtility.DisplayProgressBar("Environment Kit", "Starting build — preparing scene…", 0.02f);
-            CaveBuildRunStatusPublisher.SetPhase("startup", "Queued build startup");
+            CaveBuildRunStatusPublisher.SetPhase("startup", "Queued build startup — preparing scene…");
             CaveBuildEditorLog.LogCave(
                 "Build startup queued — watch progress bar & Pipeline Console.",
                 forceUnityConsole: true);
@@ -638,7 +637,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void SetProgress(float t, string detail)
         {
-            EditorUtility.DisplayProgressBar("Environment Kit", detail, t);
+            CaveBuildProgressUI.ShowThrottled("Environment Kit", detail, t);
             CaveBuildRunStatusPublisher.SetPhase("startup", detail);
             CaveBuildPipelineLog.Info(detail, "Startup");
         }

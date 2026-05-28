@@ -71,5 +71,5 @@ MonoBehaviour:
   editorQueueHeavyMultiplier: 12
   editorQueueLoadStepPerItem: 0.08
   editorQueueMaxLoadMultiplier: 2.5
-  editorQueueBatchSize: 5
+  editorQueueBatchSize: 1
   mirrorPacedBuildLogsToConsole: 0

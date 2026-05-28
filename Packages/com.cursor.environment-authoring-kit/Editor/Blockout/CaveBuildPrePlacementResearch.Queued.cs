@@ -77,7 +77,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void RunQueuedResearchSubStep(QueuedResearchState state)
         {
-            EditorUtility.DisplayProgressBar(
+            CaveBuildProgressUI.ShowThrottled(
                 "Environment Kit",
                 $"[Startup] Research {state.SubStep + 1}/{QueuedResearchStepCount}: {QueuedResearchStepLabels[state.SubStep]}…",
                 0.32f + 0.02f * (state.SubStep / (float)QueuedResearchStepCount));

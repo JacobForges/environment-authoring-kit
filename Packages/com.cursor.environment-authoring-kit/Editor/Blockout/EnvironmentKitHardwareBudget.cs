@@ -171,15 +171,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 Resources.UnloadUnusedAssets();
         }
 
-        public static void OnQueueStepCompleted()
+        static int _unloadStepCounter;
+
+        public static void OnQueueStepCompletedThrottled()
         {
-            if (!Active.UnloadUnusedAssetsBetweenQueueSteps)
+            if (!CaveBuildEditorResponsiveness.IsLongBuildActive)
                 return;
-            if (!CaveBuildActionPacing.IsBusy && !LavaTubeCaveBuildPipeline.IsPhasedBuildActive)
+
+            _unloadStepCounter++;
+            var interval = Active.UnloadUnusedAssetsBetweenQueueSteps ? 2 : 6;
+            if (_unloadStepCounter % interval != 0)
                 return;
 
             Resources.UnloadUnusedAssets();
-            EditorUtility.UnloadUnusedAssetsImmediate();
+        }
+
+        public static void OnQueueStepCompleted()
+        {
+            OnQueueStepCompletedThrottled();
         }
 
         public static int ClampHeightmapResolution(int requested) =>
