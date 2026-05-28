@@ -10,14 +10,14 @@ Checklist for publishing **`com.cursor.environment-authoring-kit`** to GitHub, O
 4. **Visual** — spot-check all terrain tiles for vegetation; cave has blocks or full shell (not ramp-only).
 5. **Docs** — [README.md](../README.md), [REQUIREMENTS.md](REQUIREMENTS.md), and [docs/README.md](README.md) match menus and contracts.
 
-## What to ship in the repo
+## What to ship in the repo (matches [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md))
 
 | Include | Exclude |
 |---------|---------|
-| `Editor/`, `Runtime/`, `docs/`, `Tools/cave-grader/` sources | `Tools/cave-grader/node_modules/` |
-| `package.json`, `README.md`, `CHANGELOG.md`, `LICENSE.md` (educational free / commercial by agreement) | `Assets/EnvironmentKit/Generated/` (consumer project artifacts) |
-| `Tools/cave-grader/package.json`, `.env.example` | `.env` with API keys |
-| Optional: sample `Assets/EnvironmentKit/ResearchCache/` index (no huge binaries) | Personal absolute paths in docs |
+| `Packages/com.cursor.environment-authoring-kit/` — Editor, Runtime, docs, grader sources | `Tools/cave-grader/node_modules/` |
+| `Assets/EnvironmentKit/Presets/`, `Recipes/`, `Documentation/` | `Assets/EnvironmentKit/Generated/`, `ResearchCache/` |
+| `ProjectSettings/`, `Packages/manifest.json`, root README, `docs/PUBLIC_REPO_SCOPE.md` | Asset Store folders, `.unity` scenes, `.env`, native SDK binaries |
+| `Tools/cave-grader/package.json`, `.env.example` | Personal absolute paths in docs |
 
 ## Unity package layout
 
@@ -36,7 +36,7 @@ com.cursor.environment-authoring-kit/
 Consumers add:
 
 ```json
-"com.cursor.environment-authoring-kit": "https://github.com/YOU/YOUR_REPO.git?path=Packages/com.cursor.environment-authoring-kit#v0.2.0"
+"com.cursor.environment-authoring-kit": "https://github.com/JacobForges/environment-authoring-kit.git?path=Packages/com.cursor.environment-authoring-kit#v0.3.0"
 ```
 
 Or copy the folder into `Packages/`.

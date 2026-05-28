@@ -1,8 +1,10 @@
 # Environment Authoring Kit — requirements
 
 **Status:** Living document (package scope)  
-**Last updated:** 2026-05-27  
-**Package:** `com.cursor.environment-authoring-kit` v0.2.0+
+**Last updated:** 2026-05-28  
+**Package:** `com.cursor.environment-authoring-kit` v0.3.0+
+
+**Public GitHub accuracy:** [docs/PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) (consuming Hub repo).
 
 Update this file when behavior, contracts, or acceptance criteria change.
 
@@ -16,7 +18,7 @@ Deliver a **repeatable, graded, editor-safe** pipeline that authors:
 2. **Playable lava-tube caves** — maze layout, block tunnel or shell route mesh, walk-in mouth, XR budgets.  
 3. **Optional Cursor automation** — research cache, phase prompts, grade-and-fix scripts.
 
-Target: **Unity 6 + URP + XR** adventure levels (enclosed exploration, mining, combat spaces) — not open-world MMO tooling.
+Target: **Unity 6 + URP** adventure levels that *may* use **XR** (OpenXR / vendor SDK in **your** project) — enclosed exploration, mining, combat spaces — not open-world MMO tooling. Kit applies **XR optimization profiles** in-editor; it does **not** ship device SDKs or certify glasses-ready builds.
 
 ---
 
@@ -73,7 +75,7 @@ Implementation: `SurfaceTerrainPropPlacementRegion`, `SurfaceIntelligentPropPlac
 |----|-------------|-------|
 | P-01 | **`PortalFive`** = cave entrance portal for placement. | |
 | P-02 | Ground from **`SceneGroundResolver`** / Ground tag. | |
-| P-03 | **MainScene** default for “Rebuild Complete Cave (MainScene)”. | |
+| P-03 | **Rebuild Complete Cave (MainScene)** opens `MainScene` only if present in the consumer project (not shipped on public GitHub). | |
 
 ### 2.5 Quality grading
 
@@ -112,7 +114,7 @@ Implementation: `SurfaceTerrainPropPlacementRegion`, `SurfaceIntelligentPropPlac
 
 | ID | Requirement |
 |----|-------------|
-| N-01 | **XR profile** (`VitureXRPro` or project preset) on full builds where configured. |
+| N-01 | **XR optimization profile** (`VitureXRPro` or project preset) on full builds where configured — LOD/colliders/URP hints, not device QA. |
 | N-02 | No per-frame `AssetDatabase.Refresh` or unbounded Undo on thousands of instances. |
 | N-03 | Unity **6000.0+**, **URP 17+**. |
 | N-04 | Node **18+** for `Tools/cave-grader`. |
@@ -166,5 +168,6 @@ Implementation: `SurfaceTerrainPropPlacementRegion`, `SurfaceIntelligentPropPlac
 
 | Date | Summary |
 |------|---------|
-| 2026-05-27 | 9-tile vegetation contract; terrain-first FullWorld; strict cave geometry; v0.2.0 docs. |
+| 2026-05-28 | PUBLIC_REPO_SCOPE alignment; XR honesty; ResearchCache gitignored on GitHub. |
+| 2026-05-27 | 9-tile vegetation; terrain-first FullWorld; 120-step queue (v0.3.0); Hub. |
 | 2026-05-21 | Initial package requirements excerpt (Florida research, grading, Cursor). |

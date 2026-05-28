@@ -29,7 +29,7 @@ Machine-readable registry: `CaveBuildPhaseContractRegistry` → `Assets/Environm
 | 32–37 | `validation` |
 | 38–47 | `shell_materials` (ground polish / burial under terrain) |
 | 48–62 | `shell_materials` / `gameplay_props` (world stages) |
-| 63 | `polish` (meat loop) |
+| 63 | `polish` (meat loop entry — **not** total step count; pipeline total = **120**) |
 | 64–87 | `polish` (post-meat) |
 | 88–99 | `research_seed` (post-build research) |
 | 100–117 | `polish` (finalize: props, burial, contract) |

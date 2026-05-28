@@ -1,52 +1,15 @@
-# World recipes (data-driven, not code)
+# Environment Kit — build recipes
 
-Versioned JSON recipes describe a full **Florida karst surface + lava-tube cave** build. Far Cry–style: change the recipe, not C#, to iterate biomes and scopes.
+JSON recipes under this folder configure **scope**, **gates**, **meat loop**, and **research** behavior for editor builds.
 
-## Files
+**Public GitHub:** these files **are** committed. Generated output under `../Generated/` is **not**.
 
-| Recipe | Purpose |
-|--------|---------|
-| `aaa-full-cave-production.json` | **Default for Build Complete Cave** — FullWorld terrain-first + 63-step cave queue, gates, meat loop until ship |
-| `showcase-florida-karst-xr.json` | Demo reel alias — same pipeline; pinned seed **7721001** |
-| `surface-only-iteration.json` | **Faster** — terrain/trails/NavMesh only; no cave, no pre-build gate, no autonomous polish |
+| Recipe | Use |
+|--------|-----|
+| `aaa-full-cave-production.json` | **Default for Build Complete Cave** — FullWorld terrain-first + **120-step** queued cave pipeline, gates, meat loop toward Ship tier |
+| `showcase-florida-karst-xr.json` | Showcase / reel profile (same ladder family; tune for your demo scene locally) |
+| `surface-only-iteration.json` | Surface / terrain iteration without full cave geo |
 
-**Local generation time:** recipes are passive JSON. Nothing runs until you use a menu item or CI schedule. Incremental ladder stays on for re-runs.
+Recipe selection is applied by `CaveBuildAaaProductionBootstrap` and Hub build actions — see [package docs](../../../Packages/com.cursor.environment-authoring-kit/docs/PRODUCT_BOUNDARY.md).
 
-## Apply in editor
-
-- **Window → Environment Kit → Run Showcase Build (Florida Karst XR)** — full pipeline
-- **Window → Environment Kit → Cave Build → Run Surface Iteration Recipe (fast)** — surface only
-- **Window → Environment Kit → Cave Build → Diagnostics → Apply Showcase Recipe Settings Only**
-
-## Headless / farm
-
-```bash
-cd /path/to/your/Unity/project
-Unity -batchmode -projectPath . \
-  -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RunShowcaseHeadless \
-  -quit -logFile Logs/showcase-headless.log
-```
-
-Surface-only headless (optional; not in nightly CI):
-
-```bash
-Unity -batchmode -projectPath . \
-  -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RunSurfaceIterationHeadless \
-  -quit
-```
-
-## Nightly CI (GitHub Actions)
-
-Workflow: `.github/workflows/environment-kit-showcase-nightly.yml`
-
-- Runs on **schedule + manual dispatch only** — not on push or pull_request.
-- Set repo variable `UNITY_PATH` to your Unity binary on a self-hosted runner, or the job no-ops (exit 0).
-- Does not affect editor build time on your machine.
-
-## Schema (`schemaVersion: 1`)
-
-See `CaveBuildRecipeDefinition` in the package. Key fields: `seed`, `surfaceScope`, `surfaceIncludeTrails`, `useIncrementalLadder`, `allowedResearchEntryIds`.
-
-## Product boundary
-
-`Packages/com.cursor.environment-authoring-kit/docs/PRODUCT_BOUNDARY.md`
+**Requires locally:** a Unity scene with **Ground** + **`PortalFive`**, your licensed prefabs, and optional `ResearchCache/` after `npm run sync-research-pull`.

@@ -1,5 +1,7 @@
 # Environment Kit Studio — standalone preview & approve workflow
 
+> **Status:** Design / product direction — **not** a separate shipped app in the public GitHub repo. The public repo contains the **kit + Hub window** inside Unity. See [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md).
+
 Product idea: a **standalone authoring experience** where users tune all kit settings, **watch the world build live in 3D**, then **approve or reject** before exporting a **portable world pack** (prefab + manifest) into their real game project.
 
 This is **not** a second build pipeline. It is the **same** `com.cursor.environment-authoring-kit` pipeline (120-step cave queue, surface ladder, graders) running inside a **dedicated Unity project** with a **minimal editor shell** and an explicit **approval gate** before export.

@@ -2,6 +2,8 @@
 
 Package **`com.cursor.environment-authoring-kit`** — start at the [package README](../README.md).
 
+**On GitHub:** read the Hub repo [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) first.
+
 ---
 
 ## Start here
@@ -32,7 +34,8 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 | Document | Content |
 |----------|---------|
 | [CaveGradingAndCursor.md](CaveGradingAndCursor.md) | JSON outputs, API setup, pre/post workflows |
-| [FLOW-AUDIT-2026-05-27.md](FLOW-AUDIT-2026-05-27.md) | Hub/provider flow mismatch audit and fixes |
+| [FLOW-AUDIT-2026-05-27.md](FLOW-AUDIT-2026-05-27.md) | Hub/provider flow audit; 63→120 doc drift closed 2026-05-28 |
+| [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains vs local-only |
 | [COMMERCIAL-PRODUCTION-GRADING.md](COMMERCIAL-PRODUCTION-GRADING.md) | Ship / Beta / Alpha tiers |
 | [SURFACE_BUILD_RESPONSIVENESS.md](SURFACE_BUILD_RESPONSIVENESS.md) | Editor freeze avoidance on surface passes |
 

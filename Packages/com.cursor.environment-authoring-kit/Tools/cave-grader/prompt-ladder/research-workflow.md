@@ -68,7 +68,7 @@ Unity: research phase runs `sync-research-cache` automatically. Optional hillsha
 | Pre-build Cursor running | Expected deferral — cave queues after workflow | Watch for `Pre-build Cursor workflow started`; geometry runs via `CaveBuildPendingGeometryBuild` |
 | Forced network research | `CAVE_FORCE_RESEARCH_SYNC=1` or **Cave Build → Force research sync** pref | Turn off unless refreshing cache; pulls 137 catalog URLs via HTTP |
 
-**Order after layout roll:** paced pre-placement research (6 steps) → surface world queue → terrain phases → pre-build gate → **cave geometry pipeline** (63 queued steps).
+**Order after layout roll:** paced pre-placement research (6 steps) → surface world queue → terrain phases → pre-build gate → **cave queued pipeline** (**120** paced steps — `CaveBuildQueuedPipelineSchedule.Total`).
 
 **Execution brief:** always open `CaveBuildResearchExecutionBrief.json` before terrain/LiDAR fixes — do not re-download hillshades every build unless forced.
 

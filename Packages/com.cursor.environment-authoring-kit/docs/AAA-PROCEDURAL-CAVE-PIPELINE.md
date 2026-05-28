@@ -3,6 +3,8 @@
 Design, implementation, and research guideline for the Environment Authoring Kit cave pipeline.  
 Use with [CaveGradingAndCursor.md](./CaveGradingAndCursor.md) and [CAVE-BUILD-WORKFLOW-HARMONY.md](./CAVE-BUILD-WORKFLOW-HARMONY.md).
 
+**Scope:** “AAA” here means **production grading tiers** (Ship / Beta) and internal feature manifests — not a claim that GitHub ships a finished commercial game or XR device certification. See [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md).
+
 ---
 
 ## Table of contents

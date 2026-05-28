@@ -6,7 +6,22 @@ Format: **date** — short title — details.
 
 ---
 
+## 2026-05-28
+
+### Documentation accuracy pass (public GitHub)
+
+- Added **[PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md)** — single source of truth for committed vs gitignored paths, XR honesty, 120-step pipeline, licenses.
+- Rewrote root **README**, package **README**, **REQUIREMENTS** (Hub + package), **Recipes README**, grader **research-workflow**, **PRODUCT_BOUNDARY**, **PUBLISHING**, **CaveGradingAndCursor** (ResearchCache note), **FLOW-AUDIT** closure for 63-step doc drift.
+- Clarified: **no sample `.unity` scenes** on GitHub; **MainScene** menu only if you add the scene locally; **VITURE SDK** not in repo; **ResearchCache/** and **Generated/** local-only.
+
+---
+
 ## 2026-05-27
+
+### Environment Authoring Kit v0.3.0 — 120-step queue + Hub
+
+- Queued cave pipeline **63 → 120** steps (`CaveBuildQueuedPipelineSchedule`).
+- Environment Kit **Hub** window; multi-provider settings export; flow audit doc.
 
 ### Environment Authoring Kit v0.2.0 — FullWorld pipeline + 9-tile surface contract
 
@@ -14,7 +29,7 @@ Package release prep: documentation rewrite, `package.json` **0.2.0**.
 
 **Pipeline**
 
-- FullWorld **terrain-first** — surface world, terrain AI phases, terrain ladder (including props), then queued cave **63 steps**.
+- FullWorld **terrain-first** — surface world, terrain AI phases, terrain ladder (including props), then queued cave work (later expanded to **120** steps in v0.3.0).
 - **Strict cave geometry** — incremental ladder cannot skip geo 1–13 when scene only has ramp / partial floor; `InvalidateCaveGeometryLadderRungs` on FullWorld without full cave.
 - Terrain mouth fixes require **RouteTerrainFloor** from geo — no `BuildFloorOnly` shortcut that replaced full cave generation.
 - Research gate does not block validation or geo steps on prompt-export waits.

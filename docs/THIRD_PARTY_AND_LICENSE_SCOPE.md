@@ -1,5 +1,7 @@
 # License scope and third-party components
 
+**Repository accuracy:** [PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md) lists what is actually committed on GitHub.
+
 ## What you may do with covered original work
 
 **Use it however you like.** The original kit code and project documentation in this repo are dedicated to the **public domain** under **[CC0 1.0](../LICENSE)** (or equivalent waiver where CC0 is not recognized).
@@ -16,6 +18,8 @@ That means, for the covered parts only:
 - `Packages/com.cursor.environment-authoring-kit/` — Environment Authoring Kit C# (editor + runtime)
 - `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/` — TypeScript, shell scripts, prompt templates (**not** `node_modules`)
 - Documentation: `README.md`, `REQUIREMENTS.md`, `docs/`, package `docs/` (including `RESEARCH_DATA_ATTRIBUTION.md` as **kit-authored** credit text — not a license on USGS/NOAA data itself)
+
+**Note:** The UPM package also ships [LICENSE.md](../Packages/com.cursor.environment-authoring-kit/LICENSE.md) (educational free / commercial license) for package distribution — separate from root CC0.
 
 Affirmer: see `LICENSE` (update the name if the legal rights holder is different).
 

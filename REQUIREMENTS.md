@@ -1,7 +1,7 @@
 # Hub cave project — requirements
 
 **Status:** Living document  
-**Last updated:** 2026-05-27  
+**Last updated:** 2026-05-28  
 **Owners:** Hub / Environment Authoring Kit team  
 
 Package-level detail: [Packages/com.cursor.environment-authoring-kit/docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit/docs/REQUIREMENTS.md).
@@ -12,7 +12,9 @@ When you change scope or acceptance criteria, update this file in the same PR or
 
 ## 1. Product vision
 
-Build a **repeatable, graded, partially automated** pipeline that produces **playable underground cave levels** for an **XR (VITURE)** adventure game. Levels should feel like classic dungeon exploration (RO / Zelda lineage): connected rooms and corridors, readable navigation, combat spaces, and interactable mining — not layered “onion” shells or layout-only prototypes shipped as final content.
+Build a **repeatable, graded, partially automated** pipeline that produces **playable underground cave levels** for **Unity 6 + URP** projects that *may* target **XR headsets** (OpenXR / vendor SDKs configured by you). Levels should feel like classic dungeon exploration (RO / Zelda lineage): connected rooms and corridors, readable navigation, combat spaces, and interactable mining — not layered “onion” shells or layout-only prototypes shipped as final content.
+
+**Public repo:** kit + presets/recipes only — not a glasses-ready game. See [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md).
 
 ---
 
@@ -52,7 +54,7 @@ See package [docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit
 |----|-------------|-------|
 | P-01 | **`PortalFive`** = cave **entrance** portal for build placement. | Not the shop portal |
 | P-02 | Ground / anchor from **SceneGroundInfo** (user ground mesh or detected surface). | |
-| P-03 | **MainScene** is the default rebuild target for menu “Rebuild Complete Cave (MainScene)”. | |
+| P-03 | Menu **Rebuild Complete Cave (MainScene)** opens `MainScene` **if that scene exists in your project** — no sample `.unity` is committed on GitHub. | |
 
 ### 2.4 Quality grading
 
@@ -91,11 +93,11 @@ See package [docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit
 
 ## 3. Non-functional requirements
 
-### 3.1 Performance (XR / VITURE)
+### 3.1 Performance (XR budgets — not device certification)
 
 | ID | Requirement |
 |----|-------------|
-| N-01 | Apply **XROptimizationProfile** (`VitureXRPro` preset) on full world/cave builds where configured. |
+| N-01 | Apply **XROptimizationProfile** (`VitureXRPro` preset) on full world/cave builds where configured — editor-time LOD/collider/URP hints. |
 | N-02 | Grading includes **performance** stage (collider/renderer budget). |
 | N-03 | Block culling menu available for runtime visibility in dense block caves. |
 
@@ -136,6 +138,8 @@ A cave build is **acceptable for playtest** when all are true:
 ## 5. Out of scope (current)
 
 - Fully unattended “one button” shipping without Unity editor (partial automation only).
+- **VITURE / OpenXR device certification**, native glasses SDK, or “plug in and play” without consumer project setup.
+- Committed Asset Store art, sample `.unity` scenes, or `ResearchCache/` blobs on GitHub (see [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md)).
 - Shop portal logic tied to cave entrance (explicitly separate from `PortalFive`).
 - Linux/Windows editor QA unless explicitly tested.
 - Multiplayer / networking cave sync.
@@ -162,6 +166,7 @@ A cave build is **acceptable for playtest** when all are true:
 
 | Date | Summary |
 |------|---------|
-| 2026-05-27 | FullWorld terrain-first; 9-tile vegetation contract; strict cave geometry; kit v0.2.0 docs. |
+| 2026-05-28 | Public repo doc accuracy pass; PUBLIC_REPO_SCOPE; XR honesty. |
+| 2026-05-27 | FullWorld terrain-first; 9-tile vegetation; 120-step queue (v0.3.0); Hub. |
 | 2026-05-21 | Florida panhandle LiDAR + Floridan aquifer research cache; attribution doc; ground_placement integration. |
 | 2026-05-21 | Initial requirements doc; documents portal rules, grading, Cursor flows, stability NFRs. |

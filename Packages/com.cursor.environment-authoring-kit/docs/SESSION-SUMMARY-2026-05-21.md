@@ -1,6 +1,6 @@
 # Session summary — cave build pipeline & respawn (2026-05-21)
 
-> **Archive note (2026-05-27):** This session summary is a point-in-time snapshot. For current behavior and release history, use [CHANGELOG.md](../CHANGELOG.md) and [REQUIREMENTS.md](REQUIREMENTS.md).
+> **Archive only.** For current behavior use [CHANGELOG.md](../CHANGELOG.md), [REQUIREMENTS.md](REQUIREMENTS.md), and Hub [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md). Queued pipeline = **120** steps (v0.3.0+); step counts in this file may be outdated.
 
 Design, implementation, and fixes for the **Environment Authoring Kit** cave automation in a Unity 6 Hub-style project.
 

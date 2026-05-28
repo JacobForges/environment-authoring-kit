@@ -11,10 +11,9 @@ This audit reviews Hub/pipeline consistency after the 120-step migration and Hub
 
 ## Mismatches found and fixed
 
-1. **Outdated 63-step docs**
-   - `docs/AAA-PROCEDURAL-CAVE-PIPELINE.md`
-   - `docs/SURFACE-WORLD-BUILD.md`
-   - Updated to 120-step flow labels.
+1. **Outdated 63-step docs** — **resolved 2026-05-28**
+   - Repo-wide pass: [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md), root/package READMEs, REQUIREMENTS, Recipes README, `research-workflow.md`, Hub `docs/CHANGELOG.md`.
+   - Pipeline total = **120** (`CaveBuildQueuedPipelineSchedule.Total`); step index **63** = meat loop only.
 
 2. **Provider confusion in UI warnings**
    - Several windows previously hardcoded `CURSOR_API_KEY not set`.

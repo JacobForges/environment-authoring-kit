@@ -6,6 +6,10 @@ Environment Authoring Kit gives you a fast, **AI-assisted foundation** for Unity
 
 This repository is the **shareable Unity project + UPM package** (`com.cursor.environment-authoring-kit`). It does **not** include third-party Asset Store props, store cave meshes, sample scenes, or the VITURE native SDK — those stay on your machine under separate licenses.
 
+**Accuracy contract:** [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) — what is on GitHub vs local-only (read before trusting other docs).
+
+**Package version:** **0.3.0** · queued cave build: **120/120** steps.
+
 ---
 
 ## What is on GitHub (honest scope)
@@ -125,6 +129,7 @@ Details: [CaveGradingAndCursor.md](Packages/com.cursor.environment-authoring-kit
 |-----|---------|
 | [Package README](Packages/com.cursor.environment-authoring-kit/README.md) | Install, pipeline, grader |
 | [REQUIREMENTS.md](REQUIREMENTS.md) | Hub project requirements |
+| [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains vs what you add locally |
 | [docs/THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) | What CC0 covers vs store assets |
 | [Package docs index](Packages/com.cursor.environment-authoring-kit/docs/README.md) | Pipeline, grading, attribution |
 

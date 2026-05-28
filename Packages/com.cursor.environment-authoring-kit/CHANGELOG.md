@@ -10,6 +10,10 @@ For Hub-wide project notes, see the consuming repo’s `docs/CHANGELOG.md` when 
 
 ## [0.3.0] — 2026-05-27
 
+### Documentation (2026-05-28 follow-up)
+
+- Hub [PUBLIC_REPO_SCOPE.md](../../docs/PUBLIC_REPO_SCOPE.md) and aligned README / REQUIREMENTS / package docs for GitHub accuracy (no sample scenes, no store art, XR honesty, ResearchCache local-only).
+
 ### Pipeline (120 steps)
 
 - Queued FullWorld cave build expanded from **63 → 120** paced macro steps (`CaveBuildQueuedPipelineSchedule`).
@@ -44,7 +48,7 @@ For Hub-wide project notes, see the consuming repo’s `docs/CHANGELOG.md` when 
 ### FullWorld pipeline integrity
 
 - **Terrain-first startup:** `CaveBuildStartupCoordinator` finishes surface world + terrain AI phases + terrain ladder before queued cave work (`CaveBuildSurfaceCompletionGate`).
-- **63-step queued pipeline** documented and aligned: validate → geo 1–13 → playability → validation → world → meat → post-meat → research → manifest → finalize.
+- **Queued pipeline (historical 63 macro steps)** — superseded by **120** steps in v0.3.0; validate → geo 1–13 → playability → … → finalize.
 - **Strict playable cave detection:** `HasPlayableCaveLayoutInScene` requires block tunnel rings, full shell (floor + ceiling meshes), or `MainCaveTube` — not `childCount > 2` or ramp-only patches.
 - **Incremental ladder** cannot skip geo when scene lacks full cave; FullWorld bootstrap invalidates `cave_layout` when geometry is partial.
 - **Removed floor-only mouth shortcut:** terrain ladder no longer calls `BuildFloorOnly` to fake underground layout; mouth fixes require existing `RouteTerrainFloor` from geo steps 1–13.

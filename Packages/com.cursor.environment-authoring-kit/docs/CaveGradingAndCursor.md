@@ -19,7 +19,7 @@ The Environment Authoring Kit grades every cave build with **commercial producti
 - `Assets/EnvironmentKit/Generated/CaveBuildAgentPrompt.md` — human/agent summary (active ladder rung only)
 - `Assets/EnvironmentKit/Generated/CaveBuildResearch.json` — **prestige R&D lab papers** + `floridaTerrain` paths (when cache synced)
 - `Assets/EnvironmentKit/Generated/CaveBuildResearchCache.json` — pointer to `ResearchCache/index.json` + county hillshade paths
-- `Assets/EnvironmentKit/ResearchCache/` — categorized entries, images, Florida aquifer/karst refs (persistent)
+- `Assets/EnvironmentKit/ResearchCache/` — categorized entries, images, Florida aquifer/karst refs (**local**; gitignored on public Hub — run `npm run sync-research-pull` after clone)
 - `Assets/EnvironmentKit/Generated/CaveBuildLadderContext.json` — `activeRung`, `failingRungs`, `minResearchYear`, ground placement
 - `Assets/EnvironmentKit/Generated/CaveBuildVisualShellAudit.json` — onion metrics for `visual_shell` rung
 - `Assets/EnvironmentKit/Generated/CaveLiveFixRequest.json` — play-mode issues

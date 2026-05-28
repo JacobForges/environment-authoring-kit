@@ -1,14 +1,19 @@
 # Environment Authoring Kit
 
-**`com.cursor.environment-authoring-kit`** — Unity Editor package for **procedural Florida karst surface + lava-tube cave worlds**, quality grading, and optional **Cursor SDK** automation. Built for **Unity 6 (6000.x)**, **URP**, and **XR** (VITURE profile).
+**`com.cursor.environment-authoring-kit`** — Unity Editor package for **procedural Florida karst surface + lava-tube cave worlds**, quality grading, and optional **Cursor SDK** automation.
+
+Built for **Unity 6 (6000.x)** and **URP**. XR support = **editor optimization profile + Unity XR packages** in the consumer project — **not** a bundled VITURE SDK or glasses-ready demo.
+
+> **Public GitHub clone?** Read the consuming repo’s **[docs/PUBLIC_REPO_SCOPE.md](../../docs/PUBLIC_REPO_SCOPE.md)** first — scenes, store art, `Generated/`, and `ResearchCache/` are **not** in git.
 
 | | |
 |--|--|
 | **Unity** | 6000.0+ |
 | **Rendering** | Universal Render Pipeline 17+ |
-| **XR** | `com.unity.xr.management` 4.5+ |
+| **XR** | Configure OpenXR / device SDK in **your** project; kit applies `VitureXRPro` **budget** preset when present |
 | **Node (optional)** | 18+ for `Tools/cave-grader` |
-| **License** | [Educational use free; commercial requires license](LICENSE.md) — see [Research attribution](docs/RESEARCH_DATA_ATTRIBUTION.md) for geospatial data |
+| **Version** | **0.3.0** — see `package.json` |
+| **License** | [LICENSE.md](LICENSE.md) (educational free / commercial license); consuming Hub repo may also use [CC0](../../LICENSE) for originals — see [THIRD_PARTY](../../docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) |
 
 ---
 
@@ -24,22 +29,30 @@ Add to your project's `Packages/manifest.json`:
 }
 ```
 
-Or publish to a Git URL / registry and reference that package name. Open the project in Unity and let scripts compile.
+Or publish to a Git URL / registry. Open the project in Unity and let scripts compile.
 
-**Hub reference project:** this package is developed against a sample Unity repo that uses `Assets/EnvironmentKit/` for generated artifacts and `ResearchCache/`. Your game can use the same layout or retarget paths via `CaveBuildCursorSettings`.
+**Expected project layout** (Hub / sample layout):
+
+| Path | Role |
+|------|------|
+| `Assets/EnvironmentKit/Presets/` | ScriptableObjects (atmosphere, scatter, **VitureXRPro**) — committed in public repo |
+| `Assets/EnvironmentKit/Recipes/` | JSON build recipes — committed |
+| `Assets/EnvironmentKit/Generated/` | Regenerated each build — **gitignore** |
+| `Assets/EnvironmentKit/ResearchCache/` | Local research pull — **gitignore** |
+| Your `Assets/` art | **You** provide licensed prefabs; kit scans when configured |
 
 ---
 
 ## Quick start
 
-1. Open your cave scene (e.g. `MainScene`).
-2. Tag or assign a **Ground** anchor (terrain or mesh) — the kit resolves `SceneGroundInfo` from it.
+1. Open **your** cave scene (any `.unity` with Ground + portal anchor — **no sample scene ships on GitHub**).
+2. Tag or assign a **Ground** anchor — kit resolves `SceneGroundInfo`.
 3. Place **`PortalFive`** for the cave entrance (not the shop portal).
-4. Open **Window → Environment Kit → Hub** (recommended), then run build actions from Hub.
-5. Watch **Window → Environment Kit → Cave Build → Diagnostics → Pipeline Console** until step **120/120** completes.
-6. Optional: **Cave Build Grader** for letter grade and failing stages.
+4. **Window → Environment Kit → Hub** → run **Build Complete Cave Level (Active Scene)**.
+5. Watch **Cave Build → Diagnostics → Pipeline Console** until **120/120**.
+6. Optional: **Cave Build Grader** + Node grader ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
 
-If a previous build left only a **ramp / mouth patch** without tunnels, run **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.
+Ramp-only / no tunnels? **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.
 
 ---
 
@@ -49,16 +62,16 @@ All under **Window → Environment Kit**:
 
 | Menu | Scope | What it does |
 |------|--------|----------------|
-| **Build Complete Cave Level (Active Scene)** | `FullWorld` | **Terrain-first:** 9-tile surface, trails, NavMesh, dense vegetation, then **120-step** cave pipeline |
-| **Build Surface World Only (Active Scene)** | `SurfaceOnly` | Surface + terrain ladder only — no underground geometry |
-| **Build Cave Only — Align to Surface (Active Scene)** | `CaveOnly` | Underground only; mouth aligns to existing `GeneratedSurfaceWorld` |
-| **Rebuild Complete Cave (MainScene)** | `FullWorld` | Opens MainScene and runs full build |
-| **Build Complete Cave — Full AAA Rebuild (invalidate ladder)** | `FullWorld` | Clears incremental ladder cache; forces full geo + surface |
+| **Hub** | — | Settings, providers, build controls, flow audit (recommended) |
+| **Build Complete Cave Level (Active Scene)** | `FullWorld` | Terrain-first: 9-tile surface + vegetation, then **120-step** cave queue |
+| **Build Surface World Only (Active Scene)** | `SurfaceOnly` | Surface / terrain ladder only |
+| **Build Cave Only — Align to Surface (Active Scene)** | `CaveOnly` | Underground only |
+| **Rebuild Complete Cave (MainScene)** | `FullWorld` | Opens **`MainScene`** if it exists in **your** project, then full build |
+| **Build Complete Cave — Full AAA Rebuild (invalidate ladder)** | `FullWorld` | Clears incremental cache; forces full geo + surface |
 | **Build Layout Prototype (Interview)** | prototype | Fast maze preview — not shipping quality |
-| **Terrain Build Grader** / **Re-grade Only** | surface | Surface terrain ladder scores |
-| **Cave Build Grader** | cave | Quality report, export prompts, invoke agent |
+| **Terrain Build Grader** / **Cave Build Grader** | — | Surface / cave quality reports |
 
-Diagnostics, repair, and emergency: **Cave Build → Diagnostics/** (unfreeze editor, invalidate ladder, purge stale prompts, etc.).
+Diagnostics: **Cave Build → Diagnostics/** (unfreeze, invalidate ladder, OpenXR stabilize, etc.).
 
 ---
 
@@ -75,21 +88,31 @@ flowchart TB
   end
   subgraph cave [Queued cave 120 steps]
     C0[Validate + research gate]
-    C1[Geo 1-13: maze shell blocks mouth]
+    C1[Geo 1-13]
     C2[Playability + validation]
-    C3[World stages + meat loop]
-    C4[Manifest + finalize]
+    C3[Ground polish + world 15]
+    C4[Meat loop + post-meat + research + finalize]
   end
   surface --> C0 --> C1 --> C2 --> C3 --> C4
 ```
 
 **Rules:**
 
-- Cave **geometry steps 1–13** always run when the scene lacks a **full** cave (block tunnel, or `RouteTerrainFloor` + `RouteTerrainCeiling`, or spline tube) — incremental ladder cannot skip them for a ramp-only partial.
-- Terrain mouth fixes **do not** synthesize underground layout; they require real route mesh from geo.
-- Surface props use a **per-tile density contract** on all locked terrains (see [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)).
+- Cave **geo 1–13** runs when the scene lacks a **full** cave — incremental ladder cannot skip to ramp-only partial.
+- Mouth terrain fixes require real route mesh from geo — not `BuildFloorOnly` shortcuts.
+- Surface props use **per-tile density contract** on all locked terrains ([docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)).
 
-Details: [docs/WORLD-GENERATION-PIPELINE-LADDER.md](docs/WORLD-GENERATION-PIPELINE-LADDER.md), [docs/SURFACE-WORLD-BUILD.md](docs/SURFACE-WORLD-BUILD.md), [docs/PHASE_CONTRACTS.md](docs/PHASE_CONTRACTS.md).
+Details: [WORLD-GENERATION-PIPELINE-LADDER.md](docs/WORLD-GENERATION-PIPELINE-LADDER.md), [PHASE_CONTRACTS.md](docs/PHASE_CONTRACTS.md) (step index 63 = meat loop, not total count).
+
+---
+
+## XR (honest)
+
+| Kit provides | You provide |
+|--------------|-------------|
+| `XROptimizationProfile` / `VitureXRPro.asset` — LOD, colliders, URP hints | XR Plug-in Management, OpenXR loader, build target |
+| `VitureIntegration` logs if a VITURE assembly is already loaded | VITURE SDK (optional), device testing |
+| Performance grading stage | Playtest on hardware |
 
 ---
 
@@ -98,14 +121,12 @@ Details: [docs/WORLD-GENERATION-PIPELINE-LADDER.md](docs/WORLD-GENERATION-PIPELI
 | Area | Path |
 |------|------|
 | Build entry | `Editor/Blockout/LavaTubeCaveBuilder.cs` |
+| 120-step schedule | `Editor/Blockout/CaveBuildQueuedPipelineSchedule.cs` |
 | Startup (surface → cave) | `Editor/Blockout/CaveBuildStartupCoordinator.cs` |
-| Queued pipeline (120 steps) | `Editor/Blockout/CaveBuildQueuedPipelineSchedule.cs`, `LavaTubeCaveBuildPipeline.Queued.cs` |
-| Phase contracts / ladder | `Editor/Blockout/CaveBuildPhaseContractRegistry.cs` |
-| Surface world | `Editor/Blockout/SurfaceWorldGenerator.cs`, `SurfaceTerrainAiPhases.cs` |
-| Surface props | `Editor/Blockout/SurfaceIntelligentPropPlacer.cs`, `SurfaceTerrainPropPlacementRegion.cs` |
+| Hub window | `Editor/Blockout/EnvironmentKitHubWindow.cs` |
+| Surface world | `Editor/Blockout/SurfaceWorldGenerator.cs` |
+| XR optimizer | `Editor/XR/XROptimizer.cs`, `VitureIntegration.cs` |
 | Cursor bridge | `Editor/Blockout/CaveBuildCursorAgentBridge.cs` |
-| Editor pacing | `Editor/Blockout/CaveBuildActionPacing.cs` |
-| Runtime cave | `Runtime/Cave/` |
 | Node grader | `Tools/cave-grader/` |
 
 ---
@@ -114,46 +135,28 @@ Details: [docs/WORLD-GENERATION-PIPELINE-LADDER.md](docs/WORLD-GENERATION-PIPELI
 
 ```bash
 cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader
-cp .env.example .env    # CURSOR_API_KEY=... (+ optional GOOGLE/ANTHROPIC/OPENAI/OPENROUTER/CUSTOM keys), HUB_ROOT=...
+cp .env.example .env    # HUB_ROOT= absolute path; CURSOR_API_KEY=... for SDK runs
 npm install
 npm run doctor
 ./run-grade-and-fix.sh --auto --stream
 ```
 
-Full setup: [docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md).
+Full setup: [docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md). Non-Cursor provider keys in Hub are **exported** to the process; see [FLOW-AUDIT-2026-05-27.md](docs/FLOW-AUDIT-2026-05-27.md) for current `grade-and-fix.ts` behavior.
 
 ---
 
-## Research cache
+## Generated artifacts (local)
 
-Curated proven sources under `Assets/EnvironmentKit/ResearchCache/` (in your Unity project). Agents read disk **before** web search.
-
-| Command | Purpose |
-|---------|---------|
-| `npm run sync-research-pull` | Full pull — cache + missing images + FL hillshades |
-| `npm run sync-research-cache` | Refresh metadata; reuse valid PNGs |
-| `npm run sync-florida-hillshades` | County hillshade PNGs only |
-
-Every **Build Complete Cave** triggers `SyncFullResearchPull` in the editor when configured. **Florida policy:** cave structure from LiDAR / karst GIS only — not water table, TDS, or bathymetry.
-
-Credits: [docs/RESEARCH_DATA_ATTRIBUTION.md](docs/RESEARCH_DATA_ATTRIBUTION.md).
-
----
-
-## Generated artifacts
-
-Written under `Assets/EnvironmentKit/Generated/` (regenerable; often gitignored):
+Under `Assets/EnvironmentKit/Generated/` (gitignored in public Hub repo):
 
 | File | Purpose |
 |------|---------|
 | `CaveBuildQualityReport.json` | Letter grade, dud reasons, `buildAcceptable` |
 | `CaveBuildLiveRunStatus.md` | Live pipeline step / phase |
 | `SurfacePropPlacementPlan_*.json` | Per-category placement plans |
-| `SurfacePropTerrainLock.json` | Locked 9-tile region for scatter |
 | `CaveBuildRouteProbe.json` | Underground walkability probe |
-| `CaveBuildPhaseContracts.json` | Ladder rung I/O export |
 
-Persistent (typically committed): `Assets/EnvironmentKit/ResearchCache/`, `Recipes/`, `Presets/`.
+Committed in public repo: `Presets/`, `Recipes/`, `Documentation/` under `Assets/EnvironmentKit/`.
 
 ---
 
@@ -161,27 +164,18 @@ Persistent (typically committed): `Assets/EnvironmentKit/ResearchCache/`, `Recip
 
 | Doc | Content |
 |-----|---------|
-| [docs/README.md](docs/README.md) | Package documentation index |
-| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | Functional requirements & acceptance (package) |
-| [CHANGELOG.md](CHANGELOG.md) | Package version history |
+| [docs/README.md](docs/README.md) | Package doc index |
+| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | Functional requirements |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md) | Grading, Cursor workflows |
-| [docs/AAA-PROCEDURAL-CAVE-PIPELINE.md](docs/AAA-PROCEDURAL-CAVE-PIPELINE.md) | Autonomous pipeline design |
-| [docs/COMMERCIAL-PRODUCTION-GRADING.md](docs/COMMERCIAL-PRODUCTION-GRADING.md) | Ship / Beta tiers |
-
-If you use the Hub sample repo, also see the repo root `REQUIREMENTS.md` and `docs/CHANGELOG.md`.
-
-Publishing this package: [docs/PUBLISHING.md](docs/PUBLISHING.md).
+| [docs/PRODUCT_BOUNDARY.md](docs/PRODUCT_BOUNDARY.md) | In / out of scope |
+| [docs/PUBLISHING.md](docs/PUBLISHING.md) | Release checklist |
+| Hub repo [docs/PUBLIC_REPO_SCOPE.md](../../docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains |
 
 ---
 
 ## License
 
-Original **C# and TypeScript** in this package (excluding `Tools/cave-grader/node_modules`) is under **[LICENSE.md](LICENSE.md)** — free for educational and personal non-commercial use; **commercial use requires a separate license** from the copyright holder.
+Package **C# and TypeScript** (excluding `node_modules`) — [LICENSE.md](LICENSE.md).
 
-Government and open geospatial data in the research cache remain under their provider terms — see [docs/RESEARCH_DATA_ATTRIBUTION.md](docs/RESEARCH_DATA_ATTRIBUTION.md).
-
----
-
-## Version
-
-See `package.json` (current: **0.2.0**).
+Geospatial cache data — provider terms in [docs/RESEARCH_DATA_ATTRIBUTION.md](docs/RESEARCH_DATA_ATTRIBUTION.md).
