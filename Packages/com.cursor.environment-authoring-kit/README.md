@@ -43,29 +43,20 @@ Or publish to a Git URL / registry. Open the project in Unity and let scripts co
 
 ---
 
-## Required before first build (public clone)
+## First build (public clone)
 
-FullWorld runs **preflight** first. Missing requirements → build blocked → see `Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md` (rows marked **BLOCK**).
+1. Unity **6** + URP — open this repo.
+2. **Node 18+** on the machine.
+3. **Hub → Build Complete Cave (120)** — first click runs **clone setup** (starter scene, placeholder modules, `npm install`).
 
-| Required | Detail |
-|----------|--------|
-| Scene + **`Ground`** tag | Walkable anchor for terrain/cave |
-| **`PortalFive`** | Cave entrance placement |
-| **3D mesh prefabs** in `Assets/` | Auto-scanned (floor/wall/ceiling by name + mesh shape); optional Hub folder limits — **not in git** |
-| **`npm install`** in `Tools/cave-grader` | Node 18+; preflight checks `tsx` is installed |
-
-Hub: **Diagnostics → View Preflight Report** after setup. Warnings are OK; **BLOCK** must be fixed.
-
-Full checklist: [Hub README](../../README.md#required-before-your-first-build-read-this-after-clone).
+See [consumer README](../../README.md#first-build-after-clone).
 
 ---
 
 ## Quick start
 
-1. Complete the **required** table above.
-2. Open **your** cave scene (no sample `.unity` on GitHub).
-3. **Window → Environment Kit → Hub** → **Build Complete Cave Level (Active Scene)**.
-4. Watch **Diagnostics → Pipeline Console** until **120/120**.
+1. **Build Complete Cave Level (Active Scene)** (setup runs automatically if needed).
+2. Watch **Diagnostics → Pipeline Console** until **120/120**.
 5. Optional: **Cave Build Grader** + automation ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
 
 Ramp-only / no tunnels? **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.

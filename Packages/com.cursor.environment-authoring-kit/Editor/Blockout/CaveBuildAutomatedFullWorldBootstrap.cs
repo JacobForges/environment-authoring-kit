@@ -30,6 +30,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             SessionActive = false;
             CaveBuildPreBuildReloop.ResetSession();
 
+            CaveBuildProjectSetup.EnsureCloneReady(ref ground, out var setupLog);
+            if (!string.IsNullOrEmpty(setupLog))
+                Debug.Log("[CaveBuild] " + setupLog.Replace("\n", "\n[CaveBuild] "));
+
             CaveBuildReliableFullWorldPreset.Apply(savePrefs: true);
             EnsureAutomatedCursorInvokesEnabled();
 

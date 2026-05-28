@@ -90,7 +90,11 @@ This file is the **accuracy contract** for what is on GitHub vs what you must su
 
 ## After clone (minimum)
 
-See **[README — Required before your first build](../README.md#required-before-your-first-build-read-this-after-clone)** for the full checklist.
+1. Open repo in **Unity 6** + URP.
+2. **Node 18+** on the machine.
+3. **Window → Environment Kit → Hub → Build Complete Cave (120)** — first click runs **clone setup** (starter scene, placeholder modules, `npm install`).
+
+See **[README — First build](../README.md#first-build-after-clone)**.
 
 1. Unity Hub → **Unity 6000.x** → open repo root  
 2. Wait for UPM to resolve packages  

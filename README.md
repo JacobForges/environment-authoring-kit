@@ -1,8 +1,8 @@
 # Environment Authoring Kit (Unity)
 
-**Not a one-click finished world — a strong procedural base framework you can build on.**
+**Clone → open in Unity → Build Complete Cave.** First run creates a starter scene, placeholder modules if needed, and runs `npm install` automatically.
 
-Environment Authoring Kit gives you a fast, **AI-assisted foundation** for Unity: procedural land layout, cave structure, and core world scaffolding. You still shape, refine, and detail the final world.
+AI-assisted **terrain + cave pipeline** for Unity 6. Replace starter cubes with your licensed art when ready.
 
 This repository is the **shareable Unity project + UPM package** (`com.cursor.environment-authoring-kit`). It does **not** include third-party Asset Store props, store cave meshes, sample scenes, or the VITURE native SDK — those stay on your machine under separate licenses.
 
@@ -25,37 +25,18 @@ After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)
 
 ---
 
-## Required before your first build (read this after clone)
+## First build (after clone)
 
-**A fresh clone is not playable until you add the items below.** The kit runs a **preflight checklist** before **Build Complete Cave Level**. If anything required is missing, the build stops immediately with:
+1. **Unity Hub** → open this repo folder (Unity **6** + URP).
+2. **Window → Environment Kit → Hub** → **Build Complete Cave (120)** (or menu **Build Complete Cave Level**).
 
-`Automated FullWorld blocked (N issue(s)). See Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md`
+**First click runs clone setup automatically:** starter scene (`Assets/EnvironmentKit/Scenes/StarterWorld.unity`), placeholder floor/wall/ceiling prefabs if none exist, `npm install` in `Tools/cave-grader`, and project paths pointed at **this** clone.
 
-That is **expected** — open the report and fix every row marked **BLOCK**.
+3. You need **Node 18+** installed on the machine (setup runs `npm install` for you).
 
-### Checklist (all required for FullWorld)
+**Better art (optional):** import licensed 3D cave/dungeon modules into `Assets/` — the kit scans and prefers them over starter cubes. Texture-only or 2D sprite packs are not valid cave geometry.
 
-| # | You must provide | Why |
-|---|------------------|-----|
-| 1 | **Unity scene** with a walkable surface tagged **`Ground`** | Preflight: *Ground tag / anchor* |
-| 2 | GameObject **`PortalFive`** (cave entrance anchor) | Cave mouth placement |
-| 3 | **3D mesh prefabs** somewhere under `Assets/` (auto-discovered; modular cave/dungeon/rock packs) | Preflight: *Environment module prefab catalog* — **not** 2D sprites or texture-only folders |
-| 4 | **Node 18+** and **`npm install`** in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader` | Preflight: *Node + tsx* — automated FullWorld expects the grader tools installed |
-
-### Prefabs (automatic discovery)
-
-On every preflight/build, the kit **scans all of `Assets/`** for 3D prefabs with meshes and classifies them into floor / wall / ceiling (by name, path, and mesh shape). Hub prefab folder fields are **optional** — use them only to limit or prioritize folders.
-
-**Will not work as cave modules:** texture-only packs (PNG materials with no prefabs), 2D tilemap sprite packs, UI prefabs.
-
-Import licensed **3D modular** content into `Assets/`, then **Save Hub Settings** or run preflight. Materials under discovered packs are upgraded to URP when possible.
-
-Leave **Hub project root** empty so reports and `npm` paths resolve to **this** Unity project (not another folder on your machine).
-
-### After setup
-
-1. **Window → Environment Kit → Hub** → run build, or use **Cave Build → Diagnostics → View Preflight Report** to confirm all **PASS** (warnings are OK).
-2. Optional: **Cave Build → Diagnostics → Apply Reliable FullWorld Preset** (recommended settings for first full run).
+If build still blocks, open `Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md` and fix any **BLOCK** row (usually missing Node).
 
 **Not in git (optional, speeds up research):** `Assets/EnvironmentKit/ResearchCache/` — run `npm run sync-research-pull` in `Tools/cave-grader` when you want Florida research data locally.
 
