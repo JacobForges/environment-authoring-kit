@@ -222,9 +222,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene);
                 EditorGUILayout.EndHorizontal();
 
-                if (GUILayout.Button("Full AAA Rebuild (invalidate ladder)", GUILayout.Height(24f)))
+                if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
             }
+
+            EditorGUILayout.HelpBox(
+                "Full AAA Rebuild = same 120-step FullWorld as above, but clears incremental ladder cache " +
+                "(forces fresh geo + surface). Use when a normal build reuses stale steps or the scene is half-built.",
+                MessageType.None);
 
             EditorGUILayout.Space(8f);
             EditorGUILayout.BeginHorizontal();
