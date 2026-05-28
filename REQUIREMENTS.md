@@ -32,7 +32,7 @@ Build a **repeatable, graded, partially automated** pipeline that produces **pla
 | F-08 | Entrance anchored to **`PortalFive`** when present; build fails clearly if portal/ground missing when required. | Must |
 | F-09 | **FullWorld** builds surface + 9-tile terrain + vegetation **before** queued cave geometry (terrain-first startup). | Must |
 | F-10 | Cave geometry = block tunnel **or** full shell (floor + ceiling) **or** spline tube — not ramp-only partial from terrain fixes. | Must |
-| F-11 | Queued pipeline completes **63 paced steps** (validate → geo 1–13 → … → finalize). | Must |
+| F-11 | Queued pipeline completes **120 paced steps** (validate → geo 1–13 → … → finalize). | Must |
 
 ### 2.2 Surface world & vegetation (FullWorld)
 
@@ -147,7 +147,7 @@ A cave build is **acceptable for playtest** when all are true:
 | Area | Primary code / doc |
 |------|-------------------|
 | Build entry | `LavaTubeCaveBuilder.cs`, `CaveBuildUnifiedFlow.cs` |
-| 63-step queued pipeline | `LavaTubeCaveBuildPipeline.Queued.cs` |
+| 120-step queued pipeline | `LavaTubeCaveBuildPipeline.Queued.cs` |
 | Surface + props | `SurfaceWorldGenerator.cs`, `SurfaceIntelligentPropPlacer.cs` |
 | Pre/post Cursor | `CaveBuildCursorAgentBridge.cs`, `docs/CaveGradingAndCursor.md` |
 | Pacing | `CaveBuildActionPacing.cs` |
