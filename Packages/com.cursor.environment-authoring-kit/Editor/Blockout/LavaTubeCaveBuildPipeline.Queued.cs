@@ -1661,6 +1661,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             "[CaveBuild] Nine-tile vegetation below contract — surface props may need another pass.");
                     }
 
+                    if (surfaceTransform != null && ctx.Ground?.Terrain != null && ctx.Request != null)
+                    {
+                        var center = ctx.Ground.HasAnchor
+                            ? ctx.Ground.Anchor.position
+                            : new Vector3(
+                                ctx.Ground.Bounds.center.x,
+                                ctx.Ground.SurfaceY,
+                                ctx.Ground.Bounds.center.z);
+                        var extent = SurfaceTerrainPlayRegion.ResolveUnifiedSurfaceExtent(
+                            ctx.Ground.Terrain, center, ctx.Request.SurfaceExtentMeters);
+                        if (SurfaceIntelligentPropPlacer.TryPlacePostCaveSurfaceRocks(
+                                surfaceTransform,
+                                ctx.Ground.Terrain,
+                                center,
+                                extent,
+                                ctx.Request.Seed,
+                                out var rockMsg))
+                            Debug.Log("[CaveBuild] " + rockMsg);
+                    }
+
                     break;
                 }
                 case 4:

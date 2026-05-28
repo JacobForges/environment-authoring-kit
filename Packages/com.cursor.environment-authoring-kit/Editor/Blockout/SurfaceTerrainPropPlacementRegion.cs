@@ -156,6 +156,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfacePropCategory.Grass => 240,
                 SurfacePropCategory.Bushes => 148,
                 SurfacePropCategory.GroundCover => 172,
+                SurfacePropCategory.Rocks => 24,
                 _ => 28,
             };
 
@@ -167,6 +168,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfacePropCategory.Grass => 170,
                 SurfacePropCategory.Bushes => 108,
                 SurfacePropCategory.GroundCover => 122,
+                SurfacePropCategory.Rocks => 12,
                 _ => 22,
             };
 
@@ -181,6 +183,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfacePropCategory.Grass => 3.8f,
                 SurfacePropCategory.Bushes => 5.2f,
                 SurfacePropCategory.GroundCover => 4.6f,
+                SurfacePropCategory.Rocks => 14f,
                 _ => 8f,
             };
 
@@ -221,23 +224,56 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _ => SurfaceIntelligentPropPlacer.VegetationPass.Mixed,
             };
 
-            SurfaceIntelligentPropPlacer.AppendTrailSlots(
-                slots,
-                trailsRoot,
-                playCenter,
-                extentMeters,
-                seed + (int)category * 131,
-                vegPass,
-                mainTerrain);
-
+            // Grid first so trail-adjacent duplicates keep full-tile coverage (not a single spline row).
             AppendTerrainGridSlots(slots, mainTerrain, playCenter, extentMeters, seed, category, vegPass);
+
+            if (category != SurfacePropCategory.Rocks)
+            {
+                var trailBefore = slots.Count;
+                SurfaceIntelligentPropPlacer.AppendTrailSlots(
+                    slots,
+                    trailsRoot,
+                    playCenter,
+                    extentMeters,
+                    seed + (int)category * 131,
+                    vegPass,
+                    mainTerrain);
+                SurfaceIntelligentPropPlacer.CapTrailOnlySlots(
+                    slots,
+                    trailBefore,
+                    maxTrailOnlySlots: Mathf.Max(12, TargetCountForCategory(category, tileCount) / 12));
+            }
 
             var dedupeFactor = category is SurfacePropCategory.Grass or SurfacePropCategory.GroundCover
                 ? 0.24f
                 : 0.30f;
-            SurfaceIntelligentPropPlacer.DedupeSlots(
+            SurfaceIntelligentPropPlacer.DedupeSlotsPreferGrid(
                 slots,
                 minSeparationMeters: PerTileGridSpacing(category) * dedupeFactor);
+        }
+
+        /// <summary>Rock scatter after cave geometry exists — mouth halo + per-tile grid (no trail spline).</summary>
+        public static void CollectPostCaveRockSlots(
+            Terrain mainTerrain,
+            Vector3 playCenter,
+            float extentMeters,
+            int seed,
+            List<SurfaceIntelligentPropPlacer.PlacementSlot> slots)
+        {
+            slots ??= new List<SurfaceIntelligentPropPlacer.PlacementSlot>();
+            slots.Clear();
+            if (mainTerrain == null)
+                return;
+
+            AppendTerrainGridSlots(
+                slots,
+                mainTerrain,
+                playCenter,
+                extentMeters,
+                seed + 44017,
+                SurfacePropCategory.Rocks,
+                SurfaceIntelligentPropPlacer.VegetationPass.Mixed);
+            SurfaceIntelligentPropPlacer.DedupeSlotsPreferGrid(slots, PerTileGridSpacing(SurfacePropCategory.Rocks) * 0.35f);
         }
 
         static void AppendTerrainGridSlots(
@@ -321,7 +357,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             Scale = vegPass == SurfaceIntelligentPropPlacer.VegetationPass.TreesFocus
                                 ? 0.88f + (sector % 5) * 0.04f
                                 : 0.62f + (sector % 4) * 0.05f,
-                            Category = SurfaceIntelligentPropPlacer.CategoryForSector(sector, vegPass),
+                            Category = category == SurfacePropCategory.Rocks
+                                ? "rock"
+                                : SurfaceIntelligentPropPlacer.CategoryForSector(sector, vegPass),
                             TerrainName = terrain.name,
                         });
                         addedForTile++;

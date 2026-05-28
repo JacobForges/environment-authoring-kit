@@ -276,8 +276,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         surface, terrain, center, extent, request.Seed,
                         SurfacePropCategory.GroundCover, out message);
                 case 21:
-                    message = "Optional rocks — skipped when no rock prefabs in catalog.";
-                    return true;
+                    return SurfaceIntelligentPropPlacer.TryPlacePostCaveSurfaceRocks(
+                        surface, terrain, center, extent, request.Seed, out message);
                 case 22:
                     message = "Surface enemy scatter plan — applied at runtime spawn.";
                     return true;

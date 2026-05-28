@@ -48,7 +48,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     "[CaveBuild] No API keys — FullWorld runs procedurally (" + cacheNote + ").");
             }
 
-            EditorUtility.SetDirty(CaveBuildCursorSettings.LoadOrCreate());
+            CaveBuildEditorResponsiveness.ApplyForActiveBuild(settings);
+            settings.SaveToPrefs();
+            EditorUtility.SetDirty(settings);
         }
 
         static void ConfigureProceduralResearchFallback()

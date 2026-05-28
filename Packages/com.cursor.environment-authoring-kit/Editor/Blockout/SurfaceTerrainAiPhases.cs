@@ -154,6 +154,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public bool PropsCatalogImported;
             public int PropCategoryIndex;
             public int PropCategoriesPlaced;
+            public SurfaceIntelligentPropPlacer.CategoryPlacementSession PropPlacementSession;
             public int Phase0SmoothIndex;
             public int Phase0SmoothCells;
             public bool PostPropsStabilizationDone;
@@ -652,26 +653,84 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     var tileCount = SurfaceTerrainPropPlacementRegion.ActiveLock?.terrainTileCount ??
                                     SurfaceTerrainPlayRegion.CollectSurfaceTerrains(state.Ground.Terrain).Count;
                     var target = SurfaceTerrainPropPlacementRegion.TargetCountForCategory(cat, tileCount);
-                    EditorUtility.DisplayProgressBar(
-                        "Environment Kit",
-                        $"[Surface] Props execute — {cat} ({catNum}/{PropCategories.Length}) target {target} on {tileCount} terrain(s)…",
-                        0.52f + 0.02f * state.PropCategoryIndex);
-
-                    if (SurfaceIntelligentPropPlacer.TryPlaceCategoryLadderPass(
-                            state.Surface,
-                            state.Ground.Terrain,
-                            state.Center,
-                            state.Extent,
-                            state.Request.Seed,
-                            cat,
-                            state.PropsCatalog,
-                            out var msg))
+                    var session = state.PropPlacementSession;
+                    var vegRoot = state.Surface.Find(SurfaceIntelligentPropPlacer.VegetationLayerName);
+                    if (vegRoot == null)
                     {
-                        state.PropCategoriesPlaced++;
-                        CaveBuildEditorLog.LogSurface($"[Surface] Props {cat}: {msg}", forceUnityConsole: true);
+                        var go = new GameObject(SurfaceIntelligentPropPlacer.VegetationLayerName);
+                        CaveEditorUndo.RegisterCreated(go, "Surface vegetation root");
+                        go.transform.SetParent(state.Surface, false);
+                        vegRoot = go.transform;
                     }
 
-                    state.PropCategoryIndex++;
+                    if (session == null ||
+                        session.Finalized ||
+                        session.Category != cat)
+                    {
+                        if (!SurfaceIntelligentPropPlacer.TryBeginCategoryPlacementSession(
+                                state.Surface,
+                                state.Ground.Terrain,
+                                state.Center,
+                                state.Extent,
+                                state.Request.Seed,
+                                cat,
+                                state.PropsCatalog,
+                                session,
+                                out session,
+                                out vegRoot,
+                                out var beginMsg))
+                        {
+                            CaveBuildEditorLog.LogSurfaceWarning(
+                                $"[Surface] Props {cat}: {beginMsg}",
+                                forceUnityConsole: true);
+                            state.PropPlacementSession = null;
+                            state.PropCategoryIndex++;
+                            ScheduleSurfacePropCategory(state);
+                            return;
+                        }
+
+                        state.PropPlacementSession = session;
+                    }
+
+                    var placedBefore = session.Placed;
+                    SurfaceIntelligentPropPlacer.TryPlaceCategoryLadderPassChunk(
+                        state.Ground.Terrain,
+                        vegRoot,
+                        state.Request.Seed,
+                        cat,
+                        session,
+                        SurfaceIntelligentPropPlacer.DefaultPropsPerEditorChunk,
+                        out var placedChunk);
+
+                    EditorUtility.DisplayProgressBar(
+                        "Environment Kit",
+                        $"[Surface] Props {cat} ({catNum}/{PropCategories.Length}) {session.Placed}/{target} on {tileCount} tile(s)…",
+                        0.52f + 0.02f * state.PropCategoryIndex + 0.12f * (session.Placed / (float)Mathf.Max(1, target)));
+
+                    if (session.IsComplete)
+                    {
+                        if (SurfaceIntelligentPropPlacer.TryFinalizeCategoryPlacementSession(
+                                state.Ground.Terrain,
+                                vegRoot,
+                                cat,
+                                session,
+                                out var msg))
+                        {
+                            state.PropCategoriesPlaced++;
+                            CaveBuildEditorLog.LogSurface($"[Surface] Props {cat}: {msg}", forceUnityConsole: true);
+                        }
+
+                        state.PropPlacementSession = null;
+                        state.PropCategoryIndex++;
+                    }
+                    else if (placedChunk <= 0 && session.Placed == placedBefore)
+                    {
+                        SurfaceIntelligentPropPlacer.TryFinalizeCategoryPlacementSession(
+                            state.Ground.Terrain, vegRoot, cat, session, out _);
+                        state.PropPlacementSession = null;
+                        state.PropCategoryIndex++;
+                    }
+
                     ScheduleSurfacePropCategory(state);
                 },
                 CaveBuildPipelineDomains.SurfaceQueueLabel($"terrain vegetation {cat}"));

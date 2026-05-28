@@ -25,15 +25,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public readonly List<string> Issues = new();
         }
 
-        public static SurfaceRouteReport Run(Transform caveRoot = null)
+        public static SurfaceRouteReport Run(Transform caveRoot = null, bool lightweightBuildProbe = false)
         {
             var report = new SurfaceRouteReport();
             var ground = SceneGroundResolver.Resolve();
-            if (ground?.Terrain != null)
+            if (ground?.Terrain != null && !lightweightBuildProbe)
                 SurfaceTerrainPlayRegion.FlushAllSurfaceTerrains(ground.Terrain);
 
             var waypoints = CollectSurfaceWaypoints(ground, caveRoot, out var mouth);
-            TryBakeSurfaceNav(ground, caveRoot, waypoints);
+            if (!lightweightBuildProbe)
+                TryBakeSurfaceNav(ground, caveRoot, waypoints);
             report.WaypointCount = waypoints.Count;
 
             if (waypoints.Count < 2)
@@ -44,7 +45,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var eyeHeight = 1.1f;
-            const int maxStepsPerFrame = 48;
+            var maxStepsPerFrame = lightweightBuildProbe ? 16 : 48;
             var maxSteps = Mathf.Min(waypoints.Count, maxStepsPerFrame);
             if (waypoints.Count > maxStepsPerFrame)
             {
@@ -103,11 +104,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 report.Issues.Add("[ground_placement] Could not resolve cave mouth world position.");
             }
 
-            var surface = SurfacePlaytestValidator.Run(caveRoot);
-            foreach (var line in surface.Issues)
-                report.Issues.Add(line);
+            if (!lightweightBuildProbe)
+            {
+                var surface = SurfacePlaytestValidator.Run(caveRoot);
+                foreach (var line in surface.Issues)
+                    report.Issues.Add(line);
+            }
 
-            report.Passed = report.Issues.Count == 0 && report.ReachedCaveMouth;
+            report.Passed = lightweightBuildProbe
+                ? report.Issues.Count == 0
+                : report.Issues.Count == 0 && report.ReachedCaveMouth;
             return report;
         }
 

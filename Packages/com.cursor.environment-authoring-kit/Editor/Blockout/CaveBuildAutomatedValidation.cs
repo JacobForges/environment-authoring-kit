@@ -78,7 +78,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             // phases synchronously (terrain smooth, props, meat snapshot, etc.) and freezes the editor at
             // pipeline stage 22. Full polish remains on Play Mode bot schedule (CavePlaytestRouteBotBridge).
 
-            var report = SurfaceRouteProbeRunner.Run(caveRoot);
+            var report = SurfaceRouteProbeRunner.Run(caveRoot, lightweightBuildProbe: true);
             SurfaceRouteProbeRunner.Export(report);
             if (report.Passed)
             {
