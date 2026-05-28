@@ -95,7 +95,7 @@ See **[README — Required before your first build](../README.md#required-before
 1. Unity Hub → **Unity 6000.x** → open repo root  
 2. Wait for UPM to resolve packages  
 3. Scene with **`Ground`** + **`PortalFive`**  
-4. **Licensed cave prefabs** under `Assets/` (default path `Assets/BillemotdonggulLavaTubePack/Prefabs/` — not in git)  
+4. **Licensed prefabs** under `Assets/` — Hub → Settings → **Prefab folders** (default modules path `Assets/BillemotdonggulLavaTubePack/Prefabs/` — not in git)  
 5. `cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader && npm install`  
 6. Preflight **PASS** (read `CaveBuildPreflightReport.md` if blocked)  
 7. **Hub** → **Build Complete Cave Level**

@@ -65,6 +65,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         double _nextRefreshAt;
         double _nextPinAt;
         bool _pinDuringBuild = true;
+        string _caveLavaFolders;
+        string _cavePropFolders;
+        bool _caveScanAllAssets;
 
         [MenuItem(CaveBuildMenuPaths.Hub, false, -100)]
         public static void Open()
@@ -98,6 +101,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _openRouterApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenRouter);
             _customApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.CustomEndpoint);
             _pinDuringBuild = EditorPrefs.GetBool(PrefPinDuringBuild, true);
+            LoadPrefabFolderPrefs();
             _selectedArtifact = Mathf.Clamp(_selectedArtifact, 0, Artifacts.Length - 1);
             RefreshArtifactPreview();
             EditorApplication.update += OnEditorUpdate;
@@ -242,6 +246,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Hardware budget",
                 _settings.hardwareBudget);
 
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Semicolon-separated paths under Assets/. Surface + underground builds use these scans. " +
+                "Preflight needs floor, wall, and ceiling modules in the first field. " +
+                "Default if empty: Assets/BillemotdonggulLavaTubePack/Prefabs/",
+                MessageType.None);
+            _caveLavaFolders = EditorGUILayout.TextField("Prefab folders for environment modules", _caveLavaFolders);
+            _cavePropFolders = EditorGUILayout.TextField("Prefab folders for props", _cavePropFolders);
+            _caveScanAllAssets = EditorGUILayout.Toggle("Scan all Assets for props", _caveScanAllAssets);
+            if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
+            {
+                SavePrefabFolderPrefs();
+                LavaTubePrefabCatalog.Load(forceRefresh: true);
+            }
+
             _showApiKey = EditorGUILayout.Toggle("Show API key", _showApiKey);
             DrawProviderSettings();
 
@@ -282,6 +302,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _settings.SetApiKey(EnvironmentKitAiProvider.OpenRouter, _openRouterApiKey);
                 _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
                 _settings.SaveToPrefs();
+                SavePrefabFolderPrefs();
                 EditorUtility.SetDirty(_settings);
                 AssetDatabase.SaveAssets();
             }
@@ -289,6 +310,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (GUILayout.Button("Reload From Prefs", GUILayout.Height(26f)))
             {
                 _settings.LoadFromPrefs();
+                LoadPrefabFolderPrefs();
                 _apiKey = _settings.GetApiKey();
                 _googleApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.GoogleGemini);
                 _anthropicApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.AnthropicClaude);
@@ -522,6 +544,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
             EditorUtility.RevealInFinder(path);
+        }
+
+        void LoadPrefabFolderPrefs()
+        {
+            _caveLavaFolders = EnvironmentKitSettings.CaveLavaPrefabFolders;
+            _cavePropFolders = EnvironmentKitSettings.CavePropPrefabFolders;
+            _caveScanAllAssets = EnvironmentKitSettings.CaveScanAllAssets;
+        }
+
+        void SavePrefabFolderPrefs()
+        {
+            EnvironmentKitSettings.CaveLavaPrefabFolders = _caveLavaFolders;
+            EnvironmentKitSettings.CavePropPrefabFolders = _cavePropFolders;
+            EnvironmentKitSettings.CaveScanAllAssets = _caveScanAllAssets;
         }
     }
 }

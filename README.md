@@ -39,18 +39,18 @@ That is **expected** — open the report and fix every row marked **BLOCK**.
 |---|------------------|-----|
 | 1 | **Unity scene** with a walkable surface tagged **`Ground`** | Preflight: *Ground tag / anchor* |
 | 2 | GameObject **`PortalFive`** (cave entrance anchor) | Cave mouth placement |
-| 3 | **Licensed cave mesh prefabs** under `Assets/` | Preflight: *Lava tube prefab catalog* — repo ships **no** store art |
+| 3 | **Licensed prefabs** under `Assets/` (environment modules + props) | Preflight: *Environment module prefab catalog* — repo ships **no** store art |
 | 4 | **Node 18+** and **`npm install`** in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader` | Preflight: *Node + tsx* — automated FullWorld expects the grader tools installed |
 
-### Default cave prefab folder (if you use the author’s layout)
+### Default module prefab folder (optional)
 
-The kit looks for lava-tube modules here (configurable in kit settings):
+Default scan path if Hub fields are empty:
 
 `Assets/BillemotdonggulLavaTubePack/Prefabs/`
 
-You need **floor, wall, and ceiling** prefabs in that folder (or point **Cave Lava Prefab Folders** at your own pack). Without them, preflight **blocks** with *Prefab catalog empty*.
+You need **floor, wall, and ceiling** module prefabs there (or set your own paths). Without them, preflight **blocks** with *Prefab catalog empty*.
 
-Use **any** licensed lava-tube / cave modular pack you own — import it into `Assets/`, then set the folder path in **Environment Kit → Hub → Settings** if paths differ.
+Import your licensed packs into `Assets/`, then **Hub → Settings → Prefab folders** → **Prefab folders for environment modules** / **Prefab folders for props** → **Save Hub Settings**. Same fields on **Window → Environment Kit**.
 
 ### After setup
 
@@ -85,7 +85,7 @@ Use **any** licensed lava-tube / cave modular pack you own — import it into `A
 |------|--------|
 | 1 | Unity Hub → **Unity 6000.4.6f1** (or 6000.x matching `ProjectSettings/ProjectVersion.txt`) → open this repo root |
 | 2 | Let Package Manager resolve URP/XR packages (first open may take a few minutes) |
-| 3 | Complete the **[Required before your first build](#required-before-your-first-build-read-this-after-clone)** checklist (scene, Ground, PortalFive, cave prefabs, `npm install`) |
+| 3 | Complete the **[Required before your first build](#required-before-your-first-build-read-this-after-clone)** checklist (scene, Ground, PortalFive, prefabs, `npm install`) |
 | 4 | **Window → Environment Kit → Hub** → confirm preflight passes (or read `CaveBuildPreflightReport.md`) |
 | 5 | Run **Build Complete Cave Level (Active Scene)** |
 | 6 | Watch **Cave Build → Diagnostics → Pipeline Console** through **120/120** queued steps |

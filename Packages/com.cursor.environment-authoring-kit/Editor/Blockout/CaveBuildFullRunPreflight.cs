@@ -55,8 +55,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 : "Tag walkable floor as Ground or assign on Environment Root.");
 
             var catalog = LavaTubePrefabCatalog.Load();
-            Add(list, "prefab_catalog", "Lava tube prefab catalog", catalog.IsValid ? Severity.Pass : Severity.Block,
-                catalog.IsValid ? "Catalog valid." : "Prefab catalog empty — create sample presets.");
+            Add(list, "prefab_catalog", "Environment module prefab catalog", catalog.IsValid ? Severity.Pass : Severity.Block,
+                catalog.IsValid ? "Catalog valid." : "Prefab catalog empty — add module folders in Hub → Settings → Prefab folders.");
 
             Add(list, "phased_build", "Phased cave build enabled",
                 settings.usePhasedCaveBuild ? Severity.Pass : Severity.Block,

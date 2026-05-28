@@ -98,9 +98,9 @@ namespace EnvironmentAuthoringKit.Editor
             _placeUnderGround = EditorGUILayout.Toggle("Place under ground / plane", _placeUnderGround);
             EnvironmentKitSettings.NeverCreateNewTerrain =
                 EditorGUILayout.Toggle("Never create new terrain (use my ground only)", EnvironmentKitSettings.NeverCreateNewTerrain);
-            _caveLavaFolders = EditorGUILayout.TextField("Cave Lava Prefab Folders (;)", _caveLavaFolders);
-            _cavePropFolders = EditorGUILayout.TextField("Cave Prop Prefab Folders (;)", _cavePropFolders);
-            _caveScanAllAssets = EditorGUILayout.Toggle("Scan all Assets for cave props (noisy)", _caveScanAllAssets);
+            _caveLavaFolders = EditorGUILayout.TextField("Prefab folders for environment modules (;)", _caveLavaFolders);
+            _cavePropFolders = EditorGUILayout.TextField("Prefab folders for props (;)", _cavePropFolders);
+            _caveScanAllAssets = EditorGUILayout.Toggle("Scan all Assets for props (noisy)", _caveScanAllAssets);
 
             EditorGUILayout.BeginHorizontal();
             _groundReference = (Transform)EditorGUILayout.ObjectField("Ground / Plane", _groundReference, typeof(Transform), true);
