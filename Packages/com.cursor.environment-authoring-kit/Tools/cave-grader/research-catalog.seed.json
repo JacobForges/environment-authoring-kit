@@ -667,6 +667,39 @@
       "notes": "Tight corridor rock walls + combat arenas — shell ring layout reference."
     },
     {
+      "id": "envkit-interstitial-vegetation-spread",
+      "title": "Environment Kit — interstitial vegetation spread (dual grid pass)",
+      "year": 2026,
+      "category": "vegetation",
+      "provenInProduction": true,
+      "studio": "Environment Kit (curated)",
+      "docUrl": "https://www.guerrilla-games.com/read/horizon-zero-dawn-procedural-vegetation-placement",
+      "imageUrls": [],
+      "notes": "Kit implementation: pass-1 uniform grid per terrain tile, pass-2 half-cell offset grid (+38% spacing) skipping slots within min separation of pass-1 instances. Matches Guerrilla GPU scatter after terrain rules — scatter points separate from heightfield. Use SurfaceIntelligentPropPlacer.TryInterstitialWideSpreadPass after primary categories."
+    },
+    {
+      "id": "unity-terrain-tree-distance",
+      "title": "Unity 6 — Terrain trees & details (distance / density)",
+      "year": 2026,
+      "category": "vegetation",
+      "provenInProduction": true,
+      "studio": "Unity Technologies",
+      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/terrain-Trees.html",
+      "imageUrls": [],
+      "notes": "Authoring analog: prefab scatter per tile with slope filter and min separation; do not paint only along splines. Tree distance and detail density inform per-tile TargetPerTile counts in SurfaceTerrainPropPlacementRegion."
+    },
+    {
+      "id": "florida-karst-surface-entrance-underground",
+      "title": "Florida karst — surface entrance lip + structural void below (DS 926)",
+      "year": 2015,
+      "category": "karst_geomorphology",
+      "provenInProduction": true,
+      "studio": "USGS / FGS",
+      "docUrl": "https://pubs.usgs.gov/ds/0926/",
+      "imageUrls": [],
+      "notes": "Walkable surface at cave opening; tube/route in Floridan structural unit below land surface. Kit: CaveUndergroundEntranceEnforcer — align opening, FinalizeGroundPlacement, mouth depth snap, SurfaceWalkIn descent mesh + floor modules, trail connector, atmosphere trigger. Do not use water table or inundation DEM for void Y."
+    },
+    {
       "id": "guerrilla-horizon-terrain",
       "title": "Sony Guerrilla — Horizon terrain sculpt (open world rock)",
       "year": 2022,

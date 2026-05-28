@@ -593,6 +593,124 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return placed > 0;
         }
 
+        /// <summary>
+        /// Second vegetation pass: interstitial grid beside the first pass, wider spacing, skips slots too close to existing instances.
+        /// </summary>
+        public static bool TryInterstitialWideSpreadPass(
+            Transform surfaceRoot,
+            Terrain terrain,
+            Vector3 groundCenter,
+            float extentMeters,
+            int seed,
+            SurfacePropCategory category,
+            SurfaceVegetationCatalog catalog,
+            out string message)
+        {
+            message = string.Empty;
+            if (surfaceRoot == null || terrain == null)
+                return false;
+
+            catalog ??= LoadVegetationCatalog();
+            var pool = PoolForCategory(catalog, category);
+            if (pool.Count == 0)
+            {
+                message = $"Wide spread skip — no prefabs for {category}.";
+                return false;
+            }
+
+            var vegRoot = surfaceRoot.Find(VegetationLayerName);
+            if (vegRoot == null)
+                return false;
+
+            var lockFile = SurfaceTerrainPropPlacementRegion.ActiveLock;
+            var tileCount = lockFile?.terrainTileCount ??
+                              SurfaceTerrainPlayRegion.CollectSurfaceTerrains(terrain).Count;
+            var maxCount = SurfaceTerrainPropPlacementRegion.TargetCountForCategory(category, tileCount);
+            var existing = CountPlacedForCategory(vegRoot, category);
+            var bonusTarget = Mathf.CeilToInt(maxCount * 0.42f);
+            if (existing >= maxCount + bonusTarget)
+            {
+                message = $"Wide spread {category}: already dense ({existing}).";
+                return false;
+            }
+
+            var playCenter = lockFile != null
+                ? new Vector3(lockFile.playCenterX, lockFile.playCenterY, lockFile.playCenterZ)
+                : groundCenter;
+            var unifiedExtent = lockFile != null
+                ? lockFile.extentMeters
+                : SurfaceTerrainPlayRegion.ResolveUnifiedSurfaceExtent(terrain, groundCenter, extentMeters);
+
+            var slots = new List<PlacementSlot>();
+            SurfaceTerrainPropPlacementRegion.CollectInterstitialPlacementSlotsForCategory(
+                terrain, playCenter, unifiedExtent, seed + 44021, category, slots);
+            OrderSlotsForFullAreaSpread(slots, terrain, seed + (int)category * 907);
+
+            var minSep = category switch
+            {
+                SurfacePropCategory.Trees => 4.2f,
+                SurfacePropCategory.Bushes => 2.8f,
+                SurfacePropCategory.Grass => 1.6f,
+                _ => 2.2f,
+            };
+
+            var rng = new System.Random(seed + (int)category * 5503);
+            var planEntries = new List<PlacementPlanEntry>();
+            var placed = 0;
+            var cap = Mathf.Min(bonusTarget, maxCount - existing + bonusTarget);
+
+            foreach (var slot in slots)
+            {
+                if (placed >= cap)
+                    break;
+                if (!SlotMatchesCategory(slot.Category, category))
+                    continue;
+                if (IsTooNearExistingProp(vegRoot, slot.Position, minSep))
+                    continue;
+                if (!TryPlaceSlot(terrain, vegRoot, slot, pool, rng, category, planEntries, out _, out _))
+                    continue;
+                placed++;
+            }
+
+            if (placed > 0)
+            {
+                WritePlacementPlanForCategory(
+                    category,
+                    VegetationPass.Mixed,
+                    planEntries,
+                    existing + placed,
+                    tileCount,
+                    maxCount);
+                EditorUtility.SetDirty(vegRoot.gameObject);
+                CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
+            }
+
+            message = placed > 0
+                ? $"Wide spread {category}: +{placed} interstitial (now {existing + placed}, target ~{maxCount})."
+                : $"Wide spread {category}: no open interstitial slots.";
+            return placed > 0;
+        }
+
+        static bool IsTooNearExistingProp(Transform vegRoot, Vector3 worldPos, float minSeparationMeters)
+        {
+            if (vegRoot == null || minSeparationMeters <= 0.01f)
+                return false;
+
+            var minSep2 = minSeparationMeters * minSeparationMeters;
+            foreach (Transform child in vegRoot)
+            {
+                if (child == null)
+                    continue;
+                var p = child.position;
+                var dx = p.x - worldPos.x;
+                var dz = p.z - worldPos.z;
+                if (dx * dx + dz * dz < minSep2)
+                    return true;
+            }
+
+            return false;
+        }
+
         static int TryGapFillTilesBelowMinimum(
             Terrain terrain,
             Transform vegRoot,

@@ -252,6 +252,46 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 minSeparationMeters: PerTileGridSpacing(category) * dedupeFactor);
         }
 
+        /// <summary>
+        /// Second-pass grid: half-cell offset + wider spacing so props fill gaps between the first pass
+        /// (Guerrilla/Horizon-style interstitial scatter — see research id envkit-interstitial-vegetation-spread).
+        /// </summary>
+        public static void CollectInterstitialPlacementSlotsForCategory(
+            Terrain mainTerrain,
+            Vector3 playCenter,
+            float extentMeters,
+            int seed,
+            SurfacePropCategory category,
+            List<SurfaceIntelligentPropPlacer.PlacementSlot> slots)
+        {
+            slots ??= new List<SurfaceIntelligentPropPlacer.PlacementSlot>();
+            slots.Clear();
+            if (mainTerrain == null)
+                return;
+
+            var vegPass = category switch
+            {
+                SurfacePropCategory.Trees => SurfaceIntelligentPropPlacer.VegetationPass.TreesFocus,
+                SurfacePropCategory.Bushes => SurfaceIntelligentPropPlacer.VegetationPass.Understory,
+                _ => SurfaceIntelligentPropPlacer.VegetationPass.Mixed,
+            };
+
+            AppendTerrainGridSlots(
+                slots,
+                mainTerrain,
+                playCenter,
+                extentMeters,
+                seed + 55103,
+                category,
+                vegPass,
+                spacingMultiplier: 1.38f,
+                gridPhaseOffset: 0.5f);
+
+            SurfaceIntelligentPropPlacer.DedupeSlotsPreferGrid(
+                slots,
+                minSeparationMeters: PerTileGridSpacing(category) * 0.14f);
+        }
+
         /// <summary>Rock scatter after cave geometry exists — mouth halo + per-tile grid (no trail spline).</summary>
         public static void CollectPostCaveRockSlots(
             Terrain mainTerrain,
@@ -283,11 +323,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             float extentMeters,
             int seed,
             SurfacePropCategory category,
-            SurfaceIntelligentPropPlacer.VegetationPass vegPass)
+            SurfaceIntelligentPropPlacer.VegetationPass vegPass,
+            float spacingMultiplier = 1f,
+            float gridPhaseOffset = 0f)
         {
             var terrains = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(mainTerrain);
             var tileCount = terrains.Count;
-            var spacing = PerTileGridSpacing(category);
+            var spacing = PerTileGridSpacing(category) * Mathf.Max(0.75f, spacingMultiplier);
             var rng = new System.Random(seed + (int)category * 7919 + 17);
             const int maxSlotsPerCategory = 8000;
             var perTileTarget = TargetPerTile(category);
@@ -331,7 +373,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                         var jx = ((float)rng.NextDouble() - 0.5f) * spacing * 0.35f;
                         var jz = ((float)rng.NextDouble() - 0.5f) * spacing * 0.35f;
-                        var checkerOffset = ((row + col) & 1) == 0 ? 0.25f : 0.75f;
+                        var checkerOffset = (((row + col) & 1) == 0 ? 0.25f : 0.75f) + gridPhaseOffset;
                         var rowOffset = ((row & 1) == 0 ? rowOffsetSeed : 1f - rowOffsetSeed);
                         var wx = minX + (col + checkerOffset) * stepX + jx;
                         var wz = minZ + (row + rowOffset) * stepZ + jz;

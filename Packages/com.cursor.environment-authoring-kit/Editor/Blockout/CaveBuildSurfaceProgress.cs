@@ -13,6 +13,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const int WeightPerTerrainPhase = 120;
         const int WeightPropsSetup = 45;
         const int WeightPropPolishPerCategory = 180;
+        const int WeightPropWideSpreadPerCategory = 140;
         const int WeightCraterTilePaced = 14;
         const int WeightLadderRung = 38;
         const int WeightLadderIterationBuffer = 220;
@@ -43,6 +44,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 WeightPropsSetup +
                 propTargets +
                 PropCategories.Length * WeightPropPolishPerCategory +
+                PropCategories.Length * WeightPropWideSpreadPerCategory +
                 terrainTileCount * WeightCraterTilePaced * 2 +
                 SurfaceTerrainBuildLadder.RungOrder.Length * WeightLadderRung +
                 WeightLadderIterationBuffer;
@@ -116,6 +118,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void CompletePropPolish(SurfacePropCategory category)
         {
             Advance(WeightPropPolishPerCategory, $"Polish {category}");
+        }
+
+        public static void CompletePropWideSpread(SurfacePropCategory category)
+        {
+            Advance(WeightPropWideSpreadPerCategory, $"Wide spread {category}");
         }
 
         public static void CompleteCraterTile(int tileIndex, int tileCount, string context)

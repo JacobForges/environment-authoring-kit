@@ -298,7 +298,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (Cancelled(s, 0.68f, "Surface walk-in entrance (ground mouth + descent)…"))
                 return true;
 
-            var placed = CaveSurfaceEntranceBuilder.Build(
+            CaveAdventureCaveGenerator.EnsureQueuedMaterials(s);
+            var placed = CaveUndergroundEntranceEnforcer.Enforce(
                 s.CavesRoot,
                 s.Geometry,
                 s.MazeLayout,
@@ -307,7 +308,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 s.Ground,
                 s.Catalog,
                 s.Request?.Seed ?? 0);
-            Debug.Log($"[CaveBuild] Surface walk-in entrance phase: {placed} piece(s).");
+            Debug.Log($"[CaveBuild] Surface walk-in entrance phase: {placed} piece(s) (underground enforcer).");
             return false;
         }
 

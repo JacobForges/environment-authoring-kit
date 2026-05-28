@@ -159,6 +159,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public int Phase0SmoothCells;
             public bool PostPropsStabilizationDone;
             public bool PropPolishPassDone;
+            public bool PropWideSpreadPassDone;
             public bool PreLadderCraterRepairDone;
             public string LastLadderFailingRung;
             public int SameRungFixStreak;
@@ -499,6 +500,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             state.PropCategoryIndex = 0;
             state.PropCategoriesPlaced = 0;
             state.PropPolishPassDone = false;
+            state.PropWideSpreadPassDone = false;
             state.PropsCatalog = SurfaceIntelligentPropPlacer.LoadVegetationCatalog();
 
             if (!state.PropsCatalog.HasAny)
@@ -563,6 +565,46 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildPipelineDomains.SurfaceQueueLabel("surface props — execute categories"));
         }
 
+        static void SchedulePropWideSpreadPass(QueueState state)
+        {
+            var spreadIndex = 0;
+            void RunNext()
+            {
+                if (spreadIndex >= PropCategories.Length)
+                {
+                    SchedulePropPolishPass(state);
+                    return;
+                }
+
+                var cat = PropCategories[spreadIndex++];
+                CaveBuildActionPacing.ScheduleHeavy(
+                    () =>
+                    {
+                        if (SurfaceIntelligentPropPlacer.TryInterstitialWideSpreadPass(
+                                state.Surface,
+                                state.Ground.Terrain,
+                                state.Center,
+                                state.Extent,
+                                state.Request.Seed,
+                                cat,
+                                state.PropsCatalog,
+                                out var msg))
+                        {
+                            CaveBuildEditorLog.LogSurface("[Surface] " + msg, forceUnityConsole: true);
+                            CaveBuildSurfaceProgress.CompletePropWideSpread(cat);
+                        }
+
+                        RunNext();
+                    },
+                    CaveBuildPipelineDomains.SurfaceQueueLabel($"props wide spread {cat}"));
+            }
+
+            CaveBuildEditorLog.LogSurface(
+                "[Surface] Prop wide spread — interstitial grid beside first pass on every terrain tile…",
+                forceUnityConsole: true);
+            RunNext();
+        }
+
         static void SchedulePropPolishPass(QueueState state)
         {
             var polishIndex = 0;
@@ -609,6 +651,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (state.Ground?.Terrain == null || state.Surface == null ||
                 state.PropCategoryIndex >= PropCategories.Length)
             {
+                if (!state.PropWideSpreadPassDone)
+                {
+                    state.PropWideSpreadPassDone = true;
+                    SchedulePropWideSpreadPass(state);
+                    return;
+                }
+
                 if (!state.PropPolishPassDone)
                 {
                     state.PropPolishPassDone = true;
