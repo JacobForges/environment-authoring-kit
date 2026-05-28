@@ -152,24 +152,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static int TargetPerTile(SurfacePropCategory category) =>
             category switch
             {
-                SurfacePropCategory.Trees => 58,
-                SurfacePropCategory.Grass => 240,
-                SurfacePropCategory.Bushes => 148,
-                SurfacePropCategory.GroundCover => 172,
-                SurfacePropCategory.Rocks => 24,
-                _ => 28,
+                SurfacePropCategory.Trees => 78,
+                SurfacePropCategory.Grass => 320,
+                SurfacePropCategory.Bushes => 195,
+                SurfacePropCategory.GroundCover => 228,
+                SurfacePropCategory.Rocks => 34,
+                _ => 36,
             };
 
         /// <summary>Hard minimum placements on each locked tile before the pass is acceptable.</summary>
         public static int MinPlacementsPerTile(SurfacePropCategory category) =>
             category switch
             {
-                SurfacePropCategory.Trees => 42,
-                SurfacePropCategory.Grass => 170,
-                SurfacePropCategory.Bushes => 108,
-                SurfacePropCategory.GroundCover => 122,
-                SurfacePropCategory.Rocks => 12,
-                _ => 22,
+                SurfacePropCategory.Trees => 52,
+                SurfacePropCategory.Grass => 210,
+                SurfacePropCategory.Bushes => 138,
+                SurfacePropCategory.GroundCover => 158,
+                SurfacePropCategory.Rocks => 18,
+                _ => 28,
             };
 
         public static int TargetCountForCategory(SurfacePropCategory category, int terrainTileCount) =>
@@ -179,12 +179,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static float PerTileGridSpacing(SurfacePropCategory category) =>
             category switch
             {
-                SurfacePropCategory.Trees => 10f,
-                SurfacePropCategory.Grass => 3.8f,
-                SurfacePropCategory.Bushes => 5.2f,
-                SurfacePropCategory.GroundCover => 4.6f,
-                SurfacePropCategory.Rocks => 14f,
-                _ => 8f,
+                SurfacePropCategory.Trees => 8.2f,
+                SurfacePropCategory.Grass => 3.1f,
+                SurfacePropCategory.Bushes => 4.4f,
+                SurfacePropCategory.GroundCover => 3.9f,
+                SurfacePropCategory.Rocks => 11f,
+                _ => 6.8f,
             };
 
         public static float SpacingForCategory(SurfacePropCategory category, int terrainTileCount)
@@ -241,12 +241,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfaceIntelligentPropPlacer.CapTrailOnlySlots(
                     slots,
                     trailBefore,
-                    maxTrailOnlySlots: Mathf.Max(12, TargetCountForCategory(category, tileCount) / 12));
+                    maxTrailOnlySlots: Mathf.Max(8, TargetCountForCategory(category, tileCount) / 22));
             }
 
             var dedupeFactor = category is SurfacePropCategory.Grass or SurfacePropCategory.GroundCover
-                ? 0.24f
-                : 0.30f;
+                ? 0.17f
+                : 0.22f;
             SurfaceIntelligentPropPlacer.DedupeSlotsPreferGrid(
                 slots,
                 minSeparationMeters: PerTileGridSpacing(category) * dedupeFactor);

@@ -66,7 +66,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static Material CreateStyledRockMaterial(WorldGenerationRequest request)
         {
-            var mat = new Material(CaveSplineMaterialFactory.GetOrCreateCaveRockMaterial());
+            var baseRock = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Rock)
+                           ?? CaveSplineMaterialFactory.GetOrCreateCaveRockMaterial();
+            var mat = new Material(baseRock);
             var rng = new System.Random(request.Seed + 901);
             var style = string.IsNullOrEmpty(request.BuildVisualStyle)
                 ? CaveBuildStylePalette.Classic
@@ -77,7 +79,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static Material CreateStyledFloorMaterial(WorldGenerationRequest request)
         {
-            var mat = new Material(CaveSplineMaterialFactory.GetOrCreateCaveFloorMaterial());
+            var baseFloor = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Floor)
+                            ?? CaveSplineMaterialFactory.GetOrCreateCaveFloorMaterial();
+            var mat = new Material(baseFloor);
             var rng = new System.Random(request.Seed + 902);
             var style = string.IsNullOrEmpty(request.BuildVisualStyle)
                 ? CaveBuildStylePalette.Classic

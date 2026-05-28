@@ -1,4 +1,5 @@
 using EnvironmentAuthoringKit.Cave;
+using EnvironmentAuthoringKit.Editor;
 using EnvironmentAuthoringKit.Editor.Generation;
 using UnityEditor;
 using UnityEngine;
@@ -257,6 +258,67 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     main.maxParticles = Mathf.Min(main.maxParticles, 8);
                 }
             }
+
+            ExtendAtmosphereForSurfaceDescent(caveRoot, keep);
+        }
+
+        /// <summary>Pull the underground atmosphere trigger down the surface mouth ramp so fog/blackout starts at the cave lip.</summary>
+        public static void ExtendAtmosphereForSurfaceDescent(Transform caveRoot, Transform atmosphereZone = null)
+        {
+            if (caveRoot == null)
+                return;
+
+            atmosphereZone ??= caveRoot.Find("CaveAtmosphereZone");
+            if (atmosphereZone == null)
+                return;
+
+            var col = atmosphereZone.GetComponent<BoxCollider>();
+            if (col == null)
+                return;
+
+            var min = col.center - col.size * 0.5f;
+            var max = col.center + col.size * 0.5f;
+
+            var geometry = caveRoot.Find(CaveGeometryPaths.GeometryRoot);
+            if (geometry != null)
+            {
+                var walkIn = geometry.Find(CaveSurfaceEntranceBuilder.RootName);
+                if (walkIn != null)
+                {
+                    foreach (var r in walkIn.GetComponentsInChildren<Renderer>(true))
+                    {
+                        if (r == null || !r.enabled)
+                            continue;
+                        var lp = atmosphereZone.InverseTransformPoint(r.bounds.center);
+                        var ext = r.bounds.extents;
+                        min = Vector3.Min(min, lp - ext);
+                        max = Vector3.Max(max, lp + ext);
+                    }
+                }
+            }
+
+            var ground = SceneGroundInfo.Resolve();
+            if (ground != null && ground.HasAnchor)
+            {
+                var mouth = CaveGroundPlacementUtility.GetEntranceMouthWorld(caveRoot, ground);
+                if (mouth.sqrMagnitude > 0.01f)
+                {
+                    var lip = atmosphereZone.InverseTransformPoint(mouth);
+                    lip.y = atmosphereZone.InverseTransformPoint(
+                        new Vector3(mouth.x, mouth.y + 2f, mouth.z)).y;
+                    min = Vector3.Min(min, lip - new Vector3(5f, 1f, 5f));
+                    max = Vector3.Max(max, lip + new Vector3(5f, 6f, 5f));
+                }
+            }
+
+            var size = max - min;
+            if (size.sqrMagnitude < 0.01f)
+                return;
+
+            CaveEditorUndo.RecordObject(col, "Extend cave atmosphere");
+            col.center = (min + max) * 0.5f;
+            col.size = size + new Vector3(4f, 6f, 4f);
+            atmosphereZone.localPosition = col.center;
         }
 
         static void EnsureLegacyWalkways(Transform caveRoot)

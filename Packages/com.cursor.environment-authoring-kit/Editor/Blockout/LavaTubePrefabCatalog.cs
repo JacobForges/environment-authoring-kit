@@ -48,6 +48,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!forceRefresh && _cached != null && _cached.IsValid)
                 return _cached;
 
+            ProjectCaveMaterialResolver.ClearCache();
             var catalog = new LavaTubePrefabCatalog();
             var unclassifiedModules = new List<GameObject>();
 

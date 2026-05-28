@@ -303,6 +303,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static Material LoadFallbackCaveMaterial(Shader urpLit)
         {
+            var fromProject = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Wall);
+            if (fromProject != null)
+                return fromProject;
+
             var fallbackPaths = new[]
             {
                 $"{LavaTubeMaterialUpgrader.PackRoot}/Material/MI_Ceiling01A.mat",

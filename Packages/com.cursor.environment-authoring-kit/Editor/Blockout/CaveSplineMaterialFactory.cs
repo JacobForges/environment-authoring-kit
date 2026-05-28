@@ -20,6 +20,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             LavaTubeMaterialUpgrader.EnsurePackMaterialsUpgraded();
 
+            var fromProject = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Floor);
+            if (fromProject != null)
+                return fromProject;
+
             var floorTint = new Color(0.48f, 0.4f, 0.34f);
             var existing = AssetDatabase.LoadAssetAtPath<Material>(FloorPresetPath);
             if (existing != null)
@@ -82,6 +86,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static Material GetOrCreateCaveRockMaterial()
         {
             LavaTubeMaterialUpgrader.EnsurePackMaterialsUpgraded();
+
+            var fromProject = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Rock);
+            if (fromProject != null)
+                return fromProject;
 
             // Warm cave stone tint — lets the lava-tube pack's rock texture show through
             // (texture provides the detail; tint just shifts toward earthy brown/amber under torchlight).
@@ -150,6 +158,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static Material LoadFirstMaterial()
         {
+            var fromProject = ProjectCaveMaterialResolver.Resolve(ProjectCaveMaterialResolver.MaterialRole.Wall);
+            if (fromProject != null)
+                return fromProject;
+
             foreach (var path in SourceMaterialPaths)
             {
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(path);

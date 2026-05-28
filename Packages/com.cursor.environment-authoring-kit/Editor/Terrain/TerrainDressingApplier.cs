@@ -17,11 +17,20 @@ namespace EnvironmentAuthoringKit.Editor.TerrainAuthoring
             var layers = data.terrainLayers;
             if (layers == null || layers.Length == 0)
             {
-                layers = new[]
+                var fromProject = ProjectTerrainLayerResolver.TryResolveTerrainLayers();
+                if (fromProject != null && fromProject.Length > 0)
                 {
-                    CreateLayer(preset.groundTint, "Ground"),
-                    CreateLayer(preset.secondaryTint, "Secondary")
-                };
+                    layers = fromProject;
+                }
+                else
+                {
+                    layers = new[]
+                    {
+                        CreateLayer(preset.groundTint, "Ground"),
+                        CreateLayer(preset.secondaryTint, "Secondary")
+                    };
+                }
+
                 data.terrainLayers = layers;
             }
 

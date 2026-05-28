@@ -184,29 +184,68 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (existing != null)
                 CaveEditorUndo.DestroyImmediate(existing.gameObject);
 
+            var geometry = walkInRoot.parent;
+            var cavesRoot = geometry != null ? geometry.parent : null;
             var start = layout.SolutionPath[0];
-            var routeFloor = layout.GetFloorSurfaceLocal(start.x, start.y);
-            var mouthY = CaveGeometryPaths.UndergroundDepthMeters;
-            var top = new Vector3(routeFloor.x, mouthY + 0.2f, routeFloor.z + layout.CellSize * 0.4f);
-            var bottom = routeFloor + Vector3.up * 0.15f;
+            var routeFloorLocal = layout.GetFloorSurfaceLocal(start.x, start.y);
+            var routeFloorWorld = geometry != null
+                ? geometry.TransformPoint(routeFloorLocal)
+                : routeFloorLocal;
 
-            if (ground != null && ground.HasAnchor)
+            Vector3 topWorld;
+            Vector3 bottomWorld;
+            if (ground != null && ground.HasAnchor && cavesRoot != null)
             {
-                var cavesRoot = walkInRoot.parent != null ? walkInRoot.parent.parent : null;
-                if (cavesRoot != null)
+                var mouthWorld = CaveGroundPlacementUtility.GetEntranceMouthWorld(cavesRoot, ground);
+                var surfaceY = CaveGroundPlacementUtility.SampleWalkableSurfaceWorldY(ground, mouthWorld);
+                topWorld = new Vector3(mouthWorld.x, surfaceY + 0.18f, mouthWorld.z);
+                bottomWorld = routeFloorWorld;
+                var minDrop = Mathf.Max(5f, CaveGeometryPaths.UndergroundDepthMeters * 0.55f);
+                if (topWorld.y - bottomWorld.y < minDrop)
                 {
-                    var mouthWorld = CaveGroundPlacementUtility.GetEntranceMouthWorld(cavesRoot, ground);
-                    top = cavesRoot.InverseTransformPoint(mouthWorld + Vector3.down * 0.5f);
+                    bottomWorld = new Vector3(
+                        routeFloorWorld.x,
+                        topWorld.y - minDrop,
+                        routeFloorWorld.z);
                 }
             }
+            else
+            {
+                topWorld = routeFloorWorld + Vector3.up * Mathf.Max(3f, CaveGeometryPaths.UndergroundDepthMeters * 0.35f);
+                bottomWorld = routeFloorWorld + Vector3.up * 0.15f;
+            }
 
+            floorMat = ProjectCaveMaterialResolver.EnsureUsable(
+                floorMat, ProjectCaveMaterialResolver.MaterialRole.Floor, catalog);
+            rockMat = ProjectCaveMaterialResolver.EnsureUsable(
+                rockMat, ProjectCaveMaterialResolver.MaterialRole.Rock, catalog);
             floorMat ??= CaveSplineMaterialFactory.GetOrCreateCaveFloorMaterial();
 
-            var points = new List<Vector3> { top, Vector3.Lerp(top, bottom, 0.35f), Vector3.Lerp(top, bottom, 0.7f), bottom };
+            const int sampleCount = 11;
+            var worldPoints = new List<Vector3>(sampleCount);
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var t = i / (float)(sampleCount - 1);
+                var p = Vector3.Lerp(topWorld, bottomWorld, t);
+                if (ground != null && ground.HasAnchor && t < 0.42f)
+                {
+                    var lipY = CaveGroundPlacementUtility.SampleWalkableSurfaceWorldY(ground, p);
+                    var blend = 1f - (t / 0.42f);
+                    p.y = Mathf.Lerp(p.y, lipY + 0.14f, blend);
+                }
+
+                worldPoints.Add(p);
+            }
+
+            var points = new List<Vector3>(worldPoints.Count);
+            foreach (var wp in worldPoints)
+                points.Add(walkInRoot.InverseTransformPoint(wp));
+
+            var placed = TryBuildDescentFromFloorModules(walkInRoot, points, layout, catalog, rng);
             var halfWidth = layout.PlatformSpan * 0.58f;
             var mesh = BuildWalkStripMesh(points, halfWidth, layout.CorridorHeight * 0.08f);
             if (mesh == null || floorMat == null)
-                return 0;
+                return placed;
 
             var go = new GameObject(DescentMeshName);
             CaveEditorUndo.RegisterCreated(go, "Entrance descent mesh");
@@ -218,6 +257,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             mf.sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = floorMat;
+            if (placed >= 3)
+                mr.enabled = false;
 
             var col = go.AddComponent<MeshCollider>();
             col.sharedMesh = mesh;
@@ -225,9 +266,88 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (go.GetComponent<CaveWalkableMarker>() == null)
                 go.AddComponent<CaveWalkableMarker>();
 
-            var placed = 1;
+            placed += 1;
             placed += BuildRockPortal(walkInRoot, points[0], points[points.Count - 1], layout, rockMat, catalog, rng);
+            RepairWalkInMaterials(walkInRoot);
             return placed;
+        }
+
+        static int TryBuildDescentFromFloorModules(
+            Transform walkInRoot,
+            List<Vector3> localPoints,
+            CaveMazeLayout layout,
+            LavaTubePrefabCatalog catalog,
+            System.Random rng)
+        {
+            if (walkInRoot == null || catalog == null || catalog.Floors.Count == 0 || localPoints == null || localPoints.Count < 2)
+                return 0;
+
+            var modulesRoot = walkInRoot.Find("DescentFloorModules");
+            if (modulesRoot != null)
+                CaveEditorUndo.DestroyImmediate(modulesRoot.gameObject);
+
+            var root = new GameObject("DescentFloorModules");
+            CaveEditorUndo.RegisterCreated(root, "Descent floor modules");
+            root.transform.SetParent(walkInRoot, false);
+
+            var prefab = catalog.Pick(catalog.Floors, rng);
+            if (prefab == null)
+                return 0;
+
+            var placed = 0;
+            var step = Mathf.Max(layout.CellSize * 0.85f, 2.8f);
+            for (var i = 0; i < localPoints.Count - 1; i++)
+            {
+                var a = localPoints[i];
+                var b = localPoints[i + 1];
+                var seg = b - a;
+                var len = seg.magnitude;
+                if (len < 0.05f)
+                    continue;
+
+                var forward = seg / len;
+                var right = Vector3.Cross(Vector3.up, forward).normalized;
+                var tiles = Mathf.Max(1, Mathf.CeilToInt(len / step));
+                for (var t = 0; t < tiles; t++)
+                {
+                    var along = Mathf.Min(len, (t + 0.5f) * step);
+                    var pos = a + forward * along;
+                    var rot = Quaternion.LookRotation(forward, Vector3.up);
+                    var scale = Vector3.one * Mathf.Clamp(layout.PlatformSpan / 4.5f, 0.75f, 1.35f);
+                    if (CavePrefabScatter.PlaceModule(
+                            root.transform, prefab, pos, rot, scale, "EntranceDescent", false))
+                        placed++;
+                }
+
+                if (catalog.Walls.Count > 0 && i % 2 == 0)
+                {
+                    var wallPrefab = catalog.Pick(catalog.Walls, rng);
+                    var wallOffset = right * (layout.PlatformSpan * 0.55f);
+                    CavePrefabScatter.PlaceModule(
+                        root.transform,
+                        wallPrefab,
+                        a + forward * (len * 0.5f) + wallOffset,
+                        rot,
+                        Vector3.one * 0.9f,
+                        "EntrancePortalSide",
+                        false);
+                }
+            }
+
+            return placed;
+        }
+
+        static void RepairWalkInMaterials(Transform walkInRoot)
+        {
+            if (walkInRoot == null)
+                return;
+
+            foreach (var renderer in walkInRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null)
+                    continue;
+                CaveSceneMaterialRepair.ApplyModuleMaterials(renderer.gameObject, renderer.transform.lossyScale);
+            }
         }
 
         public static void CarveTerrainBowlAtMouth(Transform caveRoot, SceneGroundInfo ground, float radiusMeters = 9f)

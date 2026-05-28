@@ -48,6 +48,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             catalog ??= LavaTubePrefabCatalog.Load();
             var rng = new System.Random(seed + 8803);
+            floorMat = ProjectCaveMaterialResolver.EnsureUsable(
+                floorMat, ProjectCaveMaterialResolver.MaterialRole.Floor, catalog);
+            rockMat = ProjectCaveMaterialResolver.EnsureUsable(
+                rockMat, ProjectCaveMaterialResolver.MaterialRole.Rock, catalog);
 
             var placed = 0;
             placed += BuildMouthPad(cavesRoot, root.transform, entrance, floorMat, ground);
@@ -57,6 +61,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             // Finally: ensure the mouth corridor is actually passable (remove blocking colliders near entrance).
             placed += CaveEntranceVolumeBuilder.ClearMouthPortalBlockingColliders(
                 cavesRoot, ground, layout, corridorLengthMeters: 11f, corridorRadiusMeters: 3.4f);
+
+            var envRoot = cavesRoot.parent;
+            var surfaceRoot = envRoot != null ? envRoot.Find(SurfaceWorldPaths.RootName) : null;
+            if (surfaceRoot != null)
+                SurfaceTrailCaveMouthConnector.ConnectPrimaryTrailToCaveMouth(surfaceRoot, cavesRoot, ground);
+
+            CavePlayabilityFix.ExtendAtmosphereForSurfaceDescent(cavesRoot);
             return placed;
         }
 

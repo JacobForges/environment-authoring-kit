@@ -61,8 +61,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     ready++;
             }
 
+            var materialsUpgraded = 0;
+            foreach (var prefab in all)
+            {
+                if (prefab == null)
+                    continue;
+                materialsUpgraded += ProjectCaveMaterialResolver.UpgradeRenderableMaterialsOnPrefab(prefab);
+            }
+
             CaveBuildEditorLog.LogSurface(
-                $"[Surface] Vegetation catalog {ready}/{all.Count} prefabs ready — skipped bulk ForceSynchronousImport (avoids LPMagicalForest freeze).",
+                $"[Surface] Vegetation catalog {ready}/{all.Count} prefabs ready" +
+                (materialsUpgraded > 0 ? $" ({materialsUpgraded} material(s) upgraded to URP)." : ".") +
+                " — skipped bulk ForceSynchronousImport (avoids LPMagicalForest freeze).",
                 forceUnityConsole: true);
         }
 
@@ -447,6 +457,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (vegRoot != null)
                 EditorUtility.SetDirty(vegRoot.gameObject);
 
+            var gapFilled = TryGapFillTilesBelowMinimum(
+                terrain,
+                vegRoot,
+                category,
+                session,
+                pool,
+                new System.Random((int)category * 31337 + session.Placed));
+
             session.Finalized = true;
             var minPerTile = SurfaceTerrainPropPlacementRegion.MinPlacementsPerTile(category);
             var tilesAtMin = 0;
@@ -458,7 +476,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             message =
                 $"Placed {session.Placed}/{session.MaxCount} {category} on {session.TileCount} terrain(s) " +
-                $"({tilesAtMin}/{session.PerTileCounts.Count} tiles at ≥{minPerTile} each).";
+                $"({tilesAtMin}/{session.PerTileCounts.Count} tiles at ≥{minPerTile} each)" +
+                (gapFilled > 0 ? $", gap-fill +{gapFilled}." : ".");
             CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
             return session.Placed > 0;
         }
@@ -572,6 +591,51 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 ? $"Polish {category}: +{placed} (now {existing + placed}/{maxCount})."
                 : $"Polish {category}: no additional slots ({existing}/{target}).";
             return placed > 0;
+        }
+
+        static int TryGapFillTilesBelowMinimum(
+            Terrain terrain,
+            Transform vegRoot,
+            SurfacePropCategory category,
+            CategoryPlacementSession session,
+            List<GameObject> pool,
+            System.Random rng)
+        {
+            if (session == null || terrain == null || vegRoot == null || pool == null || pool.Count == 0)
+                return 0;
+
+            var minPerTile = SurfaceTerrainPropPlacementRegion.MinPlacementsPerTile(category);
+            var filled = 0;
+
+            foreach (var slot in session.OrderedSlots)
+            {
+                if (session.Placed >= session.MaxCount)
+                    break;
+                if (!SlotMatchesCategory(slot.Category, category))
+                    continue;
+
+                var tileKey = slot.TerrainName;
+                if (string.IsNullOrEmpty(tileKey))
+                    continue;
+                if (session.PerTileCounts.TryGetValue(tileKey, out var count) && count >= minPerTile)
+                    continue;
+
+                var slotIndex = session.OrderedSlots.IndexOf(slot);
+                if (slotIndex >= 0 && session.UsedSlotIndices.Contains(slotIndex))
+                    continue;
+
+                if (!TryPlaceSlot(terrain, vegRoot, slot, pool, rng, category, session.PlanEntries, out _, out var resolved))
+                    continue;
+
+                if (slotIndex >= 0)
+                    session.UsedSlotIndices.Add(slotIndex);
+                var key = string.IsNullOrEmpty(resolved) ? tileKey : resolved;
+                session.PerTileCounts[key] = session.PerTileCounts.TryGetValue(key, out var c) ? c + 1 : 1;
+                session.Placed++;
+                filled++;
+            }
+
+            return filled;
         }
 
         static int CountPlacedForCategory(Transform vegRoot, SurfacePropCategory category)
@@ -1341,7 +1405,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (slots == null || slots.Count < 2 || mainTerrain == null)
                 return;
 
-            const int cellsPerAxis = 5;
+            const int cellsPerAxis = 7;
             var terrains = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(mainTerrain);
             var buckets = new Dictionary<string, List<PlacementSlot>>(StringComparer.Ordinal);
 
