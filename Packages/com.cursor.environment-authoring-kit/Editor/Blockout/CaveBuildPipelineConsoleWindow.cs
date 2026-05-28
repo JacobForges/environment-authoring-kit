@@ -148,16 +148,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         void DrawAgentPanel()
         {
-            EditorGUILayout.LabelField("Cursor agent", EditorStyles.boldLabel);
-            if (CaveBuildCursorAgentBridge.IsAgentRunning)
-                EditorGUILayout.HelpBox("Agent running — watch log below.", MessageType.Warning);
+            EditorGUILayout.LabelField("AI grading (optional)", EditorStyles.boldLabel);
+            if (!CaveBuildSessionPreset.HasUsableAiProvider)
+            {
+                EditorGUILayout.HelpBox(
+                    "Procedural build — no API keys in Hub. Grading agents are not used; cave/surface steps run without cloud AI.",
+                    MessageType.Info);
+            }
+            else if (CaveBuildCursorAgentBridge.IsAgentRunning)
+            {
+                EditorGUILayout.HelpBox("Grading agent running — watch log below.", MessageType.Warning);
+            }
             else if (!CaveBuildCursorAgentBridge.HasApiKey)
-                EditorGUILayout.HelpBox(CaveBuildCursorSettings.CursorWorkflowCredentialHint(), MessageType.Error);
+            {
+                EditorGUILayout.HelpBox(
+                    CaveBuildCursorSettings.GraderCredentialHint(),
+                    MessageType.Warning);
+            }
             else
-                EditorGUILayout.LabelField("Idle (API key present).");
+            {
+                EditorGUILayout.LabelField(
+                    $"Idle — {CaveBuildCursorSettings.ResolveActiveProvider()} ready.");
+            }
 
-            if (GUILayout.Button("Open Cursor Settings"))
-                Selection.activeObject = CaveBuildCursorSettings.LoadOrCreate();
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Open Hub AI Settings"))
+                EnvironmentKitHubWindow.Open();
+            EditorGUILayout.EndHorizontal();
         }
 
         void DrawLogToolbar()

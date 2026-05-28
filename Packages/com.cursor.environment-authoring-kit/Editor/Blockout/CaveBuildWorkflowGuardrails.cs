@@ -33,16 +33,38 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
             var missing = new List<string>();
-            if (!File.Exists(Path.Combine(hub, ResearchCacheIndexRel)))
+            var cacheMissing = !File.Exists(Path.Combine(hub, ResearchCacheIndexRel));
+            if (cacheMissing)
                 missing.Add(ResearchCacheIndexRel);
             if (!File.Exists(Path.Combine(hub, ResearchCatalogSeedRel)))
                 missing.Add(ResearchCatalogSeedRel);
 
             if (missing.Count > 0)
             {
+                var proceduralOk =
+                    cacheMissing &&
+                    missing.Count == 1 &&
+                    CaveBuildSessionPreset.AllowProceduralTerrainWithoutResearch;
+
+                if (proceduralOk)
+                {
+                    message =
+                        "artifact_preflight advisory — no ResearchCache; continuing with procedural Florida/DEM. " +
+                        "Optional: import or sync research data for richer surface authoring.";
+                    return true;
+                }
+
+                if (cacheMissing && CaveBuildResearchCacheBridge.HasUsableLocalResearchCache())
+                {
+                    message = "artifact_preflight passed (research cache present).";
+                    return true;
+                }
+
                 message =
                     "artifact_preflight failed — missing: " + string.Join(", ", missing) +
-                    ". Run Tools/cave-grader sync-research-cache + sync-research-catalog.";
+                    (cacheMissing
+                        ? ". Sync research cache (Hub or Tools/cave-grader) or use procedural build with no API keys."
+                        : ". Reinstall environment-authoring-kit package (catalog seed missing).");
                 return false;
             }
 

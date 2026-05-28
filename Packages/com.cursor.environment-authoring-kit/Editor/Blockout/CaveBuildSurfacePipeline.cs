@@ -403,7 +403,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!CaveBuildCursorAgentBridge.HasApiKey)
             {
                 Debug.Log(
-                    "[CaveBuild] Terrain below target — set CURSOR_API_KEY to auto-invoke terrain grader.");
+                    "[CaveBuild] Terrain below target — configure Hub → Active provider + API key to auto-invoke terrain grader.");
                 return;
             }
 

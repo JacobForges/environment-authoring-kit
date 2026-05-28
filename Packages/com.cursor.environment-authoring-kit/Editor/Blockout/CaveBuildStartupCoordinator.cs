@@ -214,7 +214,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 Complete(false);
                 return;
             }
-            CaveBuildEditorLog.LogCave("[Startup] " + preflightMsg, forceUnityConsole: true);
+
+            if (preflightMsg.StartsWith("artifact_preflight advisory", System.StringComparison.Ordinal))
+                CaveBuildEditorLog.LogCaveWarning("[Startup] " + preflightMsg);
+            else
+                CaveBuildEditorLog.LogCave("[Startup] " + preflightMsg, forceUnityConsole: true);
 
             CaveBuildPipelineScope.BeginFullPipeline();
             CaveBuildFullWorldSurfaceDeferral.ResetForNewBuildSession();

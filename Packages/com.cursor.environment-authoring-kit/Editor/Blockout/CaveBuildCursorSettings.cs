@@ -723,7 +723,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return provider switch
             {
                 EnvironmentKitAiProvider.Cursor =>
-                    "Set CURSOR_API_KEY in environment or Hub Settings (or switch provider).",
+                    "Add API key under Hub → Settings for the active provider (or switch to Ollama / LM Studio for local grading).",
                 EnvironmentKitAiProvider.GoogleGemini =>
                     "Set GOOGLE_API_KEY in Hub Settings or environment.",
                 EnvironmentKitAiProvider.AnthropicClaude =>
