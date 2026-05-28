@@ -90,9 +90,14 @@ This file is the **accuracy contract** for what is on GitHub vs what you must su
 
 ## After clone (minimum)
 
+See **[README — Required before your first build](../README.md#required-before-your-first-build-read-this-after-clone)** for the full checklist.
+
 1. Unity Hub → **Unity 6000.x** → open repo root  
 2. Wait for UPM to resolve packages  
-3. Create/open a scene with **Ground** + **`PortalFive`**  
-4. Add **your** licensed prefabs under `Assets/`  
-5. Optional: `Tools/cave-grader` → copy `.env.example` → `.env`  
-6. **Window → Environment Kit → Hub** → **Build Complete Cave Level**
+3. Scene with **`Ground`** + **`PortalFive`**  
+4. **Licensed cave prefabs** under `Assets/` (default path `Assets/BillemotdonggulLavaTubePack/Prefabs/` — not in git)  
+5. `cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader && npm install`  
+6. Preflight **PASS** (read `CaveBuildPreflightReport.md` if blocked)  
+7. **Hub** → **Build Complete Cave Level**
+
+Optional: `.env` from `.env.example` for Cursor/LLM automation only.

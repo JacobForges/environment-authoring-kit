@@ -11,7 +11,7 @@ Built for **Unity 6 (6000.x)** and **URP**. XR support = **editor optimization p
 | **Unity** | 6000.0+ |
 | **Rendering** | Universal Render Pipeline 17+ |
 | **XR** | Configure OpenXR / device SDK in **your** project; kit applies `VitureXRPro` **budget** preset when present |
-| **Node (optional)** | 18+ for `Tools/cave-grader` |
+| **Node** | 18+ + `npm install` in `Tools/cave-grader` (required for FullWorld preflight) |
 | **Version** | **0.3.0** — see `package.json` |
 | **License** | [LICENSE.md](LICENSE.md) — **educational/personal non-commercial free**; **commercial use requires license or purchase from copyright holder** (not CC0) |
 
@@ -43,14 +43,30 @@ Or publish to a Git URL / registry. Open the project in Unity and let scripts co
 
 ---
 
+## Required before first build (public clone)
+
+FullWorld runs **preflight** first. Missing requirements → build blocked → see `Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md` (rows marked **BLOCK**).
+
+| Required | Detail |
+|----------|--------|
+| Scene + **`Ground`** tag | Walkable anchor for terrain/cave |
+| **`PortalFive`** | Cave entrance placement |
+| **Cave prefabs** in `Assets/` | Default scan: `Assets/BillemotdonggulLavaTubePack/Prefabs/` — **not included in git**; use your licensed pack |
+| **`npm install`** in `Tools/cave-grader` | Node 18+; preflight checks `tsx` is installed |
+
+Hub: **Diagnostics → View Preflight Report** after setup. Warnings are OK; **BLOCK** must be fixed.
+
+Full checklist: [Hub README](../../README.md#required-before-your-first-build-read-this-after-clone).
+
+---
+
 ## Quick start
 
-1. Open **your** cave scene (any `.unity` with Ground + portal anchor — **no sample scene ships on GitHub**).
-2. Tag or assign a **Ground** anchor — kit resolves `SceneGroundInfo`.
-3. Place **`PortalFive`** for the cave entrance (not the shop portal).
-4. **Window → Environment Kit → Hub** → run **Build Complete Cave Level (Active Scene)**.
-5. Watch **Cave Build → Diagnostics → Pipeline Console** until **120/120**.
-6. Optional: **Cave Build Grader** + Node grader ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
+1. Complete the **required** table above.
+2. Open **your** cave scene (no sample `.unity` on GitHub).
+3. **Window → Environment Kit → Hub** → **Build Complete Cave Level (Active Scene)**.
+4. Watch **Diagnostics → Pipeline Console** until **120/120**.
+5. Optional: **Cave Build Grader** + automation ([docs/CaveGradingAndCursor.md](docs/CaveGradingAndCursor.md)).
 
 Ramp-only / no tunnels? **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.
 

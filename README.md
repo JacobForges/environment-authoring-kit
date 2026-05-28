@@ -21,7 +21,43 @@ This repository is the **shareable Unity project + UPM package** (`com.cursor.en
 | `ProjectSettings/`, `Packages/manifest.json` — Unity 6 + URP + **OpenXR / XR Interaction Toolkit** deps | `Assets/EnvironmentKit/Generated/` — build output (gitignored) |
 | Root docs: `REQUIREMENTS.md`, `docs/`, `.github/workflows/` | `.env` API keys, `node_modules/`, VITURE/GlassesGateway native binaries |
 
-After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)). Assign your own ground mesh, portal anchor, and art prefabs, then run the kit from the editor.
+After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)).
+
+---
+
+## Required before your first build (read this after clone)
+
+**A fresh clone is not playable until you add the items below.** The kit runs a **preflight checklist** before **Build Complete Cave Level**. If anything required is missing, the build stops immediately with:
+
+`Automated FullWorld blocked (N issue(s)). See Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md`
+
+That is **expected** — open the report and fix every row marked **BLOCK**.
+
+### Checklist (all required for FullWorld)
+
+| # | You must provide | Why |
+|---|------------------|-----|
+| 1 | **Unity scene** with a walkable surface tagged **`Ground`** | Preflight: *Ground tag / anchor* |
+| 2 | GameObject **`PortalFive`** (cave entrance anchor) | Cave mouth placement |
+| 3 | **Licensed cave mesh prefabs** under `Assets/` | Preflight: *Lava tube prefab catalog* — repo ships **no** store art |
+| 4 | **Node 18+** and **`npm install`** in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader` | Preflight: *Node + tsx* — automated FullWorld expects the grader tools installed |
+
+### Default cave prefab folder (if you use the author’s layout)
+
+The kit looks for lava-tube modules here (configurable in kit settings):
+
+`Assets/BillemotdonggulLavaTubePack/Prefabs/`
+
+You need **floor, wall, and ceiling** prefabs in that folder (or point **Cave Lava Prefab Folders** at your own pack). Without them, preflight **blocks** with *Prefab catalog empty*.
+
+Use **any** licensed lava-tube / cave modular pack you own — import it into `Assets/`, then set the folder path in **Environment Kit → Hub → Settings** if paths differ.
+
+### After setup
+
+1. **Window → Environment Kit → Hub** → run build, or use **Cave Build → Diagnostics → View Preflight Report** to confirm all **PASS** (warnings are OK).
+2. Optional: **Cave Build → Diagnostics → Apply Reliable FullWorld Preset** (recommended settings for first full run).
+
+**Not in git (optional, speeds up research):** `Assets/EnvironmentKit/ResearchCache/` — run `npm run sync-research-pull` in `Tools/cave-grader` when you want Florida research data locally.
 
 ---
 
@@ -47,17 +83,17 @@ After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)
 
 | Step | Action |
 |------|--------|
-| 1 | Unity Hub → **Unity 6000.x** → open this repo root |
+| 1 | Unity Hub → **Unity 6000.4.6f1** (or 6000.x matching `ProjectSettings/ProjectVersion.txt`) → open this repo root |
 | 2 | Let Package Manager resolve URP/XR packages (first open may take a few minutes) |
-| 3 | Create or open a scene with a **Ground** walkable surface and **`PortalFive`** (cave entrance anchor) |
-| 4 | Add your licensed prefabs under `Assets/` (or use kit blockout / primitives) |
-| 5 | **Window → Environment Kit → Hub** → run **Build Complete Cave Level (Active Scene)** |
+| 3 | Complete the **[Required before your first build](#required-before-your-first-build-read-this-after-clone)** checklist (scene, Ground, PortalFive, cave prefabs, `npm install`) |
+| 4 | **Window → Environment Kit → Hub** → confirm preflight passes (or read `CaveBuildPreflightReport.md`) |
+| 5 | Run **Build Complete Cave Level (Active Scene)** |
 | 6 | Watch **Cave Build → Diagnostics → Pipeline Console** through **120/120** queued steps |
-| 7 | Optional: **Cave Build Grader** + Node grader ([package docs](Packages/com.cursor.environment-authoring-kit/docs/CaveGradingAndCursor.md)) |
+| 7 | Optional: **Cave Build Grader** + Cursor/LLM automation ([package docs](Packages/com.cursor.environment-authoring-kit/docs/CaveGradingAndCursor.md)) — needs `.env` API keys |
 
 If a prior run left only a ramp/mouth with no tunnels: **Cave Build → Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**.
 
-**Secrets:** copy `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/.env.example` → `.env` locally; never commit API keys.
+**Secrets:** copy `Tools/cave-grader/.env.example` → `.env` locally; never commit API keys.
 
 ---
 
@@ -108,7 +144,7 @@ Full menu table: [Package README](Packages/com.cursor.environment-authoring-kit/
 | **Unity** | 6000.0+ (see `ProjectSettings/ProjectVersion.txt`) |
 | **Rendering** | Universal RP 17+ |
 | **XR (optional)** | Configure XR Plug-in Management + OpenXR for your device; VITURE SDK separate |
-| **Node (optional)** | 18+ for `Tools/cave-grader` |
+| **Node** | 18+ + `npm install` in `Tools/cave-grader` — **required** for automated FullWorld preflight (optional only if you skip grader integration) |
 | **Disk** | Your own art packs and scenes — not in this repository |
 
 ---
