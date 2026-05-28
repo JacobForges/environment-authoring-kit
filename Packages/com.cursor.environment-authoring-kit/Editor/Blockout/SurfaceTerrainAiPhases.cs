@@ -215,6 +215,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             state.Log.AppendLine("  \"phases\": [");
 
             IsPipelineActive = true;
+            var tileCount = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(ground.Terrain).Count;
+            CaveBuildSurfaceProgress.BeginSession(tileCount);
 
             CaveBuildEditorLog.LogSurface(
                 duringCaveBuildSurface
@@ -395,10 +397,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     out gateMsg);
             }
 
-            EditorUtility.DisplayProgressBar(
-                "Environment Kit",
-                $"[Surface] {title}",
-                0.4f + 0.04f * (index / (float)PhaseCount));
+            CaveBuildSurfaceProgress.Show(title);
 
             var phaseOk = RunPhase(
                 index,
@@ -417,6 +416,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 $"[Surface] {title} — {(phaseOk ? "OK" : "issues")}: {phaseMsg}",
                 forceUnityConsole: true);
 
+            CaveBuildSurfaceProgress.CompleteTerrainPhase(index);
             state.PhaseIndex++;
             SchedulePhaseStep(state);
         }
@@ -441,10 +441,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     out gateMsg);
             }
 
-            EditorUtility.DisplayProgressBar(
-                "Environment Kit",
-                $"[Surface] {title}",
-                0.4f + 0.04f * (index / (float)PhaseCount));
+            CaveBuildSurfaceProgress.Show(title);
 
             SurfaceTerrainResearchGuidedLidar.QueueDemStamp(ToDemStampContext(state), phaseMsg =>
                 {
@@ -456,6 +453,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     CaveBuildEditorLog.LogSurface(
                         $"[Surface] {title} — {(phaseOk ? "OK" : "issues")}: {phaseMsg}",
                         forceUnityConsole: true);
+                    CaveBuildSurfaceProgress.CompleteTerrainPhase(index);
                     state.PhaseIndex++;
                     SchedulePhaseStep(state);
                 });
@@ -519,10 +517,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void SchedulePropsLockStep(QueueState state)
         {
-            EditorUtility.DisplayProgressBar(
-                "Environment Kit",
-                "[Surface] Props — locking surface terrains…",
-                0.5f);
+            CaveBuildSurfaceProgress.Show("[Surface] Props — locking surface terrains…");
 
             SurfaceTerrainPropPlacementRegion.LockAndMarkSurfaceTerrains(
                 state.Ground.Terrain,
@@ -542,10 +537,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void SchedulePropsPlanStep(QueueState state)
         {
-            EditorUtility.DisplayProgressBar(
-                "Environment Kit",
-                "[Surface] Props — fast placement plan (no grid scan)…",
-                0.51f);
+            CaveBuildSurfaceProgress.Show("[Surface] Props — placement plan…");
 
             var planOk = SurfaceIntelligentPropPlacer.WritePlacementPlanBeforeExecute(
                 state.Ground.Terrain,
@@ -563,6 +555,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     "[Surface] Prop plan grade below threshold — placing anyway from locked terrain slots.",
                     forceUnityConsole: true);
             }
+
+            CaveBuildSurfaceProgress.CompletePropsSetup("Props plan ready — placing by category");
 
             CaveBuildActionPacing.ScheduleHeavyChain(
                 () => ScheduleSurfacePropCategory(state),
@@ -593,7 +587,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                                 cat,
                                 state.PropsCatalog,
                                 out var msg))
+                        {
                             CaveBuildEditorLog.LogSurface("[Surface] " + msg, forceUnityConsole: true);
+                            CaveBuildSurfaceProgress.CompletePropPolish(cat);
+                        }
+
                         RunNext();
                     },
                     CaveBuildPipelineDomains.SurfaceQueueLabel($"props polish {cat}"));
@@ -667,6 +665,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         session.Finalized ||
                         session.Category != cat)
                     {
+                        CaveBuildSurfaceProgress.BeginPropCategory(cat, target);
                         if (!SurfaceIntelligentPropPlacer.TryBeginCategoryPlacementSession(
                                 state.Surface,
                                 state.Ground.Terrain,
@@ -700,10 +699,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         SurfaceIntelligentPropPlacer.DefaultPropsPerEditorChunk,
                         out var placedChunk);
 
-                    EditorUtility.DisplayProgressBar(
-                        "Environment Kit",
-                        $"[Surface] Props {cat} ({catNum}/{PropCategories.Length}) {session.Placed}/{target} on {tileCount} tile(s)…",
-                        0.52f + 0.02f * state.PropCategoryIndex + 0.12f * (session.Placed / (float)Mathf.Max(1, target)));
+                    CaveBuildSurfaceProgress.ReportPropCategoryProgress(cat, session.Placed, target);
 
                     if (session.IsComplete)
                     {
@@ -718,6 +714,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             CaveBuildEditorLog.LogSurface($"[Surface] Props {cat}: {msg}", forceUnityConsole: true);
                         }
 
+                        CaveBuildSurfaceProgress.CompletePropCategory(cat, session.Placed, target);
                         state.PropPlacementSession = null;
                         state.PropCategoryIndex++;
                     }
@@ -905,10 +902,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            EditorUtility.DisplayProgressBar(
-                "Environment Kit",
-                $"[Surface] Terrain ladder grade {rungNum}/{rungTotal}: {def.Id}",
-                0.55f + 0.035f * (rungNum / (float)rungTotal));
+            CaveBuildSurfaceProgress.Show($"Terrain ladder grade {rungNum}/{rungTotal}: {def.Id}");
 
             CaveBuildEditorLog.LogSurface(
                 $"[TerrainLadder] Grading {def.Id} ({rungNum}/{rungTotal})…",
@@ -926,6 +920,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildEditorLog.LogSurface(
                 $"[TerrainLadder] {def.Id} → {stage.Score} ({(stage.Passed ? "pass" : "fail")})",
                 forceUnityConsole: true);
+            CaveBuildSurfaceProgress.CompleteLadderRung(def.Id, rungNum - 1, rungTotal);
             state.LadderRungIndex++;
             ScheduleLadderGradeRung(state);
         }

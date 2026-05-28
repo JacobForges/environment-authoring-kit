@@ -50,6 +50,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool _insideQueueInvoke;
 
         const double QueueStallWatchdogSeconds = 3.0;
+        const double HeavyQueueStallWatchdogSeconds = 90.0;
         const double BatchRunWatchdogSeconds = 12.0;
 
         public static bool IsInsideQueueInvoke => _insideQueueInvoke;
@@ -66,6 +67,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static bool IsBusy => IsExecuting || HasQueuedWork;
 
         public static bool IsHeavyRunning => !_insideQueueInvoke && _heavyRunning;
+
+        /// <summary>Call during long synchronous sub-steps so the stall watchdog does not false-alarm.</summary>
+        public static void TouchQueueActivity() =>
+            _lastBatchCompletedAt = EditorApplication.timeSinceStartup;
 
         /// <summary>Clears queued editor work and polling hooks — use when the editor freezes during a cave build.</summary>
         public static void EmergencyAbortAll()
@@ -450,9 +455,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (Queue.Count > 0 && !IsExecuting)
             {
                 var stalledFor = now - _lastBatchCompletedAt;
-                if (_lastBatchCompletedAt > 0 && stalledFor > QueueStallWatchdogSeconds)
+                var headLabel = Queue.Peek().Label ?? "action";
+                var stallLimit = StallWatchdogLimitForLabel(headLabel);
+                if (_lastBatchCompletedAt > 0 && stalledFor > stallLimit)
                 {
-                    var headLabel = Queue.Peek().Label ?? "action";
                     PreparePipelineChainKickoff();
                     var buffer = new List<PendingAction>(Queue.Count);
                     while (Queue.Count > 0)
@@ -512,6 +518,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             _heavyRunning = item.Weight == ActionWeight.Heavy;
             _insideQueueInvoke = true;
+            if (item.Weight == ActionWeight.Heavy)
+                TouchQueueActivity();
             try
             {
                 item.Action?.Invoke();
@@ -568,6 +576,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             _polling = false;
             EditorApplication.update -= Poll;
+        }
+
+        static double StallWatchdogLimitForLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label))
+                return QueueStallWatchdogSeconds;
+
+            if (label.IndexOf("crater", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("terrain ladder", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("terrain sculpt", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("vegetation", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("lidar", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("dem", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return HeavyQueueStallWatchdogSeconds;
+
+            return QueueStallWatchdogSeconds;
         }
     }
 }

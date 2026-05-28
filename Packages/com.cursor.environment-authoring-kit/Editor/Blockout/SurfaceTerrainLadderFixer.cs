@@ -156,23 +156,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildActionPacing.ScheduleHeavyChain(
                     () =>
                     {
-                        EditorUtility.DisplayProgressBar(
-                            "Environment Kit",
-                            $"[Surface] Terrain ladder — crater repair tile {currentIdx}/{terrains.Count}…",
-                            0.56f + 0.02f * (currentIdx / (float)Mathf.Max(1, terrains.Count)));
-
-                        if (current != null)
+                        if (current == null)
                         {
-                            totalCrater += SurfaceTerrainCraterRepair.RepairHeightfieldPlayable(
-                                current,
-                                center,
-                                extent,
-                                maxPasses: MaxQueuedCraterPassesPerTile);
-                            // Outer-ring smooth is playable_slopes — it reintroduces grader bowl/spike clusters here.
-                            current.Flush();
+                            CaveBuildActionPacing.ScheduleNextEditorFrame(RunNextTile);
+                            return;
                         }
 
-                        CaveBuildActionPacing.ScheduleNextEditorFrame(RunNextTile);
+                        CaveBuildSurfaceProgress.Show(
+                            $"Terrain ladder — crater repair tile {currentIdx}/{terrains.Count}…");
+                        SurfaceTerrainCraterRepair.QueueRepairHeightfieldLadderTile(
+                            current,
+                            center,
+                            extent,
+                            count =>
+                            {
+                                totalCrater += count;
+                                CaveBuildSurfaceProgress.CompleteCraterTile(
+                                    currentIdx,
+                                    terrains.Count,
+                                    "terrain ladder");
+                                CaveBuildActionPacing.ScheduleNextEditorFrame(RunNextTile);
+                            });
                     },
                     CaveBuildPipelineDomains.SurfaceQueueLabel(
                         $"terrain ladder craters tile {currentIdx}/{terrains.Count}"));

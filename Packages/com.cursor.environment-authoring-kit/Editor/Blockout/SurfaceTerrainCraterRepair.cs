@@ -476,6 +476,107 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return RepairHeightfieldPlayable(terrain, centerWorld, extentMeters, maxPasses: 18);
         }
 
+        /// <summary>
+        /// Paced ladder/post-prop repair — one light pass per editor tick (avoids 18× full-map sync freeze).
+        /// </summary>
+        public static void QueueRepairHeightfieldLadderTile(
+            Terrain terrain,
+            Vector3 centerWorld,
+            float extentMeters,
+            System.Action<int> onComplete)
+        {
+            if (terrain == null || terrain.terrainData == null)
+            {
+                onComplete?.Invoke(0);
+                return;
+            }
+
+            var session = new LadderTileSession
+            {
+                Terrain = terrain,
+                CenterWorld = centerWorld,
+                ExtentMeters = extentMeters,
+                OnComplete = onComplete,
+                Step = LadderTileStep.DeCheckerboard,
+            };
+            CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunLadderTileStep(session));
+        }
+
+        sealed class LadderTileSession
+        {
+            public Terrain Terrain;
+            public Vector3 CenterWorld;
+            public float ExtentMeters;
+            public int Total;
+            public LadderTileStep Step;
+            public System.Action<int> OnComplete;
+        }
+
+        enum LadderTileStep
+        {
+            DeCheckerboard,
+            BlurBand,
+            CraterCells,
+            SpikePass,
+            Done,
+        }
+
+        static void RunLadderTileStep(LadderTileSession session)
+        {
+            if (session?.Terrain == null)
+            {
+                session?.OnComplete?.Invoke(0);
+                return;
+            }
+
+            CaveBuildActionPacing.TouchQueueActivity();
+
+            switch (session.Step)
+            {
+                case LadderTileStep.DeCheckerboard:
+                    session.Total += SurfaceTerrainHeightSmoothing.DeCheckerboardOnTerrain(
+                        session.Terrain, session.CenterWorld, session.ExtentMeters, strength: 0.42f);
+                    session.Step = LadderTileStep.BlurBand;
+                    CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunLadderTileStep(session));
+                    break;
+
+                case LadderTileStep.BlurBand:
+                    session.Total += SurfaceTerrainRefinement.BoxBlurGraderSampleBandPublic(
+                        session.Terrain, session.CenterWorld, session.ExtentMeters, blend: 0.32f);
+                    session.Step = LadderTileStep.CraterCells;
+                    CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunLadderTileStep(session));
+                    break;
+
+                case LadderTileStep.CraterCells:
+                    QueueRepairCraterCells(
+                        session.Terrain,
+                        session.CenterWorld,
+                        session.ExtentMeters,
+                        preserveCenterRadiusMeters: 0f,
+                        count =>
+                        {
+                            session.Total += count;
+                            session.Step = LadderTileStep.SpikePass;
+                            CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunLadderTileStep(session));
+                        });
+                    break;
+
+                case LadderTileStep.SpikePass:
+                    session.Total += RepairSpikeCells(
+                        session.Terrain, session.CenterWorld, session.ExtentMeters, preserveCenterRadiusMeters: 0f);
+                    session.Total += RepairMegaDipCells(
+                        session.Terrain, session.CenterWorld, session.ExtentMeters, preserveCenterRadiusMeters: 0f);
+                    session.Step = LadderTileStep.Done;
+                    CaveBuildActionPacing.ScheduleNextEditorFrame(() => RunLadderTileStep(session));
+                    break;
+
+                case LadderTileStep.Done:
+                    session.Terrain.Flush();
+                    session.OnComplete?.Invoke(session.Total);
+                    break;
+            }
+        }
+
         /// <summary>Paced crater repair for terrain ladder fix pass 1 (one upload band per frame).</summary>
         public static void QueueRepairCraterCells(
             Terrain terrain,
@@ -544,6 +645,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                     for (var y = RingOuter; y < session.Res - RingOuter; y++)
                     {
+                        if ((y & 63) == 0)
+                            CaveBuildActionPacing.TouchQueueActivity();
+
                         for (var x = RingOuter; x < session.Res - RingOuter; x++)
                         {
                             if (!SurfaceTerrainPlayRegion.InPlayAnnulusOnTerrain(
