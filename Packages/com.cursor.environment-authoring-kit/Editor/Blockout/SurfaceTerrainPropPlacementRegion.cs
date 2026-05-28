@@ -277,6 +277,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 var stepX = (maxX - minX) / cols;
                 var stepZ = (maxZ - minZ) / rows;
                 var addedForTile = 0;
+                var rowOffsetSeed = ((terrain.name.GetHashCode() ^ seed) & 1) == 0 ? 0.25f : 0.75f;
 
                 for (var row = 0; row <= rows; row++)
                 {
@@ -294,8 +295,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                         var jx = ((float)rng.NextDouble() - 0.5f) * spacing * 0.35f;
                         var jz = ((float)rng.NextDouble() - 0.5f) * spacing * 0.35f;
-                        var wx = minX + col * stepX + jx;
-                        var wz = minZ + row * stepZ + jz;
+                        var checkerOffset = ((row + col) & 1) == 0 ? 0.25f : 0.75f;
+                        var rowOffset = ((row & 1) == 0 ? rowOffsetSeed : 1f - rowOffsetSeed);
+                        var wx = minX + (col + checkerOffset) * stepX + jx;
+                        var wz = minZ + (row + rowOffset) * stepZ + jz;
 
                         if (!SurfaceTerrainPlayRegion.ContainsWorldXZ(terrain, wx, wz))
                             continue;

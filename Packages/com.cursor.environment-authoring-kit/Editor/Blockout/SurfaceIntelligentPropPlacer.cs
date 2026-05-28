@@ -483,10 +483,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     minTrail = Mathf.Min(minTrail, dx * dx + dz * dz);
                 }
 
-                if (minTrail < 144f)
-                    score += 48;
-                else if (minTrail < 625f)
-                    score += 24;
+                // Favor a band near trails, not points hugging the spline itself.
+                if (minTrail < 36f)
+                    score -= 24;
+                else if (minTrail < 196f)
+                    score += 28;
+                else if (minTrail < 1225f)
+                    score += 12;
             }
 
             if (terrain != null &&

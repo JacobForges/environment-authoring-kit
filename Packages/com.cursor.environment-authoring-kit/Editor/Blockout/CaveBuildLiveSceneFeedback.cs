@@ -16,6 +16,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const int PingEveryNthPlacement = 5;
         const double MinRepaintIntervalSeconds = 0.12;
         const double MinRepaintIntervalIdleSeconds = 0.6;
+        const double MinFlushIntervalSeconds = 0.18;
         const double SettingsRefreshSeconds = 2.0;
 
         static string _banner = string.Empty;
@@ -27,6 +28,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool _enabledCached = true;
         static bool _allowCameraHijackCached = true;
         static double _nextSettingsRefreshAt;
+        static double _lastFlushAt;
 
         static CaveBuildLiveSceneFeedback()
         {
@@ -50,12 +52,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!Enabled && !_sessionActive)
                 return;
 
+            var now = EditorApplication.timeSinceStartup;
+            if (now - _lastFlushAt < MinFlushIntervalSeconds)
+                return;
+            _lastFlushAt = now;
+
             if (terrain != null)
                 terrain.Flush();
 
             EditorApplication.QueuePlayerLoopUpdate();
-            _lastRepaintAt = 0;
-            SceneView.RepaintAll();
+            RepaintViews();
         }
 
         public static void BeginBuildSession()
@@ -115,14 +121,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _banner = $"Placed {kind}";
             _subBanner = instance.name;
             _bannerUntil = EditorApplication.timeSinceStartup + 3.0;
-            RepaintViews();
+            FlushWorldView();
+            if (showPing)
+                EditorGUIUtility.PingObject(instance);
         }
 
-        public static void NotifySurfacePhase(string phaseLabel)
+        public static void NotifySurfacePhase(string phaseLabel, Terrain terrain = null)
         {
             if (!SessionActive)
                 return;
-            NotifyStep(phaseLabel, null, frameScene: false);
+
+            NotifyStep(phaseLabel, null, frameScene: _placementSerial % 4 == 0);
+            FlushWorldView(terrain);
         }
 
         static void TryFrameBuildArea()
