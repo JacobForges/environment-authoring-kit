@@ -5,7 +5,8 @@ using UnityEngine;
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
     /// <summary>
-    /// Routes build messages to Pipeline Console; mirrors to Unity Console only when safe (avoids ConsoleWindow overload).
+    /// Routes build messages to Pipeline Console + Hub activity; Unity Console is errors-only during long builds
+    /// unless <see cref="MirrorPacedBuildLogsToConsole"/> is enabled on CaveBuildCursorSettings.
     /// </summary>
     public static class CaveBuildEditorLog
     {
@@ -28,7 +29,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             CaveBuildPipelineLog.Info(message, "Cave");
-            if (forceUnityConsole || ShouldMirrorInfoToUnityConsole())
+            if (ShouldMirrorInfoToUnityConsole(forceUnityConsole))
                 Debug.Log($"{CaveBuildPipelineDomains.Cave} {message}");
         }
 
@@ -38,7 +39,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             CaveBuildPipelineLog.Warn(message, "Cave");
-            Debug.LogWarning($"{CaveBuildPipelineDomains.Cave} {message}");
+            if (ShouldMirrorWarningsToUnityConsole())
+                Debug.LogWarning($"{CaveBuildPipelineDomains.Cave} {message}");
+        }
+
+        public static void LogCaveError(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+
+            CaveBuildPipelineLog.Error(message, "Cave");
+            Debug.LogError($"{CaveBuildPipelineDomains.Cave} {message}");
         }
 
         public static void LogSurface(string message, bool forceUnityConsole = false)
@@ -47,7 +58,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             CaveBuildPipelineLog.Info(message, "Surface");
-            if (forceUnityConsole || ShouldMirrorInfoToUnityConsole())
+            if (ShouldMirrorInfoToUnityConsole(forceUnityConsole))
                 Debug.Log($"{CaveBuildPipelineDomains.Surface} {message}");
         }
 
@@ -57,7 +68,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             CaveBuildPipelineLog.Warn(message, "Surface");
-            Debug.LogWarning($"{CaveBuildPipelineDomains.Surface} {message}");
+            if (ShouldMirrorWarningsToUnityConsole())
+                Debug.LogWarning($"{CaveBuildPipelineDomains.Surface} {message}");
+        }
+
+        public static void LogSurfaceError(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+
+            CaveBuildPipelineLog.Error(message, "Surface");
+            Debug.LogError($"{CaveBuildPipelineDomains.Surface} {message}");
         }
 
         public static void LogQueueStep(string label, string weightSummary)
@@ -70,19 +91,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!string.IsNullOrEmpty(label) && label.IndexOf("run [", StringComparison.Ordinal) >= 0)
                 CaveBuildRunStatusPublisher.PulseSubOperation("editor queue", label);
 
-            if (MirrorPacedLogsToConsole)
+            if (ShouldMirrorInfoToUnityConsole(forceUnityConsole: false))
                 Debug.Log($"{CaveBuildPipelineDomains.Cave} Queue {msg}");
         }
 
         public static void LogLiveStep(string label)
         {
             CaveBuildPipelineLog.Info(label, "Cave-Live");
-            if (MirrorPacedLogsToConsole || !IsPacedBuildActive)
+            if (ShouldMirrorInfoToUnityConsole(forceUnityConsole: false))
                 Debug.Log(label.StartsWith("[") ? label : $"{CaveBuildPipelineDomains.CaveLive} {label}");
         }
 
-        static bool ShouldMirrorInfoToUnityConsole() =>
-            MirrorPacedLogsToConsole || !IsPacedBuildActive;
+        /// <summary>Info/log lines go to Pipeline Console only unless mirror is on (forceUnityConsole is ignored when mirror is off).</summary>
+        static bool ShouldMirrorInfoToUnityConsole(bool forceUnityConsole) =>
+            MirrorPacedLogsToConsole;
+
+        static bool ShouldMirrorWarningsToUnityConsole() =>
+            MirrorPacedLogsToConsole;
     }
 }
 #endif

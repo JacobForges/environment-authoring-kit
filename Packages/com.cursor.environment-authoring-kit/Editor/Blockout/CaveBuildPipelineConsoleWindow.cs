@@ -38,8 +38,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             EditorGUILayout.LabelField("Cave Build Pipeline Console", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Paced build steps log here first (not Unity Console) to keep the editor stable. " +
-                "Enable mirror on CaveBuildCursorSettings if you need Console echo.",
+                "During builds, info and warnings go here (and Hub activity) — Unity Console stays errors-only " +
+                "unless Cave Build Cursor Settings → Mirror Paced Build Logs To Console is enabled.",
                 MessageType.None);
             DrawRunStatusPanel();
             EditorGUILayout.Space(6);

@@ -243,7 +243,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public int editorQueueBatchSize = 1;
 
         [Tooltip(
-            "Echo every paced queue/live step to Unity Console. Off avoids Console overload and GUILayout glitches during long builds.")]
+            "Echo paced build info/warnings to Unity Console. Off (default) keeps Console errors-only during builds; Pipeline Console + Hub still show all messages.")]
         public bool mirrorPacedBuildLogsToConsole;
 
         public readonly struct QueuePacing
