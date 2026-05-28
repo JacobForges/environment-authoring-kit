@@ -297,7 +297,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 }
             }
 
-            var ground = SceneGroundInfo.Resolve();
+            var ground = SceneGroundResolver.Resolve();
             if (ground != null && ground.HasAnchor)
             {
                 var mouth = CaveGroundPlacementUtility.GetEntranceMouthWorld(caveRoot, ground);

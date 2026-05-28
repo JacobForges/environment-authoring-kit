@@ -307,12 +307,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                 var forward = seg / len;
                 var right = Vector3.Cross(Vector3.up, forward).normalized;
+                var rot = Quaternion.LookRotation(forward, Vector3.up);
                 var tiles = Mathf.Max(1, Mathf.CeilToInt(len / step));
                 for (var t = 0; t < tiles; t++)
                 {
                     var along = Mathf.Min(len, (t + 0.5f) * step);
                     var pos = a + forward * along;
-                    var rot = Quaternion.LookRotation(forward, Vector3.up);
                     var scale = Vector3.one * Mathf.Clamp(layout.PlatformSpan / 4.5f, 0.75f, 1.35f);
                     if (CavePrefabScatter.PlaceModule(
                             root.transform, prefab, pos, rot, scale, "EntranceDescent", false))

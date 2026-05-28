@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using EnvironmentAuthoringKit.Cave;
+using EnvironmentAuthoringKit.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -45,7 +46,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (waypoints.Count == 0)
                 return 0;
 
-            var last = waypoints[waypoints.Count - 1];
+            var last = waypoints[waypoints.Count - 1].position;
             var dist = Vector3.Distance(
                 new Vector3(last.x, 0f, last.z),
                 new Vector3(lip.x, 0f, lip.z));
