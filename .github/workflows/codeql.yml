@@ -18,7 +18,8 @@ name: CodeQL
 # Run manually before releases or rely on the weekly schedule.
 on:
   schedule:
-    - cron: "18 21 * * 6"
+    # Sunday 02:00 US Central (CDT → 07:00 UTC; CST → 08:00 UTC — uses 07:00, ~1h shift in winter)
+    - cron: "0 7 * * 0"
   workflow_dispatch:
 
 concurrency:

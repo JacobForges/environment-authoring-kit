@@ -73,7 +73,7 @@ Expect: `OK — kit project present` and a successful `dotnet build`.
 | Trigger | How |
 |---------|-----|
 | **Manual (recommended while developing)** | **Actions → CodeQL → Run workflow** → branch `main` |
-| **Weekly** | Saturday 21:18 UTC (cron) — only if your Mac runner is online |
+| **Weekly** | **Sunday ~2:00 AM US Central** (cron `0 7 * * 0` UTC) — only if your Mac runner is online |
 | **Push / PR** | **Off** — avoids tying up your self-hosted Mac on every commit |
 
 While you are actively building in Unity, **ignore CodeQL** unless you want a security pass. Your **~1 hour cave build** is separate local testing; CodeQL does not replace that.
@@ -84,6 +84,8 @@ While you are actively building in Unity, **ignore CodeQL** unless you want a se
 2. **Commit / push** when you want backup or to sync another machine — **CodeQL will not start** from a normal push.
 3. Optional second clone (e.g. **Repo Test**): `git pull` there to verify the package — still no CodeQL unless you run the workflow manually.
 4. Before a milestone or after large C# changes: **Actions → CodeQL → Run workflow** (runner must be online).
+
+**Night runner (optional):** Saturday night leave `cd ~/actions-runner && ./run.sh` running (or start it before 2 AM Sunday Central) so the weekly job can run while you sleep; stop it Monday if you do not need the Mac for CI.
 
 ### Do not
 
