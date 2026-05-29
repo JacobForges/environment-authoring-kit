@@ -150,7 +150,7 @@ export UNITY_PATH="/Applications/Unity/Hub/Editor/6000.0.46f1/Unity.app/Contents
 cd /path/to/Hub
 
 Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
-# Expect: "OK — Hub.sln present."
+# Expect: "OK — kit project present" or "OK — solution present".
 # Log: Logs/codeql-unity-prep.log
 
 Packages/com.cursor.environment-authoring-kit/Tools/codeql-build-csharp.sh
@@ -189,7 +189,7 @@ You may disable `codeql.yml` if you only want self-hosted scans.
 |--------|----------------|-----|
 | Workflow queued forever | Runner offline | Start `./run.sh` on runner machine |
 | `UNITY_PATH` error | Variable missing/wrong | Set repo variable; test path with `"$UNITY_PATH" -version` or run binary |
-| `Hub.sln` missing | Unity prep failed | Read `Logs/codeql-unity-prep.log`; fix compile errors in package |
+| No `.csproj` / `.sln` | Unity prep failed or timed out on initial import | Read `Logs/codeql-unity-prep.log`; prep no longer forces a second full recompile |
 | `dotnet build` fails | No SDK or Unity refs broken | Install .NET SDK; run prep first; open project in Editor once |
 | `.env.codeql` missing locally | Not created yet | `cp Packages/.../Tools/env.codeql.example .env.codeql` at Hub root |
 | Two CodeQL runs conflict | Default setup + workflows | Disable default setup |

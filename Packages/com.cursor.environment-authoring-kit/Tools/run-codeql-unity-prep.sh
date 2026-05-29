@@ -19,7 +19,7 @@ echo "Project: ${ROOT}"
 echo "Unity:   ${UNITY}"
 echo "Log:     ${LOG_FILE}"
 
-# Do not pass -quit: bootstrap waits for compile, syncs .sln/csproj, then EditorApplication.Exit.
+# Do not pass -quit: bootstrap syncs .sln/csproj after initial batchmode import, then EditorApplication.Exit.
 "$UNITY" -batchmode -nographics -projectPath "$ROOT" \
   -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl \
   -logFile "$LOG_FILE"
@@ -29,10 +29,17 @@ if [[ "$UNITY_EXIT" -ne 0 ]]; then
   exit "$UNITY_EXIT"
 fi
 
+KIT_EDITOR="${ROOT}/EnvironmentAuthoringKit.Editor.csproj"
+if [[ -f "$KIT_EDITOR" ]]; then
+  echo "${KIT_EDITOR}" > "${ROOT}/Logs/codeql-last.csproj"
+  echo "OK — kit project present: ${KIT_EDITOR}"
+  exit 0
+fi
+
 shopt -s nullglob
 SLNS=("${ROOT}"/*.sln)
 if [[ ${#SLNS[@]} -eq 0 ]]; then
-  echo "ERROR: No .sln in ${ROOT} after Unity prep. See ${LOG_FILE}"
+  echo "ERROR: No .sln or EnvironmentAuthoringKit.Editor.csproj in ${ROOT}. See ${LOG_FILE}"
   exit 1
 fi
 

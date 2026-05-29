@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using UnityEditor;
-using UnityEditor.Compilation;
 using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor
@@ -17,31 +16,31 @@ namespace EnvironmentAuthoringKit.Editor
     public static class CodeQlUnityBootstrap
     {
         const string LogPrefix = "[CodeQL]";
-        const int CompileWaitMinutes = 45;
+        const int InitialLoadWaitMinutes = 90;
+        const int LightRefreshWaitMinutes = 15;
 
         public static void PrepareForCodeQl()
         {
             try
             {
-                Debug.Log($"{LogPrefix} Refreshing assets…");
-                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+                // Batchmode already runs Initial Refresh + first script compile before -executeMethod.
+                // Do not call RequestScriptCompilation again — full Hub clones can hang for 45+ minutes.
+                Debug.Log($"{LogPrefix} Waiting for editor idle after initial load…");
+                WaitForEditorIdle($"{LogPrefix} initial load", InitialLoadWaitMinutes);
 
-                Debug.Log($"{LogPrefix} Requesting script compilation…");
-                if (!EditorApplication.isCompiling)
-                    CompilationPipeline.RequestScriptCompilation();
+                SyncProjectFiles();
 
-                WaitForEditorIdle($"{LogPrefix} compile");
-
-                if (!TrySyncProjectFiles())
+                if (!HasCodeQlBuildArtifacts())
                 {
-                    Debug.LogWarning($"{LogPrefix} API sync failed; trying menu fallback.");
-                    TrySyncViaMenu();
-                    WaitForEditorIdle($"{LogPrefix} post-menu-sync");
+                    Debug.LogWarning($"{LogPrefix} No .sln / kit .csproj yet; light refresh (no forced recompile).");
+                    AssetDatabase.Refresh();
+                    WaitForEditorIdle($"{LogPrefix} light refresh", LightRefreshWaitMinutes);
+                    SyncProjectFiles();
                 }
 
-                if (!HasSolutionFile())
+                if (!HasCodeQlBuildArtifacts())
                 {
-                    Debug.LogError($"{LogPrefix} No .sln in project root after sync.");
+                    Debug.LogError($"{LogPrefix} No .sln or EnvironmentAuthoringKit.*.csproj after sync.");
                     EditorApplication.Exit(1);
                     return;
                 }
@@ -57,9 +56,19 @@ namespace EnvironmentAuthoringKit.Editor
             }
         }
 
-        static void WaitForEditorIdle(string label)
+        static void SyncProjectFiles()
         {
-            var deadline = DateTime.UtcNow.AddMinutes(CompileWaitMinutes);
+            if (TrySyncProjectFiles())
+                return;
+
+            Debug.LogWarning($"{LogPrefix} API sync failed; trying menu fallback.");
+            TrySyncViaMenu();
+            WaitForEditorIdle($"{LogPrefix} post-menu-sync", LightRefreshWaitMinutes);
+        }
+
+        static void WaitForEditorIdle(string label, int maxMinutes)
+        {
+            var deadline = DateTime.UtcNow.AddMinutes(maxMinutes);
             while (DateTime.UtcNow < deadline)
             {
                 if (!EditorApplication.isCompiling &&
@@ -70,20 +79,36 @@ namespace EnvironmentAuthoringKit.Editor
                 Thread.Sleep(250);
             }
 
-            throw new TimeoutException($"{label} timed out after {CompileWaitMinutes} minutes.");
+            throw new TimeoutException($"{label} timed out after {maxMinutes} minutes.");
+        }
+
+        static bool HasCodeQlBuildArtifacts()
+        {
+            return HasSolutionFile() || HasKitProjectFile();
         }
 
         static bool HasSolutionFile()
         {
-            var root = Directory.GetParent(Application.dataPath)?.FullName;
+            var root = ProjectRoot();
             return !string.IsNullOrEmpty(root) &&
-                   Directory.Exists(root) &&
                    Directory.GetFiles(root, "*.sln", SearchOption.TopDirectoryOnly).Length > 0;
+        }
+
+        static bool HasKitProjectFile()
+        {
+            var root = ProjectRoot();
+            return !string.IsNullOrEmpty(root) &&
+                   File.Exists(Path.Combine(root, "EnvironmentAuthoringKit.Editor.csproj"));
+        }
+
+        static string ProjectRoot()
+        {
+            return Directory.GetParent(Application.dataPath)?.FullName;
         }
 
         static void LogDiscoveredProjects()
         {
-            var root = Directory.GetParent(Application.dataPath)?.FullName;
+            var root = ProjectRoot();
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
                 return;
 
