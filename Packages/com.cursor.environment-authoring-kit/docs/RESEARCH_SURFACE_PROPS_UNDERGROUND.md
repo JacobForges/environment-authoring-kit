@@ -2,6 +2,8 @@
 
 Applied in code (2026-05-28). Sources are in `Tools/cave-grader/research-catalog.seed.json` and `Assets/EnvironmentKit/ResearchCache/`.
 
+**Open-world scale-up (planning only):** see [RESEARCH_OPEN_WORLD_STREAMING.md](RESEARCH_OPEN_WORLD_STREAMING.md) — 30+ curated URLs on chunk streaming, Unity Addressables, AAA references, indie/MMO patterns, and AI infinite-world research (2026-05-29 catalog batch).
+
 ## Surface vegetation — full tile coverage
 
 | Source | URL | Finding | Kit implementation |

@@ -1,0 +1,30 @@
+---
+description: Git commits must be authored as JacobForges, never as Cursor or a bot.
+alwaysApply: true
+---
+
+# Git commits — author as the user
+
+When the user asks you to create a git commit (or you commit after explicit request):
+
+1. **Author identity** — Always pass an explicit author on every commit:
+   ```bash
+   git commit --author="JacobForges <jacob.adkins@students.maestrocollege.edu>" -m "$(cat <<'EOF'
+   Message here.
+
+   EOF
+   )"
+   ```
+   Use this exact name and email unless the user gives a different author in the same thread.
+
+2. **Never** commit with author/committer names or emails containing `Cursor`, `cursoragent`, `cursor.com`, or generic bot identities.
+
+3. **Do not** add `Co-authored-by: Cursor <cursoragent@cursor.com>` (or any Cursor co-author trailer) to commit messages. GitHub shows that as a second author even when the git author is you. Use a plain message body only.
+
+4. **Do not** run `git config` (global or local) to change `user.name` / `user.email` — per-commit `--author` only.
+
+5. If `git log -1` after commit shows the wrong author, amend only when your commit rules allow, still using the same `--author` flag.
+
+6. **Push** only when the user asks; commits should still use the user author before push so GitHub attributes work to **JacobForges**.
+
+If GitHub does not link commits to the profile, the user may need to add `jacob.adkins@students.maestrocollege.edu` as a verified email on GitHub (or supply their `id+login@users.noreply.github.com` noreply address for future commits).

@@ -306,6 +306,8 @@ function collectQualityFlags(entries: CacheEntry[]): QualityFlag[] {
 }
 
 function shouldDropByPolicy(e: CacheEntry): boolean {
+  // Option A catalog: classic GDC/AAA streaming refs intentionally pre-2025.
+  if (e.topics.includes("open_world_streaming")) return false;
   if (e.sourceType !== "engine_doc" && e.year < RESEARCH_MIN_YEAR) return true;
   if (isTerrainCriticalEntry(e) && !isResearchyUrl(e.url)) return true;
   if (isTerrainCriticalEntry(e) && e.provenInProduction && hasSpeculativeKeywords(e)) return true;

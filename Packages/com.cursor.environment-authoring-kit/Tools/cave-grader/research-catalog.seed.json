@@ -78,7 +78,7 @@
       "year": 2026,
       "venue": "NVIDIA Research",
       "url": "https://research.nvidia.com/publication/2026-03_3d-generalist-vision-language-action-models-crafting-3d-worlds",
-      "topics": "layout, materials, lighting, simulation-ready environments"
+      "topics": "open_world_streaming, layout, materials, lighting, simulation-ready environments, VLA crafting 3D worlds"
     },
     {
       "lab": "NVIDIA Research",
@@ -389,6 +389,537 @@
       "url": "https://arxiv.org/abs/2506.23626",
       "topics": "adventure encounter pacing, reward shaping for traversal/combat loops, moving hazards and checkpoint flow",
       "provenInProduction": true
+    },
+    {
+      "lab": "Guerrilla Games",
+      "title": "Streaming the World of Horizon Zero Dawn",
+      "year": 2023,
+      "venue": "Guerrilla Games Read",
+      "url": "https://www.guerrilla-games.com/read/Streaming-the-World-of-Horizon-Zero-Dawn",
+      "topics": "open_world_streaming, AAA terrain streaming, Decima engine, memory scheduling",
+      "provenInProduction": true
+    },
+    {
+      "lab": "GDC Vault",
+      "title": "GPU-Based Run-Time Procedural Placement in Horizon Zero Dawn",
+      "year": 2017,
+      "venue": "GDC Vault",
+      "url": "https://www.gdcvault.com/play/1024120/GPU-Based-Run-Time-Procedural",
+      "topics": "open_world_streaming, runtime scatter, vegetation placement, procedural world fill",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Hello Games",
+      "title": "Continuous World Generation in No Man's Sky",
+      "year": 2017,
+      "venue": "GDC Vault",
+      "url": "https://gdcvault.com/play/1024265/Continuous-World-Generation-in-No",
+      "topics": "open_world_streaming, procedural infinite terrain, voxel to mesh pipeline, indie scale",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Hello Games",
+      "title": "Building Worlds Using Math(s) — No Man's Sky",
+      "year": 2017,
+      "venue": "GDC Vault",
+      "url": "https://www.gdcvault.com/play/1024514/Building-Worlds-Using",
+      "topics": "open_world_streaming, seeded terrain noise, deterministic planets",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Epic Games",
+      "title": "World Partition in Unreal Engine 5",
+      "year": 2026,
+      "venue": "Epic Developer Documentation",
+      "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-in-unreal-engine",
+      "topics": "open_world_streaming, grid cells, HLOD, distance streaming, world building",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Epic Games",
+      "title": "Unreal Engine World Building Guide (World Partition)",
+      "year": 2026,
+      "venue": "Epic Developer Community",
+      "url": "https://dev.epicgames.com/community/learning/knowledge-base/r6wl/unreal-engine-world-building-guide",
+      "topics": "open_world_streaming, data layers, OFPA, spatial load, production pitfalls",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Addressables — Load Scene (additive streaming)",
+      "year": 2026,
+      "venue": "Unity Package Manual",
+      "url": "https://docs.unity3d.com/Packages/com.unity.addressables@2.0/manual/LoadingScenes.html",
+      "topics": "open_world_streaming, chunk scenes, async load, Unity implementation",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Entities — Scene streaming LoadSceneAsync",
+      "year": 2026,
+      "venue": "Unity Entities Manual",
+      "url": "https://docs.unity3d.com/Packages/com.unity.entities@6.5/manual/streaming-loading-scenes.html",
+      "topics": "open_world_streaming, DOTS sections, large world memory",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Meta",
+      "title": "Unity asset streaming sample (grid LOD + Addressables)",
+      "year": 2026,
+      "venue": "Meta Horizon Developers",
+      "url": "https://developers.meta.com/horizon/documentation/unity/unity-sample-asset-streaming",
+      "topics": "open_world_streaming, grid subscenes, LOD preload, VR open world",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie / Community",
+      "title": "Practical Open World Streaming Approaches For All Platforms",
+      "year": 2026,
+      "venue": "Slashskill",
+      "url": "https://www.slashskill.com/practical-open-world-streaming-approaches-for-all-platforms/",
+      "topics": "open_world_streaming, chunk size budgets, mobile console PC, predictive loading",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie / Community",
+      "title": "Streaming in Games (grid vs volumes)",
+      "year": 2025,
+      "venue": "Guillermo Báez Blog",
+      "url": "https://www.guillermobaez.com/blog/streaming-in-games",
+      "topics": "open_world_streaming, grid cells, streaming volumes, UE World Partition comparison",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Discussions — 3D open world performance",
+      "year": 2025,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/3d-open-world-performance-where-do-i-even-start/1682649",
+      "topics": "open_world_streaming, floating origin, terrain streaming, indie pitfalls",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Princeton VL",
+      "title": "Infinigen — Infinite Photorealistic Worlds",
+      "year": 2023,
+      "venue": "CVPR / infinigen.org",
+      "url": "https://infinigen.org/",
+      "topics": "open_world_streaming, procedural infinite worlds, terrain generation, research PCG",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Princeton VL",
+      "title": "Infinite Photorealistic Worlds (arXiv)",
+      "year": 2023,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2306.09310",
+      "topics": "open_world_streaming, procedural terrain, unlimited variation",
+      "provenInProduction": false
+    },
+    {
+      "lab": "AAAI",
+      "title": "WorldGrow: Generating Infinite 3D World",
+      "year": 2026,
+      "venue": "AAAI 2026",
+      "url": "https://ojs.aaai.org/index.php/AAAI/article/view/37571",
+      "topics": "open_world_streaming, AI world generation, block inpainting, infinite scenes",
+      "provenInProduction": false
+    },
+    {
+      "lab": "Research",
+      "title": "WorldGen: Text to Traversable 3D Worlds",
+      "year": 2025,
+      "venue": "arXiv HTML",
+      "url": "https://arxiv.org/html/2511.16825",
+      "topics": "open_world_streaming, AI layout, traversable worlds, procedural constraints",
+      "provenInProduction": false
+    },
+    {
+      "lab": "Research",
+      "title": "InfiniteDiffusion — Terrain Diffusion (infinite terrain)",
+      "year": 2025,
+      "venue": "Project Page",
+      "url": "https://xandergos.github.io/terrain-diffusion/",
+      "topics": "open_world_streaming, infinite terrain, seed consistency, Minecraft Unity demo",
+      "provenInProduction": false
+    },
+    {
+      "lab": "Research",
+      "title": "SimWorld Studio — UE5 agent environment generation",
+      "year": 2026,
+      "venue": "arXiv HTML",
+      "url": "https://arxiv.org/html/2605.09423",
+      "topics": "open_world_streaming, AI automation, embodied sim, Cursor-like agents",
+      "provenInProduction": false
+    },
+    {
+      "lab": "ESEngine",
+      "title": "World Streaming module (chunk manager)",
+      "year": 2025,
+      "venue": "ESEngine Docs",
+      "url": "https://esengine.cn/en/modules/world-streaming/",
+      "topics": "open_world_streaming, MMO-style chunks, load radius, prefetch",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Godot Community",
+      "title": "Open World Database (Godot chunk streaming)",
+      "year": 2025,
+      "venue": "GitHub",
+      "url": "https://github.com/DigitallyTailored/Godot-Open-World-Database",
+      "topics": "open_world_streaming, indie chunk streaming, batch load limits",
+      "provenInProduction": true
+    },
+    {
+      "lab": "WoW Dev / Community",
+      "title": "World Tiles and Chunks (MMO terrain hierarchy)",
+      "year": 2025,
+      "venue": "DeepWiki / noggit3",
+      "url": "https://deepwiki.com/wowdev/noggit3/2.1-world-tiles-and-chunks",
+      "topics": "open_world_streaming, MMO terrain tiles, ADT chunks, hierarchical scale",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie MMO Design",
+      "title": "So You Want to Build an MMO — World Design",
+      "year": 2026,
+      "venue": "Medium",
+      "url": "https://medium.com/@alexander.bakharev_16063/so-you-want-to-build-an-mmo-8-18-world-design-level-architecture-c07798d17f1c",
+      "topics": "open_world_streaming, server meshing, zoning, scope warning",
+      "provenInProduction": true
+    },
+    {
+      "lab": "ResearchGate",
+      "title": "Open World Streaming — automatic memory management",
+      "year": 2016,
+      "venue": "ResearchGate",
+      "url": "https://www.researchgate.net/publication/303998274_Open_World_Streaming_Automatic_memory_management_in_open_world_games_without_loading_screens",
+      "topics": "open_world_streaming, world streamer, grid nodes, classic architecture",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Ubisoft",
+      "title": "Far Cry 5 procedural world generation (GDC)",
+      "year": 2018,
+      "venue": "Game Developer",
+      "url": "https://www.gamedeveloper.com/design/video-the-world-generation-tech-behind-i-far-cry-5-i-",
+      "topics": "open_world_streaming, 64m sectors, biome masks, large outdoor worlds",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Toxigon",
+      "title": "UE5 World Partition optimization (cells, HLOD)",
+      "year": 2025,
+      "venue": "Toxigon Blog",
+      "url": "https://toxigon.com/ue5-world-partition-optimization",
+      "topics": "open_world_streaming, cell size tuning, biome streaming distance, HLOD",
+      "provenInProduction": true
+    },
+    {
+      "lab": "BitSoul",
+      "title": "UE5 World Partition stream 3D assets",
+      "year": 2025,
+      "venue": "BitSoul Blog",
+      "url": "https://bitsoulhosting.com/marketplace/blog/ue5-world-partition-streaming-3d-assets-open-world",
+      "topics": "open_world_streaming, 128m cells, loading range, open world template",
+      "provenInProduction": true
+    },
+    {
+      "lab": "GitHub",
+      "title": "godot-genre-open-world agent skill",
+      "year": 2025,
+      "venue": "GitHub",
+      "url": "https://github.com/thedivergentai/gd-agentic-skills/blob/main/skills/godot-genre-open-world/SKILL.md",
+      "topics": "open_world_streaming, floating origin, chunk streaming, density over size",
+      "provenInProduction": true
+    },
+    {
+      "lab": "PocketMine",
+      "title": "World Management — chunk loaders",
+      "year": 2025,
+      "venue": "PocketMine Docs",
+      "url": "https://pmmp-pocketmine-mp.mintlify.app/concepts/worlds",
+      "topics": "open_world_streaming, 16x16 chunks, async population, multiplayer",
+      "provenInProduction": true
+    },
+    {
+      "lab": "The Melding Wars",
+      "title": "Zone and gtchunk file layout",
+      "year": 2025,
+      "venue": "GitHub Wiki",
+      "url": "https://github.com/themeldingwars/Documentation/wiki/zone",
+      "topics": "open_world_streaming, MMO zone chunks 512m, chunk references",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Game Developer",
+      "title": "How continuous world generation works in No Man's Sky",
+      "year": 2017,
+      "venue": "Game Developer",
+      "url": "https://www.gamedeveloper.com/programming/video-how-continuous-world-generation-works-in-i-no-man-s-sky-i-",
+      "topics": "open_world_streaming, NMS pipeline, programmer bridge doc, procedural planets",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie / Community",
+      "title": "Level Streaming in Unity (YouTube tutorial)",
+      "year": 2025,
+      "venue": "YouTube",
+      "url": "https://www.youtube.com/watch?v=JOPgk3D66kA",
+      "topics": "open_world_streaming, LoadSceneAsync, UnloadSceneAsync, indie pattern",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Addressables — Memory Management",
+      "year": 2026,
+      "venue": "Unity Package Manual",
+      "url": "https://docs.unity3d.com/Packages/com.unity.addressables@1.3/manual/MemoryManagement.html",
+      "topics": "open_world_streaming, bundle refcount, chunk unload leaks, production discipline",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Entities — Loading scenes at runtime (streaming)",
+      "year": 2026,
+      "venue": "Unity Entities Manual",
+      "url": "https://docs.unity3d.com/Packages/com.unity.entities@0.50/manual/loading_scenes.html",
+      "topics": "open_world_streaming, async section load, non-blocking gameplay",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Discussions — World Building Challenge",
+      "year": 2025,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/world-building-challenge/886379",
+      "topics": "open_world_streaming, World Machine Houdini cliffs, tile authoring before streaming",
+      "provenInProduction": true
+    },
+    {
+      "lab": "GitHub",
+      "title": "WorldGrow — infinite 3D world growth (code)",
+      "year": 2026,
+      "venue": "GitHub",
+      "url": "https://github.com/world-grow/WorldGrow",
+      "topics": "open_world_streaming, AI block growth, walkable infinite, research export path",
+      "provenInProduction": false
+    },
+    {
+      "lab": "Netherlands3D",
+      "title": "Floating Origin for large real-world coordinates",
+      "year": 2025,
+      "venue": "Netherlands3D Docs",
+      "url": "https://netherlands3d.eu/docs/developers/features/floating-origin/",
+      "topics": "open_world_streaming, floating origin, WGS84 ECEF, precision shift all objects",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Coherence",
+      "title": "World Origin Shifting (multiplayer floating origin)",
+      "year": 2025,
+      "venue": "Coherence Docs",
+      "url": "https://docs.coherence.io/2.1/manual/advanced-topics/big-worlds/world-origin-shifting",
+      "topics": "open_world_streaming, per-client origin, 64-bit absolute coords, future net",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie / Community",
+      "title": "Level Streaming in Unity — Breaking Down Open Worlds",
+      "year": 2025,
+      "venue": "Drafted by Machines",
+      "url": "https://daily.jovis.ai/game-development/level-streaming-in-unity-breaking-down-open-worlds/",
+      "topics": "open_world_streaming, loadDistance unloadDistance, additive scenes, occlusion culling",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Terrain.SetNeighbors — seamless tile LOD",
+      "year": 2026,
+      "venue": "Unity Scripting API",
+      "url": "https://docs.unity3d.com/ScriptReference/Terrain.SetNeighbors.html",
+      "topics": "open_world_streaming, multi-tile LOD seams, SurfaceTerrainTileExpansion pattern",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Discussions — seamless terrain SetNeighbors",
+      "year": 2025,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/seamless-terrain-question/389019",
+      "topics": "open_world_streaming, neighbor wiring both directions, dynamic load at runtime",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Terrain.drawInstanced — instanced terrain renderer",
+      "year": 2026,
+      "venue": "Unity Scripting API",
+      "url": "https://docs.unity3d.com/6000.1/Documentation/ScriptReference/Terrain-drawInstanced.html",
+      "topics": "open_world_streaming, GPU instanced heightmap, many active chunks",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Terrain Settings — Draw Instanced reference",
+      "year": 2026,
+      "venue": "Unity Manual",
+      "url": "https://docs.unity3d.com/Manual/terrain-OtherSettings.html",
+      "topics": "open_world_streaming, per-tile draw toggle, heightmap LOD limits",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Indie / Community",
+      "title": "Streaming Massive Terrains with Geometry Clipmapping",
+      "year": 2025,
+      "venue": "Ray's Slice",
+      "url": "https://raygoe.net/2025/08/29/streaming-massive-terrains-with-geometry-clipmapping/",
+      "topics": "open_world_streaming, clipmap LOD rings, heightmap in vertex shader, beyond Unity Terrain bake",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Nintendo / Community",
+      "title": "Open world level design — spatial flow in Breath of the Wild",
+      "year": 2017,
+      "venue": "Radiator Blog",
+      "url": "https://www.blog.radiator.debacle.us/2017/10/open-world-level-design-spatial.html",
+      "topics": "open_world_streaming, triangle landmarks, gravity funnels, POI density not empty space",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Nintendo / Community",
+      "title": "BotW CEDEC — 120 map sections procedural UI tiles",
+      "year": 2017,
+      "venue": "Medium (Matt Walker summary)",
+      "url": "https://medium.com/@gypsyOtoko/this-is-a-reposting-of-my-twitter-thread-summarizing-articles-of-the-botw-cedec-talks-which-can-be-91e9be85de51",
+      "topics": "open_world_streaming, 120 dynamic sections, nightly texture gen, section streaming mental model",
+      "provenInProduction": true
+    },
+    {
+      "lab": "ZeldaMods",
+      "title": "Breath of the Wild — OpenWorldStage and map units",
+      "year": 2025,
+      "venue": "ZeldaMods Wiki",
+      "url": "https://zeldamods.org/wiki/Overview",
+      "topics": "open_world_streaming, stage/scene model, fixed spawns vs auto placement, kit POI tables",
+      "provenInProduction": true
+    },
+    {
+      "lab": "FromSoftware / Press",
+      "title": "Elden Ring — largest free-form map structure (IGN)",
+      "year": 2022,
+      "venue": "IGN",
+      "url": "https://sea.ign.com/elden-ring/173092/news/elden-ring-how-fromsofts-largest-most-free-form-map-works-summer-of-gaming",
+      "topics": "open_world_streaming, six domains, legacy dungeons in overworld, cave POI cadence",
+      "provenInProduction": true
+    },
+    {
+      "lab": "FromSoftware / Community",
+      "title": "World design lessons from FromSoftware (Elden Ring density)",
+      "year": 2023,
+      "venue": "Medium",
+      "url": "https://medium.com/@Jamesroha/world-design-lessons-from-fromsoftware-78cadc8982df",
+      "topics": "open_world_streaming, overworld plus instanced dungeons, avoid empty zones",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Level Design / Community",
+      "title": "Elden Ring — Erdtree as global landmark compass",
+      "year": 2022,
+      "venue": "Benicia Paw",
+      "url": "https://beniciapaw.com/2022/04/01/elden-ring-how-to-design-an-open-world/",
+      "topics": "open_world_streaming, landmark navigation, vista POI, Option A vista table",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Academic",
+      "title": "Implicit wayfinding in Elden Ring and A Short Hike (thesis)",
+      "year": 2024,
+      "venue": "Theseus / Haaga-Helia",
+      "url": "https://www.theseus.fi/bitstream/10024/904850/2/Grau_Vesna.pdf",
+      "topics": "open_world_streaming, terrain cues, gameplay site placement, trail graph design",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Manual — Occlusion Culling",
+      "year": 2026,
+      "venue": "Unity Manual",
+      "url": "https://docs.unity3d.com/6000.5/Documentation/Manual/OcclusionCulling.html",
+      "topics": "open_world_streaming, per-chunk bake, reduce draw in loaded ring",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Unity Manual — LOD Groups",
+      "year": 2026,
+      "venue": "Unity Manual",
+      "url": "https://docs.unity3d.com/6000.5/Documentation/Manual/LevelOfDetail.html",
+      "topics": "open_world_streaming, prop LOD rings, distant chunk impostors",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Procedural Worlds",
+      "title": "Gaia — terrain stamping and world creation (Unity)",
+      "year": 2025,
+      "venue": "Procedural Worlds",
+      "url": "https://procedural-worlds.com/products/gaia/",
+      "topics": "open_world_streaming, tile stamping workflow, compare to Florida DEM per chunk",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Rockstar / GDC",
+      "title": "Building the Beautiful World of Red Dead Redemption 2",
+      "year": 2019,
+      "venue": "GDC Vault",
+      "url": "https://www.gdcvault.com/play/1025313/Building-the-Beautiful-World-of-Red-Dead-Redemption-2-A-Exhaustive-Approach-to-Rendering",
+      "topics": "open_world_streaming, AAA terrain rendering, distant HLOD quality bar",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Epic Games",
+      "title": "World Origin Rebasing (Unreal Engine)",
+      "year": 2026,
+      "venue": "Epic Developer Documentation",
+      "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/world-origin-rebasing-in-unreal-engine",
+      "topics": "open_world_streaming, cross-engine floating origin reference, 4km zone beyond 5k units",
+      "provenInProduction": true
+    },
+    {
+      "lab": "GitHub",
+      "title": "Unity URP procedural DrawMeshInstancedIndirect vegetation",
+      "year": 2025,
+      "venue": "GitHub",
+      "url": "https://github.com/AkilarLiao/UnityURP-Procedural-DrawMeshInstancedIndirect",
+      "topics": "open_world_streaming, GPU scatter per chunk, FilterMap masks, mobile-safe instancing",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Ubisoft",
+      "title": "Assassin's Creed Unity — procedural world design (GDC)",
+      "year": 2014,
+      "venue": "Game Developer",
+      "url": "https://www.gamedeveloper.com/audio/video-creation-world-of-assassin-s-creed-unity-with-procedural-design",
+      "topics": "open_world_streaming, procedural city blocks, modular world units at scale",
+      "provenInProduction": true
+    },
+    {
+      "lab": "CD PROJEKT RED / GDC",
+      "title": "The Witcher 3 — open world design (GDC Vault)",
+      "year": 2015,
+      "venue": "GDC Vault",
+      "url": "https://www.gdcvault.com/play/1023017/The-Witcher-3-Open-World-Design",
+      "topics": "open_world_streaming, quest density, handcrafted POI in large zone, Option A narrative hooks",
+      "provenInProduction": true
+    },
+    {
+      "lab": "Unity Technologies",
+      "title": "Terrain Tools package — multi-tile authoring",
+      "year": 2026,
+      "venue": "Unity Package Manual",
+      "url": "https://docs.unity3d.com/Packages/com.unity.terrain-tools@5.0/manual/index.html",
+      "topics": "open_world_streaming, Terrain Toolbox, batch heightmap across tiles, editor scale-up",
+      "provenInProduction": true
     }
   ],
   "engineReferences": [
@@ -665,39 +1196,6 @@
         "https://cdn.akamai.steamstatic.com/steam/apps/782330/header.jpg"
       ],
       "notes": "Tight corridor rock walls + combat arenas — shell ring layout reference."
-    },
-    {
-      "id": "envkit-interstitial-vegetation-spread",
-      "title": "Environment Kit — interstitial vegetation spread (dual grid pass)",
-      "year": 2026,
-      "category": "vegetation",
-      "provenInProduction": true,
-      "studio": "Environment Kit (curated)",
-      "docUrl": "https://www.guerrilla-games.com/read/horizon-zero-dawn-procedural-vegetation-placement",
-      "imageUrls": [],
-      "notes": "Kit implementation: pass-1 uniform grid per terrain tile, pass-2 half-cell offset grid (+38% spacing) skipping slots within min separation of pass-1 instances. Matches Guerrilla GPU scatter after terrain rules — scatter points separate from heightfield. Use SurfaceIntelligentPropPlacer.TryInterstitialWideSpreadPass after primary categories."
-    },
-    {
-      "id": "unity-terrain-tree-distance",
-      "title": "Unity 6 — Terrain trees & details (distance / density)",
-      "year": 2026,
-      "category": "vegetation",
-      "provenInProduction": true,
-      "studio": "Unity Technologies",
-      "docUrl": "https://docs.unity3d.com/6000.5/Documentation/Manual/terrain-Trees.html",
-      "imageUrls": [],
-      "notes": "Authoring analog: prefab scatter per tile with slope filter and min separation; do not paint only along splines. Tree distance and detail density inform per-tile TargetPerTile counts in SurfaceTerrainPropPlacementRegion."
-    },
-    {
-      "id": "florida-karst-surface-entrance-underground",
-      "title": "Florida karst — surface entrance lip + structural void below (DS 926)",
-      "year": 2015,
-      "category": "karst_geomorphology",
-      "provenInProduction": true,
-      "studio": "USGS / FGS",
-      "docUrl": "https://pubs.usgs.gov/ds/0926/",
-      "imageUrls": [],
-      "notes": "Walkable surface at cave opening; tube/route in Floridan structural unit below land surface. Kit: CaveUndergroundEntranceEnforcer — align opening, FinalizeGroundPlacement, mouth depth snap, SurfaceWalkIn descent mesh + floor modules, trail connector, atmosphere trigger. Do not use water table or inundation DEM for void Y."
     },
     {
       "id": "guerrilla-horizon-terrain",
@@ -1251,7 +1749,40 @@
       "fl-statewide-lidar-assessment"
     ],
     "hillshadeIndexPath": "Assets/EnvironmentKit/ResearchCache/images/florida-hillshades-index.json",
-    "hillshades": [],
+    "hillshades": [
+      {
+        "county": "Bay",
+        "countyId": "bay",
+        "relativePath": "Assets/EnvironmentKit/ResearchCache/images/fl-bay-hillshade/hillshade.png",
+        "source": "usgs-3dep-segment-export",
+        "bytes": 419070,
+        "caveStructureOnly": true
+      },
+      {
+        "county": "Washington",
+        "countyId": "washington",
+        "relativePath": "Assets/EnvironmentKit/ResearchCache/images/fl-washington-hillshade/hillshade.png",
+        "source": "usgs-3dep-segment-export",
+        "bytes": 417074,
+        "caveStructureOnly": true
+      },
+      {
+        "county": "Jackson",
+        "countyId": "jackson",
+        "relativePath": "Assets/EnvironmentKit/ResearchCache/images/fl-jackson-hillshade/hillshade.png",
+        "source": "usgs-3dep-segment-export",
+        "bytes": 489794,
+        "caveStructureOnly": true
+      },
+      {
+        "county": "Calhoun",
+        "countyId": "calhoun",
+        "relativePath": "Assets/EnvironmentKit/ResearchCache/images/fl-calhoun-hillshade/hillshade.png",
+        "source": "usgs-3dep-segment-export",
+        "bytes": 501043,
+        "caveStructureOnly": true
+      }
+    ],
     "bulkDemUrl": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/FL_Panhandle_DEM_2018_8942/index.html",
     "syncCommands": [
       "npm run sync-research-pull",
@@ -1262,7 +1793,7 @@
   "dataAttribution": "Packages/com.cursor.environment-authoring-kit/docs/RESEARCH_DATA_ATTRIBUTION.md",
   "stats": {
     "labCount": 18,
-    "paperCount": 45,
+    "paperCount": 104,
     "visualRefCount": 44,
     "floridaAquiferRefs": 11
   }

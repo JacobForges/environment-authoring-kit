@@ -1290,6 +1290,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void FinishTerrainPipelineComplete(QueueState state, bool ok, string summary)
         {
+            CaveBuildStartupCoordinator.OnTerrainPipelineHelpersComplete(state?.Request, state?.Ground);
+
             var cave = UnityEngine.Object.FindAnyObjectByType<CaveBuildMetadata>()?.transform;
             if (cave != null)
             {

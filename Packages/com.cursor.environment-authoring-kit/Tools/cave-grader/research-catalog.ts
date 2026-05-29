@@ -3,8 +3,11 @@
  * No course pages, forums, or indie tool READMEs.
  */
 import { buildFloridaTerrainSummary } from "./florida-research-paths.js";
+import { OPEN_WORLD_STREAMING_PAPERS } from "./open-world-streaming-papers.js";
 import { CAVE_VISUAL_REFERENCES } from "./research-visual-references.js";
 import { RESEARCH_CACHE_GENERATED_REL, RESEARCH_CACHE_INDEX_REL } from "./research-store.js";
+
+export { OPEN_WORLD_STREAMING_PAPERS } from "./open-world-streaming-papers.js";
 
 /** Agent catalog: 2025–2026 only, proven-in-production or shipped-engine refs. */
 export const RESEARCH_MIN_YEAR = 2025;
@@ -163,7 +166,8 @@ export const PRESTIGE_LAB_PAPERS: ResearchEntry[] = [
     year: 2026,
     venue: "NVIDIA Research",
     url: "https://research.nvidia.com/publication/2026-03_3d-generalist-vision-language-action-models-crafting-3d-worlds",
-    topics: "layout, materials, lighting, simulation-ready environments",
+    topics:
+      "open_world_streaming, layout, materials, lighting, simulation-ready environments, VLA crafting 3D worlds",
   },
   {
     lab: "NVIDIA Research",
@@ -571,10 +575,16 @@ export const UNITY6_ENGINE_REFS: ResearchEntry[] = [
   },
 ];
 
+/** Option A / Horizon-zone streaming catalog — always included in seed + ResearchCache. */
+export function openWorldStreamingPapers(): ResearchEntry[] {
+  return OPEN_WORLD_STREAMING_PAPERS;
+}
+
 export function papersForMinYear(minYear = RESEARCH_MIN_YEAR): ResearchEntry[] {
-  return [...PRESTIGE_LAB_PAPERS, ...ADVENTURE_RESEARCH_CURATION].filter(
+  const core = [...PRESTIGE_LAB_PAPERS, ...ADVENTURE_RESEARCH_CURATION].filter(
     (p) => p.year >= minYear && isProvenInProduction(p)
   );
+  return [...core, ...OPEN_WORLD_STREAMING_PAPERS];
 }
 
 export function allCatalogUrls(): string[] {

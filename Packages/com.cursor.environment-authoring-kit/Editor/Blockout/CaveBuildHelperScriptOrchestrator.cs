@@ -64,8 +64,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         static bool _chainActive;
+        static double _chainStartedAt;
 
         public static bool IsChainActive => _chainActive;
+
+        /// <summary>Clears a stuck helper chain (emergency recovery / handoff watchdog).</summary>
+        public static void ResetChain()
+        {
+            _chainActive = false;
+            _chainStartedAt = 0;
+        }
 
         public static void Queue(Moment moment, Context ctx, Action<bool, string> onComplete = null)
         {
@@ -85,6 +93,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     : true);
 
             _chainActive = true;
+            _chainStartedAt = EditorApplication.timeSinceStartup;
             QueueStepAt(0, steps, moment, onComplete);
         }
 
@@ -102,6 +111,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             _chainActive = true;
+            _chainStartedAt = EditorApplication.timeSinceStartup;
             QueueStepAt(
                 0,
                 steps,
@@ -122,9 +132,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             if (index >= steps.Count)
             {
-                _chainActive = false;
+                ResetChain();
                 CaveBuildActionPacing.ApplyCooldownTimers(CaveBuildActionPacing.ActionWeight.Light);
                 onComplete?.Invoke(true, $"[{moment}] helper scripts finished ({steps.Count} steps).");
+                return;
+            }
+
+            const double chainStallSeconds = 120.0;
+            if (_chainStartedAt > 0 &&
+                EditorApplication.timeSinceStartup - _chainStartedAt > chainStallSeconds)
+            {
+                CaveBuildEditorLog.LogCaveWarning(
+                    $"[Helpers] {moment} chain stalled >{chainStallSeconds:F0}s — skipping remaining helper scripts.");
+                ResetChain();
+                onComplete?.Invoke(
+                    false,
+                    $"[{moment}] helper chain watchdog timeout (remaining scripts skipped).");
                 return;
             }
 
@@ -143,7 +166,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                     if (!ok)
                     {
-                        _chainActive = false;
+                        ResetChain();
                         CaveBuildEditorLog.LogCaveWarning($"[Helpers] {step.Script} failed: {msg}");
                         onComplete?.Invoke(false, msg);
                         return;

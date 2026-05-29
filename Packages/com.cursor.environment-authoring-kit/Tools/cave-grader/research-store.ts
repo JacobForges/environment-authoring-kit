@@ -185,6 +185,8 @@ function inferCategory(
   if (sourceType === "engine_doc") return "engine_docs";
 
   const blob = `${title} ${topics}`.toLowerCase();
+  if (blob.includes("open_world_streaming") || blob.includes("world streaming") || blob.includes("chunk"))
+    return "terrain";
   if (blob.includes("terrain") || blob.includes("heightmap") || blob.includes("carve"))
     return "terrain";
   if (blob.includes("navmesh") || blob.includes("navigation")) return "navmesh";
@@ -229,6 +231,8 @@ function inferRungs(category: ResearchCategory, topics: string, title: string): 
   if (blob.includes("navmesh")) rungs.add("navmesh");
   if (blob.includes("collision")) rungs.add("floor_collision");
   if (blob.includes("visual") || blob.includes("shell")) rungs.add("visual_shell");
+  if (blob.includes("open_world_streaming") || blob.includes("streaming") || blob.includes("chunk"))
+    rungs.add("research");
 
   if (!rungs.size) rungs.add("other");
   return [...rungs];

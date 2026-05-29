@@ -89,6 +89,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorApplication.update -= Poll;
             EditorApplication.update -= RunArmedBatchOnce;
             CaveBuildTsxProcessRunner.CancelActive("emergency abort");
+            CaveBuildHelperScriptOrchestrator.ResetChain();
         }
 
         public static void Schedule(Action action, string label = null) =>

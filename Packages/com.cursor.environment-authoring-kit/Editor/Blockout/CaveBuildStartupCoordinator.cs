@@ -40,8 +40,42 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static SurfaceWorldBuildReport _surfaceReport;
         static CaveBuildPreBuildReport _cachedPreBuildReport;
         static int _preBuildCompileWaitTicks;
+        static double _preBuildGateWatchdogAt;
 
         public static bool IsActive => _active;
+
+        /// <summary>
+        /// Called when terrain AI phases + post-terrain helper scripts finish — unblocks pre-build if the editor queue was backed up.
+        /// </summary>
+        public static void OnTerrainPipelineHelpersComplete(WorldGenerationRequest request, SceneGroundInfo ground)
+        {
+            if (request == null)
+                return;
+
+            CaveBuildSurfaceCompletionGate.ReleaseStuckHandoffForStartup(request, ground, true);
+
+            if (!LavaTubeCaveBuilder.IsBuildInProgress)
+                return;
+
+            if (_active && _step == StartupStep.PreBuildGate)
+            {
+                CaveBuildEditorLog.LogCave(
+                    "[Startup] Terrain helpers done — priority pre-build gate retry.",
+                    forceUnityConsole: true);
+                CaveBuildActionPacing.SchedulePriorityFirstStep(
+                    RunPreBuildGateEvaluate,
+                    CaveBuildPipelineDomains.QueueLabel("startup — pre-build after terrain"));
+                return;
+            }
+
+            if (!_active && CaveBuildPendingGeometryBuild.HasPending)
+            {
+                CaveBuildEditorLog.LogCave(
+                    "[Startup] Terrain done — resuming pending cave geometry.",
+                    forceUnityConsole: true);
+                CaveBuildPendingGeometryBuild.TryRunPending(out _);
+            }
+        }
 
         /// <summary>Clears startup coordinator state after <see cref="CaveBuildEmergencyRecovery"/>.</summary>
         public static void EmergencyResetStartup()
@@ -55,6 +89,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _sceneName = null;
             _surfaceReport = null;
             _step = StartupStep.PrepareScene;
+            _preBuildGateWatchdogAt = 0;
         }
 
         public static void QueueBuild(
@@ -135,7 +170,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var queueLabel = CaveBuildPipelineDomains.QueueLabel($"startup — {label}");
             if (_step == StartupStep.PreBuildGate)
             {
-                CaveBuildActionPacing.SchedulePipelineFirstStep(RunPreBuildGate, queueLabel);
+                CaveBuildActionPacing.SchedulePriorityFirstStep(RunPreBuildGate, queueLabel);
                 return;
             }
 
@@ -379,18 +414,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             _step = StartupStep.PreBuildGate;
             SetProgress(0.38f, $"[Startup] Pre-build reloop — {status}");
-            CaveBuildActionPacing.PreparePipelineChainKickoff();
-            EditorApplication.delayCall += () =>
-            {
-                try
+            CaveBuildActionPacing.SchedulePriorityFirstStep(
+                () =>
                 {
-                    CaveBuildPreBuildReloop.RunDeferredReloopFixes();
-                }
-                finally
-                {
-                    EditorApplication.QueuePlayerLoopUpdate();
-                }
-            };
+                    try
+                    {
+                        CaveBuildPreBuildReloop.RunDeferredReloopFixes();
+                    }
+                    finally
+                    {
+                        EditorApplication.QueuePlayerLoopUpdate();
+                    }
+                },
+                CaveBuildPipelineDomains.QueueLabel("startup — pre-build reloop fixes"));
         }
 
         /// <summary>After deferred reloop fixes — re-queues the gate on the light pacing queue.</summary>
@@ -402,18 +438,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _step = StartupStep.PreBuildGate;
             }
 
-            CaveBuildActionPacing.PreparePipelineChainKickoff();
-            EditorApplication.delayCall += () =>
-            {
-                try
-                {
-                    RunPreBuildGate();
-                }
-                finally
-                {
-                    EditorApplication.QueuePlayerLoopUpdate();
-                }
-            };
+            CaveBuildActionPacing.SchedulePriorityFirstStep(
+                RunPreBuildGate,
+                CaveBuildPipelineDomains.QueueLabel("startup — pre-build from reloop"));
         }
 
         static void RunPreBuildGate()
@@ -456,10 +483,37 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             SetProgress(0.38f, "[Startup] Pre-build readiness gate…");
             CaveBuildRunStatusPublisher.ClearSubOperation();
+            _preBuildGateWatchdogAt = EditorApplication.timeSinceStartup;
             EditorApplication.QueuePlayerLoopUpdate();
-            CaveBuildActionPacing.SchedulePipelineFirstStep(
+            CaveBuildActionPacing.SchedulePriorityFirstStep(
                 RunPreBuildGateEvaluate,
                 CaveBuildPipelineDomains.QueueLabel("startup — pre-build ladder"));
+            SchedulePreBuildGateWatchdog();
+        }
+
+        static void SchedulePreBuildGateWatchdog()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (!_active || _step != StartupStep.PreBuildGate)
+                    return;
+
+                if (EditorApplication.timeSinceStartup - _preBuildGateWatchdogAt < 90.0)
+                {
+                    SchedulePreBuildGateWatchdog();
+                    return;
+                }
+
+                if (!CaveBuildSurfaceCompletionGate.IsTerrainGradingComplete)
+                    return;
+
+                CaveBuildEditorLog.LogCaveWarning(
+                    "[Startup] Pre-build gate watchdog — forcing evaluate (queue may have been backed up).",
+                    forceUnityConsole: true);
+                CaveBuildActionPacing.SchedulePriorityFirstStep(
+                    RunPreBuildGateEvaluate,
+                    CaveBuildPipelineDomains.QueueLabel("startup — pre-build watchdog"));
+            };
         }
 
         static void RunPreBuildGateEvaluate()
@@ -473,6 +527,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            CaveBuildSurfaceCompletionGate.ReleaseStuckHandoffForStartup(_request, _ground, true);
+
             if (!CaveBuildUnifiedFlow.TryRunPreBuildPhase(
                     _ground,
                     _request,
@@ -484,14 +540,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     out _cachedPreBuildReport,
                     _roll))
             {
-                if (CaveBuildPendingGeometryBuild.HasPending ||
-                    CaveBuildCursorAgentBridge.IsPreBuildWorkflowActive)
+                if (CaveBuildCursorAgentBridge.IsPreBuildWorkflowActive)
                 {
                     Complete(true);
                     return;
                 }
 
-                CaveBuildActionPacing.SchedulePipelineFirstStep(
+                if (CaveBuildPendingGeometryBuild.HasPending)
+                {
+                    if (CaveBuildSurfaceCompletionGate.CanStartCaveGeometryNow(_request, _ground))
+                    {
+                        CaveBuildEditorLog.LogCave(
+                            "[Startup] Pre-build deferred cave cleared — terrain handoff ready, continuing.",
+                            forceUnityConsole: true);
+                        CaveBuildPendingGeometryBuild.Clear();
+                        AdvancePastPreBuildGate();
+                        return;
+                    }
+
+                    Complete(true);
+                    return;
+                }
+
+                CaveBuildActionPacing.SchedulePriorityFirstStep(
                     RunPreBuildGateReloopPlan,
                     CaveBuildPipelineDomains.QueueLabel("startup — pre-build reloop plan"));
                 return;
