@@ -14,6 +14,10 @@
 #
 name: CodeQL
 
+env:
+  # actions/checkout@v4 and some action pins still use Node 20 until upgraded (see changelog 2025-09-19).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Intentionally NOT on every push/PR — Unity + CodeQL ties up your Mac for ~15+ min per run.
 # Run manually before releases or rely on the weekly schedule.
 on:
@@ -39,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Guard — must use current CodeQL prep scripts
         run: |
@@ -73,6 +77,7 @@ jobs:
           chmod +x Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
           Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
 
+      # manual + custom dotnet build is required for Unity; overlay DB is not used (info log only).
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
@@ -92,7 +97,7 @@ jobs:
 
       - name: Upload Unity prep log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: codeql-unity-prep-log
           path: Logs/codeql-unity-prep.log
@@ -120,7 +125,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4

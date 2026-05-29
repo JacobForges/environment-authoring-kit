@@ -107,6 +107,23 @@ View alerts: **Security → Code scanning**.
 
 Failed C# job: download artifact **codeql-unity-prep-log** or read `Logs/codeql-unity-prep.log` on the runner machine under `_work/environment-authoring-kit/...`.
 
+### Log messages (usually safe to ignore)
+
+| Message | Meaning |
+|---------|---------|
+| **Node.js 20 actions are deprecated** | Fixed on `main` via `actions/checkout@v5`, `upload-artifact@v5`, and `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. Update self-hosted runner to **v2.327.1+** if checkout fails. |
+| **Cannot build an overlay-base database… build-mode manual** | Expected for Unity C# — we must use `manual` + `dotnet build`. CodeQL falls back to a full database; analysis still works. |
+
+### Copilot Autofix (optional)
+
+Autofix is **separate** from “default setup” vs “advanced setup”. Once alerts appear in **Security → Code scanning**, you can use autofix if your plan allows it:
+
+1. **Settings → Code security and analysis** → enable **Copilot Autofix** (or “Generate fix suggestions” / similar wording on your plan).
+2. Open an alert → **Generate fix** / **Create PR with fix** when GitHub offers it.
+3. For autofix **pull requests** from Actions, the workflow may need `pull-requests: write` (and `contents: write`) on the job that uploads results — only add if you want bot PRs.
+
+Advanced workflow + SARIF upload **does** communicate with GitHub; autofix does not require re-enabling default CodeQL setup.
+
 ---
 
 ## CodeQL vs cave-grader

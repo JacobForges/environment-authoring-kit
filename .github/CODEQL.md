@@ -20,7 +20,11 @@ Default + advanced causes: *“advanced configurations cannot be processed when 
 
 ## Maintainer checklist
 
-1. `cd ~/actions-runner && ./run.sh`
+1. `cd ~/actions-runner && ./run.sh` (runner **≥ v2.327.1** for `actions/checkout@v5`)
 2. Repo variable **`UNITY_PATH`** → Unity binary (trimmed path)
 3. Default CodeQL setup **disabled**
 4. Local smoke: `Packages/.../Tools/run-codeql-local-verify.sh`
+
+## Autofix
+
+Enable in **Settings → Code security** (Copilot Autofix). Works with this advanced workflow after alerts upload — **not** blocked by using manual Unity build. See [docs/CODEQL_SETUP_AND_USE.md](../docs/CODEQL_SETUP_AND_USE.md#copilot-autofix-optional).

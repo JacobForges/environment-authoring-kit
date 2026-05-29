@@ -1,6 +1,9 @@
 # Nightly showcase bake only — never runs on push/PR (does not slow local or CI on every commit).
 name: Environment Kit — showcase nightly
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   schedule:
     # 08:00 UTC daily
@@ -17,7 +20,7 @@ jobs:
     timeout-minutes: 180
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Showcase headless (self-hosted Unity)
         env:
@@ -28,7 +31,7 @@ jobs:
 
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: showcase-headless-log
           path: Logs/showcase-headless.log
