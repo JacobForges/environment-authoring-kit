@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using EnvironmentAuthoringKit.Editor.Generation;
+using UnityEditor;
 using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout

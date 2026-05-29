@@ -508,8 +508,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     return;
 
                 CaveBuildEditorLog.LogCaveWarning(
-                    "[Startup] Pre-build gate watchdog — forcing evaluate (queue may have been backed up).",
-                    forceUnityConsole: true);
+                    "[Startup] Pre-build gate watchdog — forcing evaluate (queue may have been backed up).");
                 CaveBuildActionPacing.SchedulePriorityFirstStep(
                     RunPreBuildGateEvaluate,
                     CaveBuildPipelineDomains.QueueLabel("startup — pre-build watchdog"));
