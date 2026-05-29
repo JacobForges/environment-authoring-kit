@@ -32,18 +32,20 @@ jobs:
         env:
           UNITY_PATH: ${{ vars.UNITY_PATH }}
         run: |
+          # GitHub Variables sometimes include accidental spaces/newlines when pasted.
+          UNITY_PATH="$(printf '%s' "${UNITY_PATH}" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           if [[ -z "${UNITY_PATH}" ]]; then
             echo "::error::Repository variable UNITY_PATH is not set. Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
           if [[ ! -x "${UNITY_PATH}" ]]; then
-            echo "::error::UNITY_PATH is not executable on this runner: ${UNITY_PATH}"
+            echo "::error::UNITY_PATH is not executable on this runner (check path and Unity install): ${UNITY_PATH}"
             exit 1
           fi
+          echo "UNITY_PATH=${UNITY_PATH}" >> "${GITHUB_ENV}"
+          echo "Using Unity: ${UNITY_PATH}"
 
       - name: Unity — regenerate solution and compile scripts
-        env:
-          UNITY_PATH: ${{ vars.UNITY_PATH }}
         run: |
           chmod +x Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
           Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh

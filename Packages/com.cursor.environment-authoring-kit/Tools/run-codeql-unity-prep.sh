@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-UNITY="${UNITY_PATH:-}"
+UNITY="$(printf '%s' "${UNITY_PATH:-}" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
 if [[ -z "$UNITY" || ! -x "$UNITY" ]]; then
   echo "ERROR: UNITY_PATH must point to the Unity Editor binary (macOS/Linux)."
