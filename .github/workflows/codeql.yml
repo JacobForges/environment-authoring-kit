@@ -1,22 +1,38 @@
-# CodeQL for environment-authoring-kit (Unity C# + cave-grader TypeScript).
-# Unity cannot run on ubuntu-latest; C# uses build-mode: none (source-based, no msbuild/Unity).
+# CodeQL Advanced — Environment Authoring Kit (Unity Hub)
+#
+# BEFORE USE: GitHub → Settings → Code security → disable "Code scanning default setup".
+#             Use ONLY this workflow (advanced setup). Default + advanced = SARIF upload error.
+#
+# C#  : self-hosted Mac with Unity + repo variable UNITY_PATH (full compile accuracy)
+# TS  : GitHub-hosted (cave-grader, build-mode: none)
+# Actions: GitHub-hosted (workflow YAML, build-mode: none)
+#
+# Prerequisites:
+#   - Self-hosted runner online: cd ~/actions-runner && ./run.sh
+#   - Variable UNITY_PATH → .../Unity.app/Contents/MacOS/Unity (no extra spaces)
+#   - .NET SDK on the Mac (dotnet build)
+#
 name: CodeQL
 
-# Cloud fallback only — does not replace Unity self-hosted (see codeql-unity-selfhosted.yml).
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
-    - cron: "0 14 * * 0"
+    - cron: "18 21 * * 6"
+  workflow_dispatch:
 
 concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  # --- Full C# analysis (Unity + msbuild). Requires your Mac runner. ---
+  csharp-unity:
+    name: Analyze (csharp — Unity)
+    runs-on: self-hosted
+    timeout-minutes: 90
     permissions:
       actions: read
       contents: read
@@ -26,12 +42,84 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate UNITY_PATH
+        env:
+          UNITY_PATH: ${{ vars.UNITY_PATH }}
+        run: |
+          UNITY_PATH="$(printf '%s' "${UNITY_PATH}" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          if [[ -z "${UNITY_PATH}" ]]; then
+            echo "::error::Set repository variable UNITY_PATH (Settings → Actions → Variables)."
+            exit 1
+          fi
+          if [[ ! -x "${UNITY_PATH}" ]]; then
+            echo "::error::UNITY_PATH not executable on this runner: ${UNITY_PATH}"
+            exit 1
+          fi
+          echo "UNITY_PATH=${UNITY_PATH}" >> "${GITHUB_ENV}"
+          echo "Using Unity: ${UNITY_PATH}"
+
+      - name: Unity — regenerate solution and compile scripts
+        run: |
+          chmod +x Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
+          Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: csharp, javascript-typescript
-          build-mode: none
+          languages: csharp
+          build-mode: manual
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build C# for CodeQL tracing
+        run: |
+          chmod +x Packages/com.cursor.environment-authoring-kit/Tools/codeql-build-csharp.sh
+          Packages/com.cursor.environment-authoring-kit/Tools/codeql-build-csharp.sh
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:csharp"
+
+      - name: Upload Unity prep log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-unity-prep-log
+          path: Logs/codeql-unity-prep.log
+          if-no-files-found: ignore
+
+  # --- Cloud jobs (no Unity). Same matrix style as GitHub's advanced template. ---
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      packages: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: actions
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

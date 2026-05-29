@@ -1,26 +1,25 @@
-# Code scanning (CodeQL) — Hub repo
+# Code scanning (CodeQL)
 
-## Quick start (honest full C# scan)
+## One workflow only
 
-1. Copy `Packages/com.cursor.environment-authoring-kit/Tools/env.codeql.example` → **Hub root** `.env.codeql` and set `UNITY_PATH`.
-2. Run locally:
+Use **`.github/workflows/codeql.yml`** — do **not** add GitHub’s auto-generated `CodeQL Advanced` workflow separately.
 
-```bash
-Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-local-verify.sh
-```
+**Settings → Code security** → turn **off** “Code scanning default setup”.  
+Default + this file causes: *“advanced configurations cannot be processed when default setup is enabled”*.
 
-3. On GitHub: **disable Code scanning default setup** (it autobuilds without Unity and fails).
-4. Register a **self-hosted runner** on the Mac that has Unity (Settings → Actions → Runners).
-5. Set repo variable **`UNITY_PATH`** (same path as `.env.codeql`).
-6. Push; run **Actions → CodeQL (Unity self-hosted)**.
+## Jobs
+
+| Job | Runner | Languages |
+|-----|--------|-----------|
+| **Analyze (csharp — Unity)** | Your Mac (`self-hosted`) | C# with Unity + `dotnet build` |
+| **Analyze (javascript-typescript)** | GitHub cloud | `Tools/cave-grader` |
+| **Analyze (actions)** | GitHub cloud | Workflow YAML |
+
+## Setup checklist
+
+1. `cd ~/actions-runner && ./run.sh` (keep running)
+2. Repo variable **`UNITY_PATH`** → Unity binary (trimmed path, no newlines)
+3. Default CodeQL setup **disabled**
+4. Local smoke test: `Packages/.../Tools/run-codeql-local-verify.sh`
 
 Full guide: `Packages/com.cursor.environment-authoring-kit/docs/CODEQL_SELFHOSTED_INSTALL.md`
-
-## Workflows
-
-| File | Where it runs | Purpose |
-|------|----------------|---------|
-| `codeql-unity-selfhosted.yml` | **Your Mac** (`self-hosted`) | Unity + compile + full C# CodeQL |
-| `codeql.yml` | GitHub cloud | Fallback `build-mode: none` (less complete) |
-
-**Security alerts** ≠ cave/terrain **quality grade** (`Tools/cave-grader`).
