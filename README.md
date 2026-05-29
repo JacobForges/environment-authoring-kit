@@ -143,7 +143,7 @@ Security static analysis on GitHub (**Security → Code scanning**). Separate fr
 **Setup and daily use:** [docs/CODEQL_SETUP_AND_USE.md](docs/CODEQL_SETUP_AND_USE.md)  
 **Do not** enable GitHub’s “Code scanning default setup” alongside this workflow (SARIF conflict).
 
-Verified **2026-05-29** on self-hosted Mac (~16 min first full C# job including CodeQL bundle download).
+Verified **2026-05-29** on self-hosted Mac (~16 min first full C# job). Runs **manually** or **weekly** — not on every push (so doc edits do not launch Unity).
 
 ---
 

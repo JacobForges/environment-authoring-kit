@@ -72,10 +72,18 @@ Expect: `OK — kit project present` and a successful `dotnet build`.
 
 | Trigger | How |
 |---------|-----|
-| **Push to `main`** | Automatic (if runner is online) |
-| **Pull request → `main`** | Automatic |
-| **Manual** | **Actions → CodeQL → Run workflow** |
-| **Weekly** | Saturday 21:18 UTC (cron in workflow) |
+| **Manual (recommended while developing)** | **Actions → CodeQL → Run workflow** → branch `main` |
+| **Weekly** | Saturday 21:18 UTC (cron) — only if your Mac runner is online |
+| **Push / PR** | **Off** — avoids tying up your self-hosted Mac on every commit |
+
+While you are actively building in Unity, **ignore CodeQL** unless you want a security pass. Your **~1 hour cave build** is separate local testing; CodeQL does not replace that.
+
+### Typical dev loop (Hub)
+
+1. Work in **`~/Hub`** in Unity — build, grade, iterate (no GitHub required).
+2. **Commit / push** when you want backup or to sync another machine — **CodeQL will not start** from a normal push.
+3. Optional second clone (e.g. **Repo Test**): `git pull` there to verify the package — still no CodeQL unless you run the workflow manually.
+4. Before a milestone or after large C# changes: **Actions → CodeQL → Run workflow** (runner must be online).
 
 ### Do not
 

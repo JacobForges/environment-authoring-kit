@@ -14,11 +14,9 @@
 #
 name: CodeQL
 
+# Intentionally NOT on every push/PR — Unity + CodeQL ties up your Mac for ~15+ min per run.
+# Run manually before releases or rely on the weekly schedule.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   schedule:
     - cron: "18 21 * * 6"
   workflow_dispatch:
