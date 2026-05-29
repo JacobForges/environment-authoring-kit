@@ -19,13 +19,28 @@ echo "Project: ${ROOT}"
 echo "Unity:   ${UNITY}"
 echo "Log:     ${LOG_FILE}"
 
+# Do not pass -quit: bootstrap must run EditorApplication.update, sync .sln, then EditorApplication.Exit.
 "$UNITY" -batchmode -nographics -projectPath "$ROOT" \
   -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl \
-  -quit -logFile "$LOG_FILE"
+  -logFile "$LOG_FILE"
+UNITY_EXIT=$?
+if [[ "$UNITY_EXIT" -ne 0 ]]; then
+  echo "ERROR: Unity exited ${UNITY_EXIT}. See ${LOG_FILE}"
+  exit "$UNITY_EXIT"
+fi
 
-if [[ ! -f "${ROOT}/Hub.sln" ]]; then
-  echo "ERROR: Hub.sln not found after Unity prep. See ${LOG_FILE}"
+shopt -s nullglob
+SLNS=("${ROOT}"/*.sln)
+if [[ ${#SLNS[@]} -eq 0 ]]; then
+  echo "ERROR: No .sln in ${ROOT} after Unity prep. See ${LOG_FILE}"
   exit 1
 fi
 
-echo "OK — Hub.sln present."
+# Prefer Hub.sln when present; otherwise first solution (repo folder name may differ on CI).
+SLN="${ROOT}/Hub.sln"
+if [[ ! -f "$SLN" ]]; then
+  SLN="${SLNS[0]}"
+fi
+echo "SLN=${SLN}" >> "${GITHUB_ENV:-/dev/null}" 2>/dev/null || true
+echo "${SLN}" > "${ROOT}/Logs/codeql-last.sln"
+echo "OK — solution present: ${SLN}"

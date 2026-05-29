@@ -10,7 +10,8 @@ namespace EnvironmentAuthoringKit.Editor
 {
     /// <summary>
     /// Headless prep for GitHub CodeQL (self-hosted runner with Unity installed).
-    /// Unity -batchmode -projectPath &lt;Hub&gt; -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl -quit
+    /// Unity -batchmode -projectPath &lt;Hub&gt; -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl
+    /// (no -quit on CLI; this class calls EditorApplication.Exit when sync is done)
     /// </summary>
     public static class CodeQlUnityBootstrap
     {
@@ -100,6 +101,18 @@ namespace EnvironmentAuthoringKit.Editor
             }
 
             return false;
+        }
+
+        static void TrySyncViaMenu()
+        {
+            try
+            {
+                EditorApplication.ExecuteMenuItem("Assets/Open C# Project");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{LogPrefix} Menu sync failed: {ex.Message}");
+            }
         }
     }
 }

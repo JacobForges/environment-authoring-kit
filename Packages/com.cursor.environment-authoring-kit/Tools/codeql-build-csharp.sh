@@ -3,12 +3,25 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-SLN="${ROOT}/Hub.sln"
-
+SLN="${CODEQL_SLN:-}"
+if [[ -z "$SLN" && -f "${ROOT}/Logs/codeql-last.sln" ]]; then
+  SLN="$(tr -d '\r\n' < "${ROOT}/Logs/codeql-last.sln")"
+fi
+if [[ -z "$SLN" || ! -f "$SLN" ]]; then
+  SLN="${ROOT}/Hub.sln"
+fi
 if [[ ! -f "$SLN" ]]; then
-  echo "ERROR: Missing ${SLN} — run run-codeql-unity-prep.sh first."
+  shopt -s nullglob
+  candidates=("${ROOT}"/*.sln)
+  if [[ ${#candidates[@]} -gt 0 ]]; then
+    SLN="${candidates[0]}"
+  fi
+fi
+if [[ ! -f "$SLN" ]]; then
+  echo "ERROR: No .sln — run run-codeql-unity-prep.sh first."
   exit 1
 fi
+echo "Building solution: ${SLN}"
 
 cd "$ROOT"
 

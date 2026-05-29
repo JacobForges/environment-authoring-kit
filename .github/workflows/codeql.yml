@@ -32,7 +32,7 @@ jobs:
   csharp-unity:
     name: Analyze (csharp — Unity)
     runs-on: self-hosted
-    timeout-minutes: 90
+    timeout-minutes: 120
     permissions:
       actions: read
       contents: read
