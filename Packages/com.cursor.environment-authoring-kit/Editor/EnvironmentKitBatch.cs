@@ -52,6 +52,9 @@ namespace EnvironmentAuthoringKit.Editor
         public static void RunSurfaceIterationHeadless() =>
             CaveBuildHeadlessRunner.RunRecipe(CaveBuildShowcaseMenu.SurfaceIterationRecipeId, exitEditorWhenDone: true);
 
+        /// <summary>Regenerate Hub.sln and compile scripts for CodeQL (self-hosted CI). See docs/CODEQL_SELFHOSTED_INSTALL.md.</summary>
+        public static void PrepareForCodeQl() => CodeQlUnityBootstrap.PrepareForCodeQl();
+
         [MenuItem("Window/Environment Kit/Cave Build/Advanced/Legacy/Build Cave World Now (Blockout)")]
         public static void BuildCaveWorldFromMenu()
         {

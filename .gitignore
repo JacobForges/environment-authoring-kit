@@ -134,3 +134,11 @@ node_modules/
 /viture_*.h
 /lib*.dylib
 *.mp4
+
+# CodeQL local env (machine-specific Unity path)
+.env.codeql
+
+# CodeQL install zip artifacts (sources are in repo)
+/codeql-unity-selfhosted-kit/
+/codeql-unity-selfhosted-kit.zip
+Packages/com.cursor.environment-authoring-kit/codeql-unity-selfhosted-kit.zip
