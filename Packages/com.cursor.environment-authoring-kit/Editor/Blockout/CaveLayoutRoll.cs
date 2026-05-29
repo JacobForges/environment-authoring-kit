@@ -33,6 +33,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public string VisualStyleId;
         public int MazeGenFlavor;
+        public int SurfaceTileLayoutVariant = -1;
         public int PreferredOpeningSector;
         public float FogDensityMultiplier;
         public float ColorMood;

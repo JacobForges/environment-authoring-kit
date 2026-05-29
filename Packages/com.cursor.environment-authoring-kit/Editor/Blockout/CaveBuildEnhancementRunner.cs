@@ -105,7 +105,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     if (request != null)
                     {
                         var ground = SceneGroundResolver.Resolve();
-                        var env = Object.FindFirstObjectByType<EnvironmentRoot>();
+                        var env = UnityEngine.Object.FindFirstObjectByType<EnvironmentRoot>();
                         var surface = env != null ? env.transform : null;
                         request.SurfaceIncludeMountains = true;
                         request.HeightStyle = TerrainHeightStyle.Mountains;
