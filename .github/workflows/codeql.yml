@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: codeql-${{ github.ref }}
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,6 +41,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Guard — must use current CodeQL prep scripts
+        run: |
+          PREP=Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh
+          if grep -qE '^[[:space:]]*".*\$UNITY".*-quit| -quit -logFile' "$PREP"; then
+            echo "::error::Stale run-codeql-unity-prep.sh (still uses -quit)."
+            echo "Do NOT re-run old CodeQL (Unity self-hosted) jobs."
+            echo "Use Actions → CodeQL → Run workflow on latest main."
+            exit 1
+          fi
+          echo "Prep script OK (commit $(git rev-parse --short HEAD))."
 
       - name: Validate UNITY_PATH
         env:
