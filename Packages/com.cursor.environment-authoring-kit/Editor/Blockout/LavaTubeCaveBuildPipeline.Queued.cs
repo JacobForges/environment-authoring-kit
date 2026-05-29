@@ -59,7 +59,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildPipelineDomains.LogCave(
                     $"Queued pipeline ({QueuedStepTotal} macro steps) — {scope}; " +
                     $"validate={ValidateSubCount} paced actions (research 9 steps: unified manifest, ONE research agent prompt, fast active prompt); " +
-                    "geo 13, playability 18, validation 6, ground polish 10, world 15, meat, post-meat 24, research 12, finalize polish 15, manifest, finalize. " +
+                    "geo 14, playability 18, validation 6, ground polish 10, world 15, meat, post-meat 24, research 12, finalize polish 15, manifest, finalize. " +
                     "FullWorld: surface/terrain should finish in startup before cave geo.",
                     forceUnityConsole: true);
                 if (scope == SurfaceBuildScope.FullWorld)
@@ -99,7 +99,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildPhaseContractRegistry.InvalidateCaveGeometryLadderRungs();
                 CaveBuildEditorLog.LogCaveWarning(
                     "[CaveBuild] FullWorld: no substantive cave in scene — invalidated cave_layout ladder; " +
-                    "queued geo steps 1–13 will run after validate (not ramp-only mouth patch).");
+                    "queued geo steps 1–14 will run after validate (not ramp-only mouth patch).");
             }
 
             CaveBuildEditorLog.LogCave(
@@ -331,7 +331,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         /// <summary>
-        /// After a long Cursor agent run, the macro pipeline can stall on step 118/120 while auto-rebuild defers forever.
+        /// After a long Cursor agent run, the macro pipeline can stall on step 119/121 while auto-rebuild defers forever.
         /// Jump to manifest + finalize so the user is not stuck on a stale status line.
         /// </summary>
         static bool _resumeAfterAgentArmed;
@@ -424,7 +424,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _queued.QueuedAwaitingResearchPromptStep = -1;
             CaveBuildActionPacing.PreparePipelineChainKickoff();
             CaveBuildEditorLog.LogCave(
-                "Pipeline resume — manifest complete, scheduling finalize (step 120/120).",
+                "Pipeline resume — manifest complete, scheduling finalize (step 121/121).",
                 forceUnityConsole: true);
             ScheduleQueuedStep(QueuedStepFinishReport, CaveBuildActionPacing.ActionWeight.Normal);
         }
@@ -457,7 +457,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (EditorApplication.timeSinceStartup - _manifestStepEnteredAt < 6.0)
                 return;
 
-            CaveBuildEditorLog.LogCaveWarning("Manifest step stalled >6s — forcing finalize (120/120).");
+            CaveBuildEditorLog.LogCaveWarning("Manifest step stalled >6s — forcing finalize (121/121).");
             _manifestFinalizeResumeArmed = false;
             ResumePipelineAfterManifestIfStuck();
         }
@@ -1210,14 +1210,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 QueuedStepTotal,
                 $"cave geo {geoIdx}/{QueuedGeoStepCount} — {QueuedGeoLabel(step)}");
 
-            if (step == QueuedGeoFirst + 7)
+            if (step == QueuedGeoFirst + 8)
                 EnvironmentKitScopedAssetRefresh.ImportStructurePrefabsNow(ctx.Catalog);
 
-            if (step == 13)
+            if (step == QueuedGeoFirst + QueuedGeoStepCount - 1)
                 EnvironmentKitScopedAssetRefresh.ImportScatterPropsNow(ctx.Catalog);
 
             bool cancelled;
-            if (step == 6)
+            if (step == QueuedGeoFirst + 5)
             {
                 cancelled = CaveAdventureCaveGenerator.QueuedStepShell(s);
                 if (!cancelled)
@@ -1233,18 +1233,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 cancelled = step switch
                 {
-                    1 => CaveAdventureCaveGenerator.QueuedStepClear(s),
-                    2 => CaveAdventureCaveGenerator.QueuedStepEntrance(s),
-                    3 => CaveAdventureCaveGenerator.QueuedStepMaze(s),
-                    4 => CaveAdventureCaveGenerator.QueuedStepAddTerrain(s),
-                    5 => CaveAdventureCaveGenerator.QueuedStepPlatforms(s),
-                    7 => CaveAdventureCaveGenerator.QueuedStepBlocksPrepare(s),
-                    8 => RunQueuedBlocksBatchWithLiveStatus(s),
-                    9 => CaveAdventureCaveGenerator.QueuedStepBlocksFinish(s),
-                    10 => CaveAdventureCaveGenerator.QueuedStepFeatures(s),
-                    11 => CaveAdventureCaveGenerator.QueuedStepSurfaceWalkIn(s),
-                    12 => CaveAdventureCaveGenerator.QueuedStepSpawn(s),
-                    13 => CaveAdventureCaveGenerator.QueuedStepPropsAndWater(s),
+                    var n when n == QueuedGeoFirst => CaveAdventureCaveGenerator.QueuedStepClear(s),
+                    var n when n == QueuedGeoFirst + 1 => CaveAdventureCaveGenerator.QueuedStepEntrance(s),
+                    var n when n == QueuedGeoFirst + 2 => CaveAdventureCaveGenerator.QueuedStepMaze(s),
+                    var n when n == QueuedGeoFirst + 3 => CaveAdventureCaveGenerator.QueuedStepAddTerrain(s),
+                    var n when n == QueuedGeoFirst + 4 => CaveAdventureCaveGenerator.QueuedStepPlatforms(s),
+                    var n when n == QueuedGeoFirst + 6 => CaveAdventureCaveGenerator.QueuedStepGrandCavern(s),
+                    var n when n == QueuedGeoFirst + 7 => CaveAdventureCaveGenerator.QueuedStepBlocksPrepare(s),
+                    var n when n == QueuedGeoFirst + 8 => RunQueuedBlocksBatchWithLiveStatus(s),
+                    var n when n == QueuedGeoFirst + 9 => CaveAdventureCaveGenerator.QueuedStepBlocksFinish(s),
+                    var n when n == QueuedGeoFirst + 10 => CaveAdventureCaveGenerator.QueuedStepFeatures(s),
+                    var n when n == QueuedGeoFirst + 11 => CaveAdventureCaveGenerator.QueuedStepSurfaceWalkIn(s),
+                    var n when n == QueuedGeoFirst + 12 => CaveAdventureCaveGenerator.QueuedStepSpawn(s),
+                    var n when n == QueuedGeoFirst + 13 => CaveAdventureCaveGenerator.QueuedStepPropsAndWater(s),
                     _ => false,
                 };
             }
@@ -1255,7 +1256,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            if (step == 13)
+            if (step == QueuedGeoFirst + QueuedGeoStepCount - 1)
             {
                 ctx.Report = CaveAdventureCaveGenerator.FinishQueuedReport(s);
                 ctx.CaveRoot = s.CavesRoot;

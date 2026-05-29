@@ -212,21 +212,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             if (step == 0)
                 return RungResearchSeed;
-            if (step >= 1 && step <= 13)
+            if (step >= CaveBuildQueuedPipelineSchedule.GeoFirst &&
+                step < CaveBuildQueuedPipelineSchedule.PlayabilityFirst)
                 return RungCaveLayout;
-            if (step >= 14 && step <= 31)
+            if (step >= CaveBuildQueuedPipelineSchedule.PlayabilityFirst &&
+                step < CaveBuildQueuedPipelineSchedule.ValidationFirst)
                 return RungRouteMeshNav;
-            if (step >= 32 && step <= 37)
+            if (step >= CaveBuildQueuedPipelineSchedule.ValidationFirst &&
+                step < CaveBuildQueuedPipelineSchedule.GroundPolishFirst)
                 return RungValidation;
-            if (step >= 38 && step <= 57)
-                return step < 53 ? RungShellMaterials : RungGameplayProps;
+            if (step >= CaveBuildQueuedPipelineSchedule.GroundPolishFirst &&
+                step < CaveBuildQueuedPipelineSchedule.WorldFirst + CaveBuildQueuedPipelineSchedule.WorldCount)
+                return step < CaveBuildQueuedPipelineSchedule.Meat - 11
+                    ? RungShellMaterials
+                    : RungGameplayProps;
             if (step == CaveBuildQueuedPipelineSchedule.Meat)
                 return RungPolish;
             if (step >= CaveBuildQueuedPipelineSchedule.PostMeatFirst &&
                 step < CaveBuildQueuedPipelineSchedule.FinalizePolishFirst)
                 return RungPolish;
             // Research macro steps only — manifest + finalize must never share RungResearchSeed
-            // or incremental ladder skips finalize after manifest (stuck at 119/120).
+            // or incremental ladder skips finalize after manifest (stuck at 120/121).
             if (step >= CaveBuildQueuedPipelineSchedule.ResearchFirst &&
                 step < CaveBuildQueuedPipelineSchedule.AaaManifest)
                 return RungResearchSeed;

@@ -78,6 +78,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             else
                 Line("cave-grader tsx already installed.");
 
+            CaveBuildSeedDefaults.EnsureVarietyForFreshGeneration();
             CaveBuildSessionPreset.ApplyAutomaticForFullWorld();
             EditorPrefs.SetInt(PrefSetupVersion, SetupVersion);
             AssetDatabase.SaveAssets();

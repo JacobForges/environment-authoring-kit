@@ -14,6 +14,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void Apply(bool savePrefs = true, bool log = true)
         {
+            CaveBuildSeedDefaults.EnsureVarietyForFreshGeneration();
             CaveBuildOfflineNoApiPreset.Apply(savePrefs: false, log: false);
 
             var settings = CaveBuildCursorSettings.LoadOrCreate();
@@ -31,7 +32,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (log)
             {
                 Debug.Log(
-                    "[CaveBuild] Out-of-box preset — FullWorld runs procedurally to 120/120 with no API keys. " +
+                    "[CaveBuild] Out-of-box preset — FullWorld runs procedurally to 121/121 with no API keys. " +
                     "Optional: Hub → Active provider (Ollama/Gemini/etc.) + keys for AI grading passes.");
             }
         }

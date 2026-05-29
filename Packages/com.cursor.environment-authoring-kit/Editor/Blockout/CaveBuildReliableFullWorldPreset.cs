@@ -37,14 +37,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (savePrefs)
                 settings.SaveToPrefs();
 
-            EditorPrefs.SetBool("CaveBuild_RandomizeEachTime", false);
             if (CaveBuildLayoutRollSession.LastRecordedSeed > 0)
+            {
+                EditorPrefs.SetBool("CaveBuild_RandomizeEachTime", false);
                 CaveBuildLayoutRollSession.PinLastSeedForDebugging();
+            }
+            else
+                CaveBuildSeedDefaults.EnsureVarietyForFreshGeneration();
 
             Selection.activeObject = settings;
             CaveBuildEnhancementRunner.ExportCatalogJson();
             Debug.Log(
-                "[CaveBuild] Automated FullWorld preset — phased 120-step queue, Cursor on terrain meat + post-surface, " +
+                "[CaveBuild] Automated FullWorld preset — phased 121-step queue, Cursor on terrain meat + post-surface, " +
                 "pre-build reloop until 88+, enhancements on, DEM×128.");
         }
     }

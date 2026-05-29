@@ -17,6 +17,39 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const float DoorWidthRatio = 0.28f;
         const float DoorHeightMeters = 5.8f;
 
+        public const string RouteEndCavernRootName = "RouteEndCavern";
+
+        /// <summary>Grand cavern chamber at the end of <see cref="CaveMazeLayout.SolutionPath"/> (after walk platforms + route shell).</summary>
+        public static int BuildRouteEndGrandCavern(
+            Transform geometryRoot,
+            CaveMazeLayout layout,
+            Material rockMat,
+            Material floorMat)
+        {
+            if (geometryRoot == null || layout == null)
+                return 0;
+
+            var cx = layout.CavernCenter.x;
+            var cz = layout.CavernCenter.y;
+            if (!layout.IsPassage(cx, cz))
+                return 0;
+
+            var existing = geometryRoot.Find(RouteEndCavernRootName);
+            if (existing != null)
+                CaveEditorUndo.DestroyImmediate(existing.gameObject);
+
+            var root = new GameObject(RouteEndCavernRootName);
+            CaveEditorUndo.RegisterCreated(root, "Route End Cavern");
+            root.transform.SetParent(geometryRoot, false);
+
+            if (rockMat == null)
+                rockMat = CaveSplineMaterialFactory.GetOrCreateCaveRockMaterial();
+            if (floorMat == null)
+                floorMat = CaveSplineMaterialFactory.GetOrCreateCaveFloorMaterial();
+
+            return BuildGrandCavern(root.transform, layout, rockMat, floorMat, adventureHybrid: true);
+        }
+
         public static int Build(Transform meshRoot, CaveMazeLayout layout, Material rockMat, bool adventureHybrid = false)
         {
             if (meshRoot == null || layout == null)

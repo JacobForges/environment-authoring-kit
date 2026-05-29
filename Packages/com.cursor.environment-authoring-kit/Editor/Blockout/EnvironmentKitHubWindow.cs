@@ -181,7 +181,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             EditorGUILayout.LabelField("Environment Kit Hub", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Single place to run 120-step builds, tune settings, and inspect live generated data before export/prefab decisions.",
+                "Single place to run 121-step builds, tune settings, and inspect live generated data before export/prefab decisions.",
                 MessageType.None);
             EditorGUILayout.BeginHorizontal();
             _pinDuringBuild = EditorGUILayout.ToggleLeft("Pin Hub during active build", _pinDuringBuild);
@@ -222,7 +222,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!inProgress)
             {
                 EditorGUILayout.HelpBox(
-                    "Start here: Build Complete Cave (120). Works on a fresh empty scene with no API keys — " +
+                    "Start here: Build Complete Cave (121). Works on a fresh empty scene with no API keys — " +
                     "you do not need Full AAA Rebuild first (first run clears cache automatically).",
                     MessageType.Info);
             }
@@ -232,7 +232,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             using (new EditorGUI.DisabledScope(inProgress))
             {
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Build Complete Cave (120)", GUILayout.Height(30f)))
+                if (GUILayout.Button("Build Complete Cave (121)", GUILayout.Height(30f)))
                     DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveActiveScene);
                 if (GUILayout.Button("Build Surface Only", GUILayout.Height(30f)))
                     DeferGuiAction(LavaTubeCaveBuilder.BuildSurfaceWorldOnlyActiveScene);

@@ -28,6 +28,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public int BlockCount;
             public int FeatureCount;
             public int TerrainPieces;
+            public int CavernPieceCount;
             public Transform BlockSection;
             public int BlockRingIndex;
             public int BlockRingCount;
@@ -233,6 +234,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             s.TerrainPieces = CaveEnclosureShellBuilder.Build(
                 s.Geometry, s.MazeLayout, s.FloorMat, s.RockMat, s.Request.Seed);
             CaveEnclosureShellBuilder.HideRoutePlatformSlabs(s.CavesRoot);
+            return false;
+        }
+
+        public static bool QueuedStepGrandCavern(QueuedBuildState s)
+        {
+            if (Cancelled(s, 0.45f, "Route-end grand cavern…"))
+                return true;
+
+            EnsureQueuedMaterials(s);
+            s.CavernPieceCount = CaveMazeVolumeBuilder.BuildRouteEndGrandCavern(
+                s.Geometry, s.MazeLayout, s.RockMat, s.FloorMat);
+            if (s.CavernPieceCount > 0 && s.MazeLayout != null)
+            {
+                Debug.Log(
+                    $"[CaveBuild] Route-end grand cavern: {s.CavernPieceCount} piece(s) at cell " +
+                    $"{s.MazeLayout.CavernCenter} (end of walkway).");
+            }
+
             return false;
         }
 

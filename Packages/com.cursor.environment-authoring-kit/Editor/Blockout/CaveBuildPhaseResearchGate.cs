@@ -250,10 +250,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Macro boundaries for bot reports / prompt refresh — excludes manifest + finalize (115+).</summary>
         public static bool IsPhaseBoundary(int step) =>
             step == 0 ||
-            step == 13 ||
-            step == 31 ||
-            step == 37 ||
-            step == 47 ||
+            step == CaveBuildQueuedPipelineSchedule.PlayabilityFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.ValidationFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.GroundPolishFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.WorldFirst - 1 ||
             step == CaveBuildQueuedPipelineSchedule.Meat ||
             (step >= CaveBuildQueuedPipelineSchedule.ResearchFirst &&
              step < CaveBuildQueuedPipelineSchedule.AaaManifest);
@@ -261,10 +261,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Blocking cache pull only at true phase starts — not every post-meat substep or AAA manifest.</summary>
         public static bool RequiresFullResearchPull(int step) =>
             step == 0 ||
-            step == 13 ||
-            step == 31 ||
-            step == 37 ||
-            step == 47 ||
+            step == CaveBuildQueuedPipelineSchedule.PlayabilityFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.ValidationFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.GroundPolishFirst - 1 ||
+            step == CaveBuildQueuedPipelineSchedule.WorldFirst - 1 ||
             step == CaveBuildQueuedPipelineSchedule.Meat ||
             step == CaveBuildQueuedPipelineSchedule.ResearchFirst;
 
@@ -307,24 +307,28 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             if (step == 0)
                 return "research";
-            if (step >= 1 && step <= 13)
+            if (step >= CaveBuildQueuedPipelineSchedule.GeoFirst &&
+                step < CaveBuildQueuedPipelineSchedule.PlayabilityFirst)
             {
                 if (step == 5)
                     return "layout_platforms";
-                if (step == 6)
+                if (step == 6 || step == 7)
                     return "moving_platforms";
-                if (step == 11)
+                if (step == 12)
                     return "cave_mouth_seal";
                 return "visual_shell";
             }
 
-            if (step >= 14 && step <= 31)
-                return step < 20 ? "floor_collision" : "ground_placement";
-            if (step >= 32 && step <= 36)
-                return step == 32 ? "floor_collision" : "floor_collision";
-            if (step >= 37 && step <= 47)
+            if (step >= CaveBuildQueuedPipelineSchedule.PlayabilityFirst &&
+                step < CaveBuildQueuedPipelineSchedule.ValidationFirst)
+                return step < 21 ? "floor_collision" : "ground_placement";
+            if (step >= CaveBuildQueuedPipelineSchedule.ValidationFirst &&
+                step < CaveBuildQueuedPipelineSchedule.GroundPolishFirst)
+                return "floor_collision";
+            if (step >= CaveBuildQueuedPipelineSchedule.GroundPolishFirst &&
+                step < CaveBuildQueuedPipelineSchedule.WorldFirst)
             {
-                var w = step - 37;
+                var w = step - CaveBuildQueuedPipelineSchedule.GroundPolishFirst;
                 return w switch
                 {
                     0 => "visual_shell",
@@ -342,14 +346,28 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 };
             }
 
-            if (step == 48)
+            if (step >= CaveBuildQueuedPipelineSchedule.WorldFirst &&
+                step < CaveBuildQueuedPipelineSchedule.Meat)
+            {
+                var w = step - CaveBuildQueuedPipelineSchedule.WorldFirst;
+                return w switch
+                {
+                    0 => "meat_loop_additive",
+                    _ => w < 8 ? "fog_layout" : "packaging_ship",
+                };
+            }
+
+            if (step == CaveBuildQueuedPipelineSchedule.Meat)
                 return "meat_loop_additive";
-            if (step >= 49 && step < 57)
+            if (step >= CaveBuildQueuedPipelineSchedule.PostMeatFirst &&
+                step < CaveBuildQueuedPipelineSchedule.ResearchFirst)
                 return "fog_layout";
-            if (step >= 62 && step < 1000)
-                return "packaging_ship";
-            if (step >= 57 && step < 62)
+            if (step >= CaveBuildQueuedPipelineSchedule.ResearchFirst &&
+                step < CaveBuildQueuedPipelineSchedule.FinalizePolishFirst)
                 return "research";
+            if (step >= CaveBuildQueuedPipelineSchedule.FinalizePolishFirst &&
+                step < 1000)
+                return "packaging_ship";
             if (step >= PlaytestPolishPhaseRunner.QueuedStepBase &&
                 step < PlaytestPolishPhaseRunner.QueuedStepBase + PlaytestPolishPhaseRunner.PhaseCount)
             {
