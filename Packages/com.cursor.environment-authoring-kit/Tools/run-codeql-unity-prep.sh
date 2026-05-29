@@ -19,7 +19,7 @@ echo "Project: ${ROOT}"
 echo "Unity:   ${UNITY}"
 echo "Log:     ${LOG_FILE}"
 
-# Do not pass -quit: bootstrap must run EditorApplication.update, sync .sln, then EditorApplication.Exit.
+# Do not pass -quit: bootstrap waits for compile, syncs .sln/csproj, then EditorApplication.Exit.
 "$UNITY" -batchmode -nographics -projectPath "$ROOT" \
   -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl \
   -logFile "$LOG_FILE"

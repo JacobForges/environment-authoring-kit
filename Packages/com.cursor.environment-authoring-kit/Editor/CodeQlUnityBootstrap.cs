@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -10,51 +11,74 @@ namespace EnvironmentAuthoringKit.Editor
 {
     /// <summary>
     /// Headless prep for GitHub CodeQL (self-hosted runner with Unity installed).
-    /// Unity -batchmode -projectPath &lt;Hub&gt; -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl
-    /// (no -quit on CLI; this class calls EditorApplication.Exit when sync is done)
+    /// Unity -batchmode -projectPath &lt;repo&gt; -executeMethod EnvironmentAuthoringKit.Editor.CodeQlUnityBootstrap.PrepareForCodeQl
+    /// Do not pass -quit on the CLI; this class calls EditorApplication.Exit when done.
     /// </summary>
     public static class CodeQlUnityBootstrap
     {
         const string LogPrefix = "[CodeQL]";
+        const int CompileWaitMinutes = 45;
 
         public static void PrepareForCodeQl()
         {
-            EditorApplication.update -= OnEditorUpdate;
-            EditorApplication.update += OnEditorUpdate;
-
-            Debug.Log($"{LogPrefix} Refreshing assets…");
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
-
-            if (!EditorApplication.isCompiling)
-            {
-                Debug.Log($"{LogPrefix} Requesting script compilation…");
-                CompilationPipeline.RequestScriptCompilation();
-            }
-        }
-
-        static void OnEditorUpdate()
-        {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
-                return;
-
-            EditorApplication.update -= OnEditorUpdate;
-
             try
             {
+                Debug.Log($"{LogPrefix} Refreshing assets…");
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+                Debug.Log($"{LogPrefix} Requesting script compilation…");
+                if (!EditorApplication.isCompiling)
+                    CompilationPipeline.RequestScriptCompilation();
+
+                WaitForEditorIdle($"{LogPrefix} compile");
+
                 if (!TrySyncProjectFiles())
-                    Debug.LogWarning($"{LogPrefix} Project sync API unavailable; using existing Hub.sln if present.");
+                {
+                    Debug.LogWarning($"{LogPrefix} API sync failed; trying menu fallback.");
+                    TrySyncViaMenu();
+                    WaitForEditorIdle($"{LogPrefix} post-menu-sync");
+                }
+
+                if (!HasSolutionFile())
+                {
+                    Debug.LogError($"{LogPrefix} No .sln in project root after sync.");
+                    EditorApplication.Exit(1);
+                    return;
+                }
 
                 LogDiscoveredProjects();
+                Debug.Log($"{LogPrefix} Ready for dotnet/msbuild.");
+                EditorApplication.Exit(0);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"{LogPrefix} Prepare failed: {ex}");
                 EditorApplication.Exit(1);
-                return;
+            }
+        }
+
+        static void WaitForEditorIdle(string label)
+        {
+            var deadline = DateTime.UtcNow.AddMinutes(CompileWaitMinutes);
+            while (DateTime.UtcNow < deadline)
+            {
+                if (!EditorApplication.isCompiling &&
+                    !EditorApplication.isUpdating &&
+                    !EditorApplication.isPlayingOrWillChangePlaymode)
+                    return;
+
+                Thread.Sleep(250);
             }
 
-            Debug.Log($"{LogPrefix} Ready for msbuild/dotnet.");
-            EditorApplication.Exit(0);
+            throw new TimeoutException($"{label} timed out after {CompileWaitMinutes} minutes.");
+        }
+
+        static bool HasSolutionFile()
+        {
+            var root = Directory.GetParent(Application.dataPath)?.FullName;
+            return !string.IsNullOrEmpty(root) &&
+                   Directory.Exists(root) &&
+                   Directory.GetFiles(root, "*.sln", SearchOption.TopDirectoryOnly).Length > 0;
         }
 
         static void LogDiscoveredProjects()
@@ -66,9 +90,12 @@ namespace EnvironmentAuthoringKit.Editor
             foreach (var sln in Directory.GetFiles(root, "*.sln", SearchOption.TopDirectoryOnly))
                 Debug.Log($"{LogPrefix} Solution: {sln}");
 
-            var kitEditor = Path.Combine(root, "EnvironmentAuthoringKit.Editor.csproj");
-            if (File.Exists(kitEditor))
-                Debug.Log($"{LogPrefix} Package editor project: {kitEditor}");
+            foreach (var name in new[] { "EnvironmentAuthoringKit.Editor.csproj", "EnvironmentAuthoringKit.Runtime.csproj" })
+            {
+                var path = Path.Combine(root, name);
+                if (File.Exists(path))
+                    Debug.Log($"{LogPrefix} Project: {path}");
+            }
         }
 
         static bool TrySyncProjectFiles()
@@ -88,7 +115,7 @@ namespace EnvironmentAuthoringKit.Editor
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"{LogPrefix} ProjectGeneration.Sync failed: {ex.Message}");
+                    Debug.LogWarning($"{LogPrefix} ProjectGeneration.Sync: {ex.Message}");
                 }
             }
 
@@ -111,7 +138,7 @@ namespace EnvironmentAuthoringKit.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"{LogPrefix} Menu sync failed: {ex.Message}");
+                Debug.LogWarning($"{LogPrefix} Menu sync: {ex.Message}");
             }
         }
     }
