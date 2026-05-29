@@ -1210,7 +1210,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 QueuedStepTotal,
                 $"cave geo {geoIdx}/{QueuedGeoStepCount} — {QueuedGeoLabel(step)}");
 
-            if (step == QueuedGeoFirst + 8)
+            if (step == QueuedGeoFirst + 9)
                 EnvironmentKitScopedAssetRefresh.ImportStructurePrefabsNow(ctx.Catalog);
 
             if (step == QueuedGeoFirst + QueuedGeoStepCount - 1)
@@ -1238,14 +1238,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     var n when n == QueuedGeoFirst + 2 => CaveAdventureCaveGenerator.QueuedStepMaze(s),
                     var n when n == QueuedGeoFirst + 3 => CaveAdventureCaveGenerator.QueuedStepAddTerrain(s),
                     var n when n == QueuedGeoFirst + 4 => CaveAdventureCaveGenerator.QueuedStepPlatforms(s),
-                    var n when n == QueuedGeoFirst + 6 => CaveAdventureCaveGenerator.QueuedStepGrandCavern(s),
-                    var n when n == QueuedGeoFirst + 7 => CaveAdventureCaveGenerator.QueuedStepBlocksPrepare(s),
-                    var n when n == QueuedGeoFirst + 8 => RunQueuedBlocksBatchWithLiveStatus(s),
-                    var n when n == QueuedGeoFirst + 9 => CaveAdventureCaveGenerator.QueuedStepBlocksFinish(s),
-                    var n when n == QueuedGeoFirst + 10 => CaveAdventureCaveGenerator.QueuedStepFeatures(s),
-                    var n when n == QueuedGeoFirst + 11 => CaveAdventureCaveGenerator.QueuedStepSurfaceWalkIn(s),
-                    var n when n == QueuedGeoFirst + 12 => CaveAdventureCaveGenerator.QueuedStepSpawn(s),
-                    var n when n == QueuedGeoFirst + 13 => CaveAdventureCaveGenerator.QueuedStepPropsAndWater(s),
+                    var n when n == QueuedGeoFirst + 6 => CaveAdventureCaveGenerator.QueuedStepLabyrinthAnnex(s),
+                    var n when n == QueuedGeoFirst + 7 => CaveAdventureCaveGenerator.QueuedStepGrandCavern(s),
+                    var n when n == QueuedGeoFirst + 8 => CaveAdventureCaveGenerator.QueuedStepBlocksPrepare(s),
+                    var n when n == QueuedGeoFirst + 9 => RunQueuedBlocksBatchWithLiveStatus(s),
+                    var n when n == QueuedGeoFirst + 10 => CaveAdventureCaveGenerator.QueuedStepBlocksFinish(s),
+                    var n when n == QueuedGeoFirst + 11 => CaveAdventureCaveGenerator.QueuedStepFeatures(s),
+                    var n when n == QueuedGeoFirst + 12 => CaveAdventureCaveGenerator.QueuedStepSurfaceWalkIn(s),
+                    var n when n == QueuedGeoFirst + 13 => CaveAdventureCaveGenerator.QueuedStepSpawn(s),
+                    var n when n == QueuedGeoFirst + 14 => CaveAdventureCaveGenerator.QueuedStepPropsAndWater(s),
                     _ => false,
                 };
             }

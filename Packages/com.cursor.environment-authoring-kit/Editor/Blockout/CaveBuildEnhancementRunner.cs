@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using EnvironmentAuthoringKit;
 using EnvironmentAuthoringKit.Cave;
 using EnvironmentAuthoringKit.Editor.Generation;
 using UnityEditor;
@@ -94,9 +95,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 case "creative_opening_sector_bias":
                 case "creative_path_yaw_variance":
                 case "creative_prop_emphasis_karst":
+                case "creative_tomb_raider_labyrinth":
+                case "creative_asymmetric_surface_tiles":
                     if (request != null && rng != null)
                         CaveBuildEnhancementCreativePasses.ApplyRequestRolls(request, rng);
                     return "request rolls applied";
+
+                case "creative_mountain_trail_ridges":
+                    if (request != null)
+                    {
+                        var ground = SceneGroundResolver.Resolve();
+                        var env = Object.FindFirstObjectByType<EnvironmentRoot>();
+                        var surface = env != null ? env.transform : null;
+                        request.SurfaceIncludeMountains = true;
+                        request.HeightStyle = TerrainHeightStyle.Mountains;
+                        return SurfaceMountainTrailEnhancement.Apply(
+                            surface,
+                            ground.Terrain,
+                            ground.HasAnchor ? ground.Anchor.position : Vector3.zero,
+                            request.SurfaceExtentMeters,
+                            request.Seed);
+                    }
+
+                    return "skipped";
 
                 case "creative_entrance_key_light":
                 case "creative_biolum_accent":

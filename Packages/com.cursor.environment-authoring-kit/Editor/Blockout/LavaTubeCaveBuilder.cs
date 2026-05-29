@@ -861,6 +861,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static CaveLayoutRoll CreateLayoutRoll()
         {
+            if (EditorPrefs.GetBool(PrefRandomize, true))
+                _unifiedBuildRoll = null;
+
             if (CaveBuildLayoutRollSession.TryConsumePreservedRoll(out var preserved))
             {
                 Debug.Log(

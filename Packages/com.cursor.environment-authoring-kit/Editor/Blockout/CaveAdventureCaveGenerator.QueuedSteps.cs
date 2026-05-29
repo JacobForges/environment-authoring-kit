@@ -144,11 +144,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (Cancelled(s, 0.2f, "Maze layout (3D grid)…"))
                 return true;
 
+            var mazeFlavor = s.Request.MazeGenFlavor;
+            if (s.Request.UseTombRaiderLabyrinthCadence)
+                mazeFlavor = (int)CaveMazeGenFlavor.WalkwayLabyrinthCavern;
+
             s.MazeLayout = CaveMazeLayoutGenerator.Generate(
                 s.Request.Seed,
                 s.Request.CaveTunnelSegments,
                 s.Request.CaveChamberCount,
-                s.Request.MazeGenFlavor);
+                mazeFlavor);
 
             var meta = s.CavesRoot != null ? s.CavesRoot.GetComponent<CaveBuildMetadata>() : null;
             if (meta == null && s.CavesRoot != null)
@@ -234,6 +238,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             s.TerrainPieces = CaveEnclosureShellBuilder.Build(
                 s.Geometry, s.MazeLayout, s.FloorMat, s.RockMat, s.Request.Seed);
             CaveEnclosureShellBuilder.HideRoutePlatformSlabs(s.CavesRoot);
+            return false;
+        }
+
+        public static bool QueuedStepLabyrinthAnnex(QueuedBuildState s)
+        {
+            if (Cancelled(s, 0.445f, "Labyrinth annex (walkable maze)…"))
+                return true;
+
+            if (s.MazeLayout == null || !s.MazeLayout.HasLabyrinthAnnex)
+                return false;
+
+            EnsureQueuedMaterials(s);
+            var count = CaveLabyrinthVolumeBuilder.Build(s.Geometry, s.MazeLayout, s.RockMat, s.FloorMat);
+            if (count > 0)
+            {
+                Debug.Log(
+                    $"[CaveBuild] Labyrinth annex: {count} floor/ceiling cell(s) before grand cavern " +
+                    $"(entrance cell {s.MazeLayout.LabyrinthEntranceCell}).");
+            }
+
             return false;
         }
 

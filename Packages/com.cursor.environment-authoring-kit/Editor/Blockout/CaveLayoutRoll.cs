@@ -76,7 +76,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     : TerrainHeightStyle.Hilly,
 
                 VisualStyleId = CaveBuildStylePalette.PickVisualStyle(rng),
-                MazeGenFlavor = rng.Next(0, 5),
+                MazeGenFlavor = rng.Next(0, 6),
+                SurfaceTileLayoutVariant = rng.Next(0, 48),
                 PreferredOpeningSector = -1,
                 FogDensityMultiplier = 0.65f + (float)rng.NextDouble() * 0.9f,
                 ColorMood = (float)rng.NextDouble(),
@@ -139,6 +140,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             request.PropEmphasis = PropEmphasis ?? string.Empty;
             request.BuildVisualStyle = VisualStyleId ?? CaveBuildStylePalette.Classic;
             request.MazeGenFlavor = MazeGenFlavor;
+            request.SurfaceTileLayoutVariant = SurfaceTileLayoutVariant;
             request.PreferredCaveOpeningSector = PreferredOpeningSector;
         }
 

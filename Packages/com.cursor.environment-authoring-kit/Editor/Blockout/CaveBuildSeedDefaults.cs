@@ -11,8 +11,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void EnsureVarietyForFreshGeneration()
         {
             EditorPrefs.SetBool(PrefRandomize, true);
+            EditorPrefs.DeleteKey("CaveBuild_FixedSeed");
             CaveBuildDeterminism.Unpin();
             CaveBuildLayoutRollSession.ClearPreserveRequest();
+        }
+
+        public static void ForceNewSeedBeforeLayoutRoll()
+        {
+            EnsureVarietyForFreshGeneration();
+            EditorPrefs.DeleteKey("CaveBuild_LastSeed");
         }
     }
 }

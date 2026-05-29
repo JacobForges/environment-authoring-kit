@@ -30,7 +30,39 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public float DropPerRow = 0.28f;
         public Vector3 OriginOffset;
         public List<Vector2Int> SolutionPath = new();
+        /// <summary>Playable Dreadhalls-style annex between walkway end and grand cavern.</summary>
+        public bool HasLabyrinthAnnex;
+        public Vector2Int LabyrinthEntranceCell = new(-1, -1);
+        public int LabyrinthOriginX;
+        public int LabyrinthOriginZ;
+        public int LabyrinthWidth;
+        public int LabyrinthHeight;
         public List<CavePathKnot> PathKnots = new();
+
+        HashSet<Vector2Int> _solutionPathSet;
+
+        public HashSet<Vector2Int> SolutionPathSet
+        {
+            get
+            {
+                if (_solutionPathSet == null && SolutionPath != null)
+                {
+                    _solutionPathSet = new HashSet<Vector2Int>();
+                    foreach (var c in SolutionPath)
+                        _solutionPathSet.Add(c);
+                }
+
+                return _solutionPathSet;
+            }
+        }
+
+        public bool IsLabyrinthAnnexCell(int x, int z)
+        {
+            if (!HasLabyrinthAnnex || LabyrinthWidth <= 0 || LabyrinthHeight <= 0)
+                return false;
+            return x >= LabyrinthOriginX && x < LabyrinthOriginX + LabyrinthWidth &&
+                   z >= LabyrinthOriginZ && z < LabyrinthOriginZ + LabyrinthHeight;
+        }
         /// <summary>Cells along the route where floor/walk is omitted — player must jump the pit.</summary>
         public HashSet<Vector2Int> JumpGapCells = new();
         /// <summary>Mid-route landmark pause (spatial cinematography — sightline rest before finale).</summary>
@@ -131,6 +163,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         OrganicCellular = 2,
         InterviewWinding = 3,
         SparseJumps = 4,
+        /// <summary>Walkway corridor → carved labyrinth annex → grand cavern (Tomb Raider / Dreadhalls cadence).</summary>
+        WalkwayLabyrinthCavern = 5,
     }
 
     public static class CaveMazeLayoutGenerator
@@ -164,8 +198,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             var rng = new System.Random(seed);
             var flavor = mazeFlavor >= 0
-                ? (CaveMazeGenFlavor)Mathf.Clamp(mazeFlavor, 0, 4)
-                : (CaveMazeGenFlavor)rng.Next(0, 5);
+                ? (CaveMazeGenFlavor)Mathf.Clamp(mazeFlavor, 0, 5)
+                : (CaveMazeGenFlavor)rng.Next(0, 6);
             var stepCount = Mathf.Clamp(
                 tunnelSegments * 2 + chamberCount * 2 + rng.Next(4, 14),
                 12,
@@ -177,6 +211,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveMazeGenFlavor.InterviewWinding => BuildInterviewCourse(rng, stepCount),
                 CaveMazeGenFlavor.VerticalClimb => BuildCompactCourse(rng, stepCount, 0.3f, 0.58f, 0.2f),
                 CaveMazeGenFlavor.SparseJumps => BuildCompactCourse(rng, stepCount, 0.5f, 0.35f, 0.15f),
+                CaveMazeGenFlavor.WalkwayLabyrinthCavern => BuildWalkwayLabyrinthCavernCourse(rng, stepCount),
                 _ => BuildCompactCourse(rng, stepCount, 0.58f, 0.42f, 0.28f),
             };
 
@@ -306,6 +341,213 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             layout.StartCell = layout.SolutionPath[0];
             return layout;
+        }
+
+        /// <summary>Linear approach tunnel, proper maze annex (CS50 Dreadhalls), then grand cavern goal.</summary>
+        static CaveMazeLayout BuildWalkwayLabyrinthCavernCourse(System.Random rng, int stepCount)
+        {
+            var walkwaySteps = Mathf.Clamp(stepCount / 2 + rng.Next(2, 6), 10, 20);
+            var walkway = BuildRandomWalkCells(rng, walkwaySteps);
+
+            var annexW = 17 + rng.Next(0, 6);
+            if ((annexW & 1) == 0)
+                annexW++;
+            var annexH = 15 + rng.Next(0, 5);
+            if ((annexH & 1) == 0)
+                annexH++;
+
+            var minX = int.MaxValue;
+            var minZ = int.MaxValue;
+            var maxX = int.MinValue;
+            var maxZ = int.MinValue;
+            foreach (var c in walkway)
+            {
+                minX = Mathf.Min(minX, c.x);
+                minZ = Mathf.Min(minZ, c.y);
+                maxX = Mathf.Max(maxX, c.x);
+                maxZ = Mathf.Max(maxZ, c.y);
+            }
+
+            const int pad = 3;
+            var gridW = maxX - minX + 1 + pad * 2 + annexW + 4;
+            var gridH = Mathf.Max(maxZ - minZ + 1 + pad * 2, annexH + pad * 2);
+
+            var layout = new CaveMazeLayout
+            {
+                Width = gridW,
+                Height = gridH,
+                Passage = new bool[gridW, gridH],
+                CellSize = 2.85f + (float)rng.NextDouble() * 0.55f,
+                PlatformSpan = 2.55f + (float)rng.NextDouble() * 0.45f,
+                PlatformDepth = 2.35f + (float)rng.NextDouble() * 0.4f,
+                CorridorHeight = CaveThirdPersonClearance.ResolveDefaultCorridorHeight() +
+                                 (float)rng.NextDouble() * 1.4f,
+                CeilingClearanceAboveFloor = 0f,
+                DropPerRow = 0.16f + (float)rng.NextDouble() * 0.1f,
+                SolutionPath = new List<Vector2Int>(),
+                HasLabyrinthAnnex = true,
+            };
+
+            foreach (var c in walkway)
+            {
+                var gx = c.x - minX + pad;
+                var gz = c.y - minZ + pad;
+                layout.Passage[gx, gz] = true;
+                layout.SolutionPath.Add(new Vector2Int(gx, gz));
+            }
+
+            layout.StartCell = layout.SolutionPath[0];
+            var walkwayEnd = layout.SolutionPath[layout.SolutionPath.Count - 1];
+            layout.LabyrinthEntranceCell = walkwayEnd;
+
+            var annexOriginX = walkwayEnd.x + 2;
+            var annexOriginZ = Mathf.Clamp(walkwayEnd.y - annexH / 2, pad, layout.Height - annexH - pad);
+            layout.LabyrinthOriginX = annexOriginX;
+            layout.LabyrinthOriginZ = annexOriginZ;
+            layout.LabyrinthWidth = annexW;
+            layout.LabyrinthHeight = annexH;
+
+            var bridgeX = walkwayEnd.x + 1;
+            if (bridgeX < layout.Width)
+                layout.Passage[bridgeX, walkwayEnd.y] = true;
+
+            var mazeStart = new Vector2Int(annexOriginX + 1, annexOriginZ + 1);
+            if (mazeStart.x < layout.Width && mazeStart.y < layout.Height)
+                layout.Passage[mazeStart.x, mazeStart.y] = true;
+
+            var savedStart = layout.StartCell;
+            layout.StartCell = mazeStart;
+            CarveProperMazeInRegion(layout, annexOriginX, annexOriginZ, annexW, annexH, rng);
+            layout.StartCell = savedStart;
+
+            layout.CavernCenter = PickFarthestAnnexCell(layout, mazeStart, rng);
+            OpenFinishCavern(layout);
+            layout.CavernRadiusCells = 1 + rng.Next(0, 2);
+
+            var labyrinthPath = FindPath(layout, walkwayEnd, layout.CavernCenter);
+            if (labyrinthPath.Count > 1)
+            {
+                for (var i = 1; i < labyrinthPath.Count; i++)
+                {
+                    if (!layout.SolutionPath.Contains(labyrinthPath[i]))
+                        layout.SolutionPath.Add(labyrinthPath[i]);
+                }
+            }
+
+            PickJumpGaps(layout, rng, 1, 3);
+            ApplyPlatformerHeights(layout, rng);
+            EnsureMinimumPathDescent(layout, 2f + (float)rng.NextDouble() * 0.6f);
+            CenterLayoutOnPath(layout);
+            CaveThirdPersonLayoutUtility.ApplyToLayout(layout);
+            return layout;
+        }
+
+        static List<Vector2Int> BuildRandomWalkCells(System.Random rng, int steps)
+        {
+            var path = new List<Vector2Int> { Vector2Int.zero };
+            var cursor = Vector2Int.zero;
+            var dirs = new[] { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
+
+            for (var i = 1; i < steps; i++)
+            {
+                var options = new List<Vector2Int>(4);
+                foreach (var d in dirs)
+                {
+                    var bias = d == Vector2Int.right ? 0.52f : d == Vector2Int.up ? 0.4f : 0.28f;
+                    if (rng.NextDouble() < bias)
+                        options.Add(d);
+                }
+
+                if (options.Count == 0)
+                    options.Add(dirs[rng.Next(dirs.Length)]);
+
+                cursor += options[rng.Next(options.Count)];
+                path.Add(cursor);
+            }
+
+            return path;
+        }
+
+        static void CarveProperMazeInRegion(
+            CaveMazeLayout layout,
+            int originX,
+            int originZ,
+            int regionW,
+            int regionH,
+            System.Random rng)
+        {
+            var visited = new bool[layout.Width, layout.Height];
+            var stack = new Stack<Vector2Int>();
+            var start = layout.StartCell;
+            if (start.x < 0 || start.x >= layout.Width || start.y < 0 || start.y >= layout.Height)
+                return;
+
+            visited[start.x, start.y] = true;
+            layout.Passage[start.x, start.y] = true;
+            stack.Push(start);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Peek();
+                var neighbors = new List<Vector2Int>();
+
+                foreach (var step in new[] { new Vector2Int(2, 0), new Vector2Int(-2, 0), new Vector2Int(0, 2), new Vector2Int(0, -2) })
+                {
+                    var nx = current.x + step.x;
+                    var nz = current.y + step.y;
+                    if (nx < originX + 1 || nz < originZ + 1 ||
+                        nx >= originX + regionW - 1 || nz >= originZ + regionH - 1)
+                        continue;
+                    if (visited[nx, nz])
+                        continue;
+                    neighbors.Add(new Vector2Int(nx, nz));
+                }
+
+                if (neighbors.Count == 0)
+                {
+                    stack.Pop();
+                    continue;
+                }
+
+                var next = neighbors[rng.Next(neighbors.Count)];
+                var between = new Vector2Int((current.x + next.x) / 2, (current.y + next.y) / 2);
+                layout.Passage[between.x, between.y] = true;
+                layout.Passage[next.x, next.y] = true;
+                visited[next.x, next.y] = true;
+                stack.Push(next);
+            }
+        }
+
+        static Vector2Int PickFarthestAnnexCell(CaveMazeLayout layout, Vector2Int from, System.Random rng)
+        {
+            var best = from;
+            var bestDist = -1;
+            for (var x = layout.LabyrinthOriginX; x < layout.LabyrinthOriginX + layout.LabyrinthWidth; x++)
+            {
+                for (var z = layout.LabyrinthOriginZ; z < layout.LabyrinthOriginZ + layout.LabyrinthHeight; z++)
+                {
+                    if (!layout.Passage[x, z])
+                        continue;
+                    var d = Mathf.Abs(x - from.x) + Mathf.Abs(z - from.y);
+                    if (d > bestDist)
+                    {
+                        bestDist = d;
+                        best = new Vector2Int(x, z);
+                    }
+                }
+            }
+
+            if (bestDist < 4)
+            {
+                var corner = new Vector2Int(
+                    layout.LabyrinthOriginX + layout.LabyrinthWidth - 2,
+                    layout.LabyrinthOriginZ + layout.LabyrinthHeight - 2);
+                if (corner.x > 0 && corner.y > 0 && corner.x < layout.Width && corner.y < layout.Height)
+                    layout.Passage[corner.x, corner.y] = true;
+                best = corner;
+            }
+
+            return best;
         }
 
         static void CenterLayoutOnPath(CaveMazeLayout layout)

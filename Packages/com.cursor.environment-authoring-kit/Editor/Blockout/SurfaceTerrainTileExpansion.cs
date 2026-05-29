@@ -69,7 +69,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var mainOrigin = mainTerrain.transform.position;
             var tilesRoot = GetOrCreateTilesRoot(mainTerrain);
             var count = 0;
-            var offsets = NeighborOffsets(score, fullWorld);
+            var offsets = NeighborOffsets(score, fullWorld, request.SurfaceTileLayoutVariant, request.Seed);
             var added = new List<Terrain>();
             var entries = new List<GameplayTileEntry>();
 
@@ -222,7 +222,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var tilesRoot = GetOrCreateTilesRoot(mainTerrain);
             RemoveStaleGameplayTiles(tilesRoot);
 
-            var offsets = NeighborOffsets(score, fullWorld);
+            var offsets = NeighborOffsets(score, fullWorld, request.SurfaceTileLayoutVariant, request.Seed);
             var session = new AttachTilesSession
             {
                 MainTerrain = mainTerrain,
@@ -1330,21 +1330,38 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return Mathf.Min(MaxExtraTiles, budgetCap);
         }
 
-        static Vector2Int[] NeighborOffsets(float score, bool fullWorld)
+        static Vector2Int[] NeighborOffsets(float score, bool fullWorld, int layoutVariant, int seed)
         {
-            if (fullWorld || score > 0.72f)
+            var all = new[]
+            {
+                new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1),
+                new Vector2Int(1, 1), new Vector2Int(-1, 1), new Vector2Int(1, -1), new Vector2Int(-1, -1),
+                new Vector2Int(2, 0), new Vector2Int(-2, 0), new Vector2Int(0, 2), new Vector2Int(0, -2),
+            };
+
+            if (!fullWorld && score <= 0.72f)
             {
                 return new[]
                 {
                     new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1),
-                    new Vector2Int(1, 1), new Vector2Int(-1, 1), new Vector2Int(1, -1), new Vector2Int(-1, -1),
                 };
             }
 
-            return new[]
+            var rng = new System.Random(seed + 9137 + Mathf.Max(0, layoutVariant) * 31);
+            var minTiles = fullWorld ? 4 + rng.Next(0, 3) : 2 + rng.Next(0, 2);
+            var maxTiles = fullWorld ? 8 : 4;
+            var count = Mathf.Clamp(minTiles + (layoutVariant >= 0 ? layoutVariant % 4 : rng.Next(0, 3)), minTiles, maxTiles);
+
+            var picked = new List<Vector2Int>(count);
+            var pool = new List<Vector2Int>(all);
+            while (picked.Count < count && pool.Count > 0)
             {
-                new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1),
-            };
+                var idx = rng.Next(pool.Count);
+                picked.Add(pool[idx]);
+                pool.RemoveAt(idx);
+            }
+
+            return picked.ToArray();
         }
 
         static float ScoreExpansionNeed(

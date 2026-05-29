@@ -104,6 +104,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return placed;
         }
 
+        public static int BuildCorridorCellFloorCeilingOnlyPublic(
+            Transform parent,
+            CaveMazeLayout layout,
+            int x,
+            int z,
+            Material rockMat,
+            Material floorMat,
+            float interior,
+            float wallThickness) =>
+            BuildCorridorCellFloorCeilingOnly(parent, layout, x, z, rockMat, floorMat, interior, wallThickness);
+
         static int BuildCorridorCellFloorCeilingOnly(
             Transform parent,
             CaveMazeLayout layout,

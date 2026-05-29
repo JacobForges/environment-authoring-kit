@@ -235,6 +235,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static void RunLayoutRoll()
         {
             SetProgress(0.2f, "[Startup] Layout roll & recipe…");
+            if (EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true))
+                CaveBuildSeedDefaults.ForceNewSeedBeforeLayoutRoll();
             _roll = LavaTubeCaveBuilder.StartupCreateLayoutRoll();
             CaveBuildLayoutRollSession.Record(_roll);
             LavaTubeCaveBuilder.StartupLogLayoutRoll(_roll);
@@ -256,7 +258,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 AllowCreateTerrain = !_pending.LayoutPrototype,
                 IncludeCaveWater = false,
                 SurfaceScope = _pending.LayoutPrototype ? SurfaceBuildScope.CaveOnly : _pending.SurfaceScope,
-                SurfaceDirectionCount = 1,
                 SurfaceTerrainBuildPasses = SurfaceTerrainCenteredAuthor.DefaultPassCount,
             };
             CaveBuildAaaProductionBootstrap.MergeRecipeIntoRequest(productionRecipe, _request, _roll);

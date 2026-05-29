@@ -122,8 +122,14 @@ namespace EnvironmentAuthoringKit.Editor.Generation
         /// <summary>Serialized style id from <see cref="CaveBuildStylePalette"/> (per-build roll).</summary>
         public string BuildVisualStyle = string.Empty;
 
-        /// <summary>Maze generator flavor index (0–4). -1 = pick from seed at generate time.</summary>
+        /// <summary>Maze generator flavor index (0–5). -1 = pick from seed at generate time.</summary>
         public int MazeGenFlavor = -1;
+
+        /// <summary>Walkway → labyrinth annex → cavern (Tomb Raider / Dreadhalls research cadence).</summary>
+        public bool UseTombRaiderLabyrinthCadence;
+
+        /// <summary>Asymmetric neighbor-tile pattern (0–47). -1 = roll from seed.</summary>
+        public int SurfaceTileLayoutVariant = -1;
 
         /// <summary>Surface opening sector index, or -1 to pick a random marker each build.</summary>
         public int PreferredCaveOpeningSector = -1;
@@ -177,6 +183,8 @@ namespace EnvironmentAuthoringKit.Editor.Generation
                 CaveEntranceYawDegrees = CaveEntranceYawDegrees,
                 BuildVisualStyle = BuildVisualStyle,
                 MazeGenFlavor = MazeGenFlavor,
+                UseTombRaiderLabyrinthCadence = UseTombRaiderLabyrinthCadence,
+                SurfaceTileLayoutVariant = SurfaceTileLayoutVariant,
                 PreferredCaveOpeningSector = PreferredCaveOpeningSector,
                 DemSupersampleTargetDim = DemSupersampleTargetDim,
                 RunEnhancementPhases = RunEnhancementPhases,
@@ -185,9 +193,10 @@ namespace EnvironmentAuthoringKit.Editor.Generation
 
         public static WorldGenerationRequest LoadOrDefault()
         {
+            var randomize = UnityEditor.EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true);
             return new WorldGenerationRequest
             {
-                Seed = UnityEditor.EditorPrefs.GetInt("CaveBuild_LastSeed", 12345),
+                Seed = randomize ? 0 : UnityEditor.EditorPrefs.GetInt("CaveBuild_LastSeed", 0),
                 SurfaceExtentMeters = UnityEditor.EditorPrefs.GetFloat("CaveBuild_SurfaceExtent", 220f),
                 SurfaceIncludeTrails = true,
                 SurfaceIncludeRoads = true,

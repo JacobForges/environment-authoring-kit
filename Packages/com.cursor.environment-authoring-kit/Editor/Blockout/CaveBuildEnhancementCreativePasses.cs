@@ -14,8 +14,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (request == null || rng == null)
                 return;
 
+            if (CaveResearchLayoutHints.PreferTombRaiderCadence(request, rng))
+                CaveResearchLayoutHints.ApplyTombRaiderGuidance(request, rng);
+
             if (request.MazeGenFlavor < 0)
-                request.MazeGenFlavor = rng.Next(0, 5);
+                request.MazeGenFlavor = rng.Next(0, 6);
+
+            if (request.SurfaceTileLayoutVariant < 0)
+                request.SurfaceTileLayoutVariant = rng.Next(0, 48);
 
             if (string.IsNullOrEmpty(request.BuildVisualStyle))
                 request.BuildVisualStyle = CaveBuildStylePalette.PickVisualStyle(rng);

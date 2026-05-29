@@ -30,7 +30,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var s = BeginQueued(environmentRoot, ground, request, catalog, reportProgress);
             if (QueuedStepClear(s) || QueuedStepEntrance(s) || QueuedStepMaze(s) ||
                 QueuedStepAddTerrain(s) || QueuedStepPlatforms(s) || QueuedStepShell(s) ||
-                QueuedStepGrandCavern(s) || QueuedStepBlocksPrepare(s))
+                QueuedStepLabyrinthAnnex(s) || QueuedStepGrandCavern(s) || QueuedStepBlocksPrepare(s))
             {
                 return CancelledReport();
             }

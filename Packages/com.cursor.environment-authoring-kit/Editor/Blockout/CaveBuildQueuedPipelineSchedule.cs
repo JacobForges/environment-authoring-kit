@@ -4,27 +4,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     /// <summary>Single source of truth for the paced FullWorld cave queue (Build X/120).</summary>
     public static class CaveBuildQueuedPipelineSchedule
     {
-        public const int Total = 121;
+        public const int Total = 122;
 
         public const int Validate = 0;
         public const int GeoFirst = 1;
-        public const int GeoCount = 14;
-        public const int PlayabilityFirst = 15;
-        public const int ValidationFirst = 33;
+        public const int GeoCount = 15;
+        public const int PlayabilityFirst = 16;
+        public const int ValidationFirst = 34;
         public const int ValidationCount = 6;
-        public const int GroundPolishFirst = 39;
+        public const int GroundPolishFirst = 40;
         public const int GroundPolishCount = 10;
-        public const int WorldFirst = 49;
+        public const int WorldFirst = 50;
         public const int WorldCount = 15;
-        public const int Meat = 64;
-        public const int PostMeatFirst = 65;
+        public const int Meat = 65;
+        public const int PostMeatFirst = 66;
         public const int PostMeatCount = 24;
-        public const int ResearchFirst = 89;
+        public const int ResearchFirst = 90;
         public const int ResearchCount = 12;
-        public const int FinalizePolishFirst = 101;
+        public const int FinalizePolishFirst = 102;
         public const int FinalizePolishCount = 18;
-        public const int AaaManifest = 119;
-        public const int FinishReport = 120;
+        public const int AaaManifest = 120;
+        public const int FinishReport = 121;
 
         public const int ManifestQueuedStepIndex = AaaManifest;
 
@@ -143,14 +143,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             4 => "add terrain",
             5 => "walk platforms",
             6 => "enclosure shell (walkway)",
-            7 => "route-end grand cavern",
-            8 => "blocks — prepare",
-            9 => "blocks — ring batch",
-            10 => "blocks — wall details",
-            11 => "features & goal",
-            12 => "surface walk-in entrance",
-            13 => "spawn & runtime",
-            14 => "props, mobs & water",
+            7 => "labyrinth annex (playable maze)",
+            8 => "route-end grand cavern",
+            9 => "blocks — prepare",
+            10 => "blocks — ring batch",
+            11 => "blocks — wall details",
+            12 => "features & goal",
+            13 => "surface walk-in entrance",
+            14 => "spawn & runtime",
+            15 => "props, mobs & water",
             _ => "geometry",
         };
     }

@@ -37,7 +37,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public int costWeight;
         }
 
-        public const int PhaseCount = 45;
+        public const int PhaseCount = 48;
 
         public static readonly PhaseDef[] All =
         {
@@ -91,6 +91,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             P("creative_prop_emphasis_karst", "Prop emphasis: karst + canopy", Category.Creative, Hook.OnRequestPrepared, true, 1),
             P("creative_torch_warmth", "Route torch warmth from style", Category.Creative, Hook.AfterCaveShell, true, 1),
             P("creative_post_color_mood", "Post polish color mood pass", Category.Creative, Hook.OnFinalize, true, 2),
+            P("creative_tomb_raider_labyrinth", "Tomb Raider walkway → labyrinth → cavern", Category.Creative, Hook.OnRequestPrepared, true, 2),
+            P("creative_asymmetric_surface_tiles", "Asymmetric multi-tile surface (non-square)", Category.Creative, Hook.OnRequestPrepared, true, 1),
+            P("creative_mountain_trail_ridges", "Twin peaks + flank ascent/descent trails", Category.Creative, Hook.AfterTerrainPhases, true, 2),
         };
 
         static PhaseDef P(

@@ -312,9 +312,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 if (step == 5)
                     return "layout_platforms";
-                if (step == 6 || step == 7)
+                if (step == 6 || step == 7 || step == 8)
                     return "moving_platforms";
-                if (step == 12)
+                if (step == 13)
                     return "cave_mouth_seal";
                 return "visual_shell";
             }
