@@ -8,7 +8,7 @@ This repository is the **shareable Unity project + UPM package** (`com.cursor.en
 
 **Accuracy contract:** [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) — what is on GitHub vs local-only (read before trusting other docs).
 
-**Package version:** **0.3.0** · queued cave build: **120/120** steps.
+**Package version:** **0.3.1** · queued cave build: **120/120** steps.
 
 ---
 
@@ -130,6 +130,23 @@ Full menu table: [Package README](Packages/com.cursor.environment-authoring-kit/
 
 ---
 
+## Code scanning (CodeQL) — optional CI
+
+Security static analysis on GitHub (**Security → Code scanning**). Separate from cave-grader quality checks.
+
+| Piece | Requirement |
+|-------|----------------|
+| **Workflow** | [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml) on `main` |
+| **C# (Unity)** | Self-hosted Mac runner + repo variable **`UNITY_PATH`** |
+| **TypeScript / Actions** | GitHub-hosted (no Unity) |
+
+**Setup and daily use:** [docs/CODEQL_SETUP_AND_USE.md](docs/CODEQL_SETUP_AND_USE.md)  
+**Do not** enable GitHub’s “Code scanning default setup” alongside this workflow (SARIF conflict).
+
+Verified **2026-05-29** on self-hosted Mac (~16 min first full C# job including CodeQL bundle download).
+
+---
+
 ## AI-assisted workflow (optional)
 
 - In-editor grading ladder and **Environment Kit Hub**
@@ -149,6 +166,7 @@ Details: [CaveGradingAndCursor.md](Packages/com.cursor.environment-authoring-kit
 | [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains vs what you add locally |
 | [docs/THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md) | Kit license vs Unity, store assets, APIs |
 | [Package docs index](Packages/com.cursor.environment-authoring-kit/docs/README.md) | Pipeline, grading, attribution |
+| [docs/CODEQL_SETUP_AND_USE.md](docs/CODEQL_SETUP_AND_USE.md) | CodeQL self-hosted Mac + GitHub Actions |
 
 ---
 

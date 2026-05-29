@@ -157,6 +157,12 @@ namespace EnvironmentAuthoringKit.Editor
 
         static void TrySyncViaMenu()
         {
+            if (Application.isBatchMode)
+            {
+                Debug.LogWarning($"{LogPrefix} Skipping Assets/Open C# Project in batchmode (would launch external IDE).");
+                return;
+            }
+
             try
             {
                 EditorApplication.ExecuteMenuItem("Assets/Open C# Project");

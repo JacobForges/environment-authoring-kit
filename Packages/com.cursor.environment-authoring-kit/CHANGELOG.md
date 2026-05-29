@@ -8,6 +8,19 @@ For Hub-wide project notes, see the consuming repo’s `docs/CHANGELOG.md` when 
 
 ---
 
+## [0.3.1] — 2026-05-29
+
+### CodeQL (GitHub code scanning)
+
+- **Verified green** on self-hosted Mac: workflow **CodeQL**, job **Analyze (csharp — Unity)** (~16 min first run including CodeQL bundle download; Unity prep ~2½ min).
+- Single workflow [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml): C# on `self-hosted` + Unity/`UNITY_PATH`; TypeScript (`cave-grader`) and Actions on GitHub cloud.
+- `CodeQlUnityBootstrap`: no second `RequestScriptCompilation` after batchmode import (fixes ~45 min CI hang); accepts `EnvironmentAuthoringKit.*.csproj` without `.sln`.
+- `run-codeql-unity-prep.sh` / `codeql-build-csharp.sh` for Unity prep and `dotnet build` tracing.
+- Docs: Hub [docs/CODEQL_SETUP_AND_USE.md](../../docs/CODEQL_SETUP_AND_USE.md), package [docs/CODEQL_SELFHOSTED_INSTALL.md](docs/CODEQL_SELFHOSTED_INSTALL.md).
+- Batchmode: skip **Assets → Open C# Project** fallback so CI does not launch Cursor on the runner work tree.
+
+---
+
 ## [0.3.0] — 2026-05-27
 
 ### Documentation (2026-05-28 follow-up)

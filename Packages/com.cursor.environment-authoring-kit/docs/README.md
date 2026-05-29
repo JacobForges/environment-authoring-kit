@@ -41,6 +41,15 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 
 ---
 
+## CI & security
+
+| Document | Content |
+|----------|---------|
+| [CODEQL_SETUP_AND_USE.md](../../../../docs/CODEQL_SETUP_AND_USE.md) | CodeQL on GitHub — setup, run, results (Hub) |
+| [CODEQL_SELFHOSTED_INSTALL.md](CODEQL_SELFHOSTED_INSTALL.md) | Install checklist, legal, troubleshooting depth |
+
+---
+
 ## Data & legal
 
 | Document | Content |
@@ -67,3 +76,4 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 | Ladder rung I/O | [PHASE_CONTRACTS.md](PHASE_CONTRACTS.md) + `CaveBuildPhaseContractRegistry` |
 | Grade JSON or Cursor env | [CaveGradingAndCursor.md](CaveGradingAndCursor.md) |
 | Research / attribution | [RESEARCH_DATA_ATTRIBUTION.md](RESEARCH_DATA_ATTRIBUTION.md) |
+| CodeQL workflows or Unity prep scripts | [CODEQL_SETUP_AND_USE.md](../../../../docs/CODEQL_SETUP_AND_USE.md) + [CHANGELOG.md](../CHANGELOG.md) |

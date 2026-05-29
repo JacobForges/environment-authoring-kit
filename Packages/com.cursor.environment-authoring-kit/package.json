@@ -1,6 +1,6 @@
 {
   "name": "com.cursor.environment-authoring-kit",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "displayName": "Environment Authoring Kit",
   "description": "Procedural Florida karst surface (9-tile terrain, dense vegetation) and lava-tube cave pipeline with grading, 122-step queued builds, and optional Cursor SDK automation (URP, XR).",
   "license": "SEE LICENSE IN LICENSE.md",

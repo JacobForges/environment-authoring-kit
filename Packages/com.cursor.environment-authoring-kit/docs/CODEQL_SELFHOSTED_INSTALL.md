@@ -2,6 +2,8 @@
 
 Complete guide for running **GitHub Code scanning (CodeQL)** on the Environment Authoring Kit Hub repo when you want **compiler-accurate C# analysis** instead of cloud `build-mode: none`.
 
+**Start here for day-to-day use:** Hub [docs/CODEQL_SETUP_AND_USE.md](../../../../docs/CODEQL_SETUP_AND_USE.md) (setup, run, results — verified green 2026-05-29).
+
 ---
 
 ## What this kit does (and does not do)
@@ -68,9 +70,9 @@ Before installing, confirm:
 
 ```
 Hub/
-  .github/workflows/codeql-unity-selfhosted.yml
-  .github/workflows/codeql.yml          # optional cloud fallback
+  .github/workflows/codeql.yml          # C# self-hosted + cloud TS/Actions
   .github/codeql/codeql-config.yml
+  docs/CODEQL_SETUP_AND_USE.md
   Packages/com.cursor.environment-authoring-kit/
     Editor/CodeQlUnityBootstrap.cs
     Tools/run-codeql-unity-prep.sh
@@ -163,9 +165,9 @@ If prep fails, open `Logs/codeql-unity-prep.log` for Unity compile errors.
 
 ## Part 5 — Run on GitHub
 
-1. **Actions** tab → **CodeQL (Unity self-hosted)** → **Run workflow** (or push to `main`).
-2. Job **C# (Unity compile)** should run on your self-hosted runner (not `ubuntu-latest`).
-3. Job **TypeScript (cave-grader)** runs on `ubuntu-latest` (no Unity).
+1. **Actions** tab → workflow **CodeQL** → **Run workflow** (or push to `main`).
+2. Job **Analyze (csharp — Unity)** runs on your self-hosted runner (not `ubuntu-latest`).
+3. Jobs **Analyze (javascript-typescript)** and **Analyze (actions)** run on `ubuntu-latest`.
 4. Results: **Security** → **Code scanning alerts**.
 
 Upload artifact **codeql-unity-prep-log** if the C# job fails.
@@ -174,12 +176,13 @@ Upload artifact **codeql-unity-prep-log** if the C# job fails.
 
 ## Workflow reference
 
-| Workflow file | Runner | C# mode | When to use |
-|---------------|--------|---------|-------------|
-| `codeql-unity-selfhosted.yml` | `self-hosted` + Unity | Manual build (best) | Primary — your Mac with Unity |
-| `codeql.yml` | `ubuntu-latest` | `build-mode: none` | Backup when runner offline |
+Single file: **`.github/workflows/codeql.yml`** (`name: CodeQL`).
 
-You may disable `codeql.yml` if you only want self-hosted scans.
+| Job | Runner | Notes |
+|-----|--------|-------|
+| **Analyze (csharp — Unity)** | `self-hosted` | Unity prep + manual `dotnet build` |
+| **Analyze (javascript-typescript)** | `ubuntu-latest` | `build-mode: none` |
+| **Analyze (actions)** | `ubuntu-latest` | `build-mode: none` |
 
 ---
 

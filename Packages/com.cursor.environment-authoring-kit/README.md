@@ -12,7 +12,7 @@ Built for **Unity 6 (6000.x)** and **URP**. XR support = **editor optimization p
 | **Rendering** | Universal Render Pipeline 17+ |
 | **XR** | Configure OpenXR / device SDK in **your** project; kit applies `VitureXRPro` **budget** preset when present |
 | **Node** | 18+ + `npm install` in `Tools/cave-grader` (required for FullWorld preflight) |
-| **Version** | **0.3.0** — see `package.json` |
+| **Version** | **0.3.1** — see `package.json` |
 | **License** | [LICENSE.md](LICENSE.md) — **educational/personal non-commercial free**; **commercial use requires license or purchase from copyright holder** (not CC0) |
 
 ---
@@ -169,6 +169,14 @@ Committed in public repo: `Presets/`, `Recipes/`, `Documentation/` under `Assets
 
 ---
 
+## Code scanning (CodeQL)
+
+Optional GitHub security scanning for this repo. C# requires a **self-hosted Mac** with Unity; TypeScript grader and Actions YAML run on GitHub cloud.
+
+**Hub guide:** [docs/CODEQL_SETUP_AND_USE.md](../../docs/CODEQL_SETUP_AND_USE.md) · **Install detail:** [docs/CODEQL_SELFHOSTED_INSTALL.md](docs/CODEQL_SELFHOSTED_INSTALL.md)
+
+---
+
 ## Documentation
 
 | Doc | Content |
@@ -180,6 +188,7 @@ Committed in public repo: `Presets/`, `Recipes/`, `Documentation/` under `Assets
 | [docs/PRODUCT_BOUNDARY.md](docs/PRODUCT_BOUNDARY.md) | In / out of scope |
 | [docs/PUBLISHING.md](docs/PUBLISHING.md) | Release checklist |
 | Hub repo [docs/PUBLIC_REPO_SCOPE.md](../../docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains |
+| Hub [docs/CODEQL_SETUP_AND_USE.md](../../docs/CODEQL_SETUP_AND_USE.md) | CodeQL setup and use |
 
 ---
 

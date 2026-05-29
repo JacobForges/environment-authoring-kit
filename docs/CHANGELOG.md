@@ -6,6 +6,17 @@ Format: **date** — short title — details.
 
 ---
 
+## 2026-05-29
+
+### CodeQL — self-hosted Unity CI (verified)
+
+- **CodeQL** workflow green on self-hosted Mac: Unity prep, `dotnet build`, CodeQL analyze, SARIF upload (~16 min first C# job).
+- Added **[CODEQL_SETUP_AND_USE.md](CODEQL_SETUP_AND_USE.md)** — setup checklist, how to run, troubleshooting, CodeQL vs cave-grader.
+- Root **README** and package **README** link CodeQL docs; package **CHANGELOG** **0.3.1**.
+- `CodeQlUnityBootstrap` no longer forces a second full recompile in batchmode; skips IDE menu fallback on CI.
+
+---
+
 ## 2026-05-28
 
 ### License + provider docs correction (user-facing accuracy)

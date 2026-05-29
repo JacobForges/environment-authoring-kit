@@ -1,25 +1,26 @@
 # Code scanning (CodeQL)
 
+**User guide:** [docs/CODEQL_SETUP_AND_USE.md](../docs/CODEQL_SETUP_AND_USE.md)  
+**Install / legal / deep troubleshooting:** [Packages/.../docs/CODEQL_SELFHOSTED_INSTALL.md](../Packages/com.cursor.environment-authoring-kit/docs/CODEQL_SELFHOSTED_INSTALL.md)
+
 ## One workflow only
 
-Use **`.github/workflows/codeql.yml`** — do **not** add GitHub’s auto-generated `CodeQL Advanced` workflow separately.
+Use **`.github/workflows/codeql.yml`** — do **not** add GitHub’s auto-generated **CodeQL Advanced** template from the web UI.
 
 **Settings → Code security** → turn **off** “Code scanning default setup”.  
-Default + this file causes: *“advanced configurations cannot be processed when default setup is enabled”*.
+Default + advanced causes: *“advanced configurations cannot be processed when default setup is enabled”*.
 
-## Jobs
+## Jobs (verified 2026-05-29)
 
 | Job | Runner | Languages |
 |-----|--------|-----------|
-| **Analyze (csharp — Unity)** | Your Mac (`self-hosted`) | C# with Unity + `dotnet build` |
-| **Analyze (javascript-typescript)** | GitHub cloud | `Tools/cave-grader` |
-| **Analyze (actions)** | GitHub cloud | Workflow YAML |
+| **Analyze (csharp — Unity)** | `self-hosted` (your Mac) | C# — Unity prep + `dotnet build` |
+| **Analyze (javascript-typescript)** | `ubuntu-latest` | `Tools/cave-grader` |
+| **Analyze (actions)** | `ubuntu-latest` | Workflow YAML |
 
-## Setup checklist
+## Maintainer checklist
 
-1. `cd ~/actions-runner && ./run.sh` (keep running)
-2. Repo variable **`UNITY_PATH`** → Unity binary (trimmed path, no newlines)
+1. `cd ~/actions-runner && ./run.sh`
+2. Repo variable **`UNITY_PATH`** → Unity binary (trimmed path)
 3. Default CodeQL setup **disabled**
-4. Local smoke test: `Packages/.../Tools/run-codeql-local-verify.sh`
-
-Full guide: `Packages/com.cursor.environment-authoring-kit/docs/CODEQL_SELFHOSTED_INSTALL.md`
+4. Local smoke: `Packages/.../Tools/run-codeql-local-verify.sh`
