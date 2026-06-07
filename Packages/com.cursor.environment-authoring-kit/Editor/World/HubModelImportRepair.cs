@@ -107,7 +107,9 @@ namespace EnvironmentAuthoringKit.Editor.World
             assetPath = assetPath.Replace('\\', '/');
             return assetPath.Contains("BillemotdonggulLavaTubePack/", StringComparison.Ordinal) ||
                    assetPath.Contains("BackRock-NeonCity/", StringComparison.Ordinal) ||
-                   assetPath.Contains("Pizza&Games/Realistic Rocks/", StringComparison.Ordinal);
+                   assetPath.Contains("Pizza&Games/Realistic Rocks/", StringComparison.Ordinal) ||
+                   (assetPath.Contains("WizardPBR/Mesh/", StringComparison.Ordinal) &&
+                    assetPath.IndexOf("WizardBodyMesh", StringComparison.OrdinalIgnoreCase) < 0);
         }
 
         public static bool IsAnimationOnlyBundle(string assetPath)
@@ -133,6 +135,9 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return false;
 
             if (assetPath.Contains("CC0Imports/Characters/", StringComparison.Ordinal))
+                return true;
+
+            if (assetPath.Contains("WizardPBR/Mesh/WizardBodyMesh.fbx", StringComparison.OrdinalIgnoreCase))
                 return true;
 
             return IsQuaterniusCharacter(assetPath);
@@ -339,6 +344,9 @@ namespace EnvironmentAuthoringKit.Editor.World
             if (IsLavaTubeConvexHullMesh(assetPath, mesh))
                 EnsureMeshNormals(mesh);
 
+            if (IsStaticEnvironmentMesh(assetPath))
+                EnsureMeshNormalsAndTangents(mesh);
+
             if (NeedsBoneWeightFix(assetPath))
                 FixMeshBoneWeights(mesh);
         }
@@ -358,6 +366,16 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return;
 
             mesh.RecalculateNormals();
+        }
+
+        static void EnsureMeshNormalsAndTangents(Mesh mesh)
+        {
+            EnsureMeshNormals(mesh);
+            var tangents = mesh.tangents;
+            if (tangents != null && tangents.Length > 0)
+                return;
+
+            mesh.RecalculateTangents();
         }
 
         static void StripEmbeddedMeshes(GameObject root)
@@ -721,7 +739,7 @@ namespace EnvironmentAuthoringKit.Editor.World
 
     sealed class HubModelImportRepairPostprocessor : AssetPostprocessor
     {
-        const uint PostprocessorVersion = 6;
+        const uint PostprocessorVersion = 7;
 
         public override uint GetVersion() => PostprocessorVersion;
 

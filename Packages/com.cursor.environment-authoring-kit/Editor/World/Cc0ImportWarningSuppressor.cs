@@ -1,20 +1,38 @@
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
+using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor.World
 {
     /// <summary>
     /// Hides kit-driven reimport noise only while an explicit CC0 bulk reimport scope is active.
-    /// Benign FBX/OBJ importer warnings are never hidden globally.
+    /// Benign FBX/OBJ importer warnings are filtered from the console by default.
     /// </summary>
     static class Cc0ImportWarningSuppressor
     {
         static int _depth;
+        static ILogHandler _defaultLogHandler;
+        static bool _logHookInstalled;
+
+        static Cc0ImportWarningSuppressor()
+        {
+            EditorApplication.delayCall += InstallBenignImportLogFilter;
+        }
 
         public static bool IsActive => _depth > 0;
 
         public static IDisposable Begin() => new Scope();
+
+        static void InstallBenignImportLogFilter()
+        {
+            if (_logHookInstalled)
+                return;
+
+            _defaultLogHandler ??= Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new BenignImportLogHandler(_defaultLogHandler);
+            _logHookInstalled = true;
+        }
 
         /// <summary>Benign third-party FBX/OBJ import noise — only hidden during explicit kit reimport scopes.</summary>
         public static bool IsBenignImportNoise(string condition, string stackTrace)
@@ -63,7 +81,7 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return false;
 
             if (IsBenignImportNoise(condition, stackTrace))
-                return IsActive;
+                return true;
 
             if (!IsActive)
                 return false;
@@ -86,6 +104,25 @@ namespace EnvironmentAuthoringKit.Editor.World
                 if (_depth > 0)
                     _depth--;
             }
+        }
+
+        sealed class BenignImportLogHandler : ILogHandler
+        {
+            readonly ILogHandler _inner;
+
+            public BenignImportLogHandler(ILogHandler inner) => _inner = inner;
+
+            public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args)
+            {
+                var message = args == null || args.Length == 0 ? format : string.Format(format, args);
+                if (IsBenignImportNoise(message, null))
+                    return;
+
+                _inner.LogFormat(logType, context, format, args);
+            }
+
+            public void LogException(Exception exception, UnityEngine.Object context) =>
+                _inner.LogException(exception, context);
         }
     }
 }

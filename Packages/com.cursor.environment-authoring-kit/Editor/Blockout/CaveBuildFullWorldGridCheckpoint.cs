@@ -10,6 +10,9 @@ using EnvironmentAuthoringKit.Editor.Generation;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
+    using FullWorldGridPhase = SurfaceTerrainTileExpansion.FullWorldGridPhase;
+    using FullWorldGridSession = SurfaceTerrainTileExpansion.FullWorldGridSession;
+
     /// <summary>
     /// Resume FullWorld place/terraform/seam chain after crash or memory pause (phase + index on disk).
     /// Also saves the Unity scene + terrain assets at each checkpoint so you can stop and resume later.
@@ -67,7 +70,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
         }
 
-        public static void BindActiveSession(FullWorldGridSession session) => _activeSession = session;
+        internal static void BindActiveSession(FullWorldGridSession session) => _activeSession = session;
 
         public static void SaveActiveSession(string reason)
         {
@@ -77,7 +80,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Save(_activeSession, reason);
         }
 
-        public static void Save(FullWorldGridSession session, string reason)
+        internal static void Save(FullWorldGridSession session, string reason)
         {
             if (session?.MainTerrain == null)
                 return;
@@ -299,7 +302,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             error = string.Empty;
 
             Terrain main = null;
-            foreach (var t in UnityEngine.Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+            foreach (var t in UnityEngine.Object.FindObjectsByType<Terrain>())
             {
                 if (t != null && t.name == doc.mainTerrainName)
                 {

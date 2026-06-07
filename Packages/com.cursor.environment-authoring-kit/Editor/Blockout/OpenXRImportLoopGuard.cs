@@ -35,7 +35,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool SuppressImporterWarnings
         {
-            get => EditorPrefs.GetBool(PrefSuppressWarnings, false);
+            get => EditorPrefs.GetBool(PrefSuppressWarnings, true);
             set
             {
                 EditorPrefs.SetBool(PrefSuppressWarnings, value);

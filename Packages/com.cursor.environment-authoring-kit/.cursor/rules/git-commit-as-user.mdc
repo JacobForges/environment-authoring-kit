@@ -1,5 +1,5 @@
 ---
-description: Git commits must be authored as Jacob Lee Adkins GIA GD, never as Cursor or a bot.
+description: Git commits must be authored as JacobForges, never as Cursor or a bot.
 alwaysApply: true
 ---
 
@@ -9,7 +9,7 @@ When the user asks you to create a git commit (or you commit after explicit requ
 
 1. **Author identity** — Always pass an explicit author on every commit:
    ```bash
-   git commit --author="Jacob Lee Adkins GIA GD <jacob@Jacobs-MacBook-Air.local>" -m "$(cat <<'EOF'
+   git commit --author="JacobForges <jacob.adkins@students.maestrocollege.edu>" -m "$(cat <<'EOF'
    Message here.
 
    EOF
@@ -25,6 +25,6 @@ When the user asks you to create a git commit (or you commit after explicit requ
 
 5. If `git log -1` after commit shows the wrong author, amend only when your commit rules allow, still using the same `--author` flag.
 
-6. **Push** only when the user asks; commits should still use the user author before push so GitHub attributes work to the user's account.
+6. **Push** only when the user asks; commits should still use the user author before push so GitHub attributes work to **JacobForges**.
 
 If GitHub does not link commits to the profile, the user may need to add `jacob.adkins@students.maestrocollege.edu` as a verified email on GitHub (or supply their `id+login@users.noreply.github.com` noreply address for future commits).
