@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad05a3fedb4a490d86cf1a30d6436f1, type: 3}
+  m_Name: CaveBuildCursorSettings
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor::EnvironmentAuthoringKit.Editor.Blockout.CaveBuildCursorSettings
+  hubProjectRoot: /Users/jacob/Hub
+  nodeExecutablePath: 
+  nodeBinDirectory: 
+  modelId: auto
+  aiProvider: 0
+  openAiCompatibleBaseUrl: http://localhost:11434/v1
+  googleModelId: gemini-2.5-flash
+  anthropicModelId: claude-3-7-sonnet-latest
+  openAiModelId: gpt-4.1-mini
+  openRouterModelId: openai/gpt-4.1-mini
+  ollamaModelId: qwen2.5-coder:14b
+  lmStudioModelId: local-model
+  customProviderLabel: Custom Endpoint
+  allowExternalProviderEdits: 0
+  externalProviderEditsDryRun: 1
+  autoInvokeAfterEveryBuild: 0
+  autoInvokeOnDud: 1
+  autoRebuildAfterAgentSuccess: 0
+  autoInvokeEachMeatLoopPass: 0
+  suppressMeatLoopCursorInvokes: 1
+  autoInvokePreBuildWorkflow: 0
+  enforcePreBuildGate: 1
+  preBuildReloopUntilPass: 0
+  maxPreBuildReloopAttempts: 12
+  skipResearchNetworkSyncWhenCachePresent: 1
+  autoContinueAfterPreBuildCursor: 1
+  usePhasedCaveBuild: 1
+  showLiveScenePlacement: 1
+  lidarGuidedSculptOnly: 1
+  cinematicSceneCamera: 1
+  liveSceneCameraZoomOut: 30.1
+  forceLivePreviewWhenRecording: 1
+  useIncrementalLadder: 1
+  constrainBotToResearchOnFailure: 1
+  autoRunPlaytestBotAfterBuild: 0
+  enableBatchMode: 0
+  batchJobCount: 3
+  batchDelaySeconds: 0.5
+  batchSeedIncrement: 10007
+  runPostBuildResearchPhase: 1
+  invokeCursorOnResearchPhase: 1
+  autoInvokeTerrainAfterSurfaceBuild: 1
+  autoRebuildSurfaceAfterTerrainAgent: 0
+  suggestTerrainGradeWatcher: 1
+  stabilizationMode: 0
+  queuedStepTimeoutSeconds: 180
+  waitForTerrainBeforeCaveMeat: 1
+  caveMeatTerrainWaitTimeoutSeconds: 900
+  enableQualityFastGates: 1
+  skipAutonomousWhenGradeAtOrAbove: 1
+  fastGateMinOverallScore: 88
+  requireHollowTitanOnSurface: 1
+  hollowTitanPhasedBuild: 1
+  hollowTitanBaseClearanceMeters: 0.35
+  hollowTitanFloorCount: 4
+  hollowTitanFloorHeightMeters: 6.5
+  hollowTitanEnemiesPerFloor: 2
+  hollowTitanLootPerFloor: 1
+  hollowTitanPatrolNodesPerFloor: 3
+  enableAutonomousUntilShip: 0
+  maxAutonomousIterations: 8
+  autonomousIterationCooldownSeconds: 4
+  suppressMidBuildDialogs: 1
+  showReloopDialog: 0
+  enableFullAutoHeal: 1
+  healMinScoreForGoodCheckpoint: 80
+  maxHealRecoveryAttempts: 5
+  healRollbackBeforeRetry: 1
+  healInvokeAiAfterRollback: 1
+  healRetryDelaySeconds: 6
+  exportGenerationPrefabWhenFinished: 1
+  enableEnhancementPhases: 1
+  demSupersampleTargetDim: 128
+  requirePreflightBeforeFullWorldBuild: 0
+  hardwareBudget: 0
+  enableGaussianSplatHeroAtCaveMouth: 0
+  gaussianSplatAssetPath: 
+  gaussianSplatHeroQuality: 1
+  gaussianSplatRenderInEditMode: 0
+  gaussianSplatRenderInPlayMode: 1
+  editorQueueLightBase: 0.05
+  editorQueueNormalMultiplier: 3
+  editorQueueHeavyMultiplier: 12
+  editorQueueLoadStepPerItem: 0.08
+  editorQueueMaxLoadMultiplier: 2.5
+  editorQueueBatchSize: 1
+  mirrorPacedBuildLogsToConsole: 0

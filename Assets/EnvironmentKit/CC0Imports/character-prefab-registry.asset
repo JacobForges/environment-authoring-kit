@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6558dd4829570480cbe1ef18f996061b, type: 3}
+  m_Name: character-prefab-registry
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor:EnvironmentAuthoringKit.Editor.World:Cc0PrefabRegistry
+  entries:
+  - slot: NPC_PlayGuide
+    prefab: {fileID: 3970445952565698092, guid: bd432d9c29d644519b393ebd24f0d1eb, type: 3}
+  - slot: NPC_PlayMerchant
+    prefab: {fileID: 8632080959131540185, guid: 028b86ece8f074a009a0996a66644c29, type: 3}
+  - slot: NPC_FoothillRanger
+    prefab: {fileID: 8848593337685155680, guid: dd602c7779f2648cdb9c58500941d6ea, type: 3}
+  - slot: NPC_FoothillHerbalist
+    prefab: {fileID: 5995825547387291009, guid: df5a9ba664b4f44c9af908bfe8601c5f, type: 3}
+  - slot: NPC_PeakHermit
+    prefab: {fileID: 6795795990598912040, guid: 56e45184475074e78ab8846a30a73826, type: 3}
+  - slot: NPC_PeakOreTrader
+    prefab: {fileID: 5408330851120801161, guid: e6d47440525a640ccb401599867f931c, type: 3}
+  - slot: NPC_PeakGuard_A
+    prefab: {fileID: 2926384488942709695, guid: 1fc30e843b3654650a952d3a12fd6f7d, type: 3}
+  - slot: NPC_PeakGuard_B
+    prefab: {fileID: 8773625346086565088, guid: 5306be94d6f714a2c90d47f610658e6b, type: 3}
+  - slot: NPC_HorizonWatcher
+    prefab: {fileID: 4944040480164975774, guid: f5d20b45a6832444ca2989d9eee34a12, type: 3}
+  - slot: NPC_Ambient_A
+    prefab: {fileID: 1857878171462674935, guid: d72612c6256a14d68ae483f6d7a942bd, type: 3}
+  - slot: NPC_Ambient_B
+    prefab: {fileID: 8653492032658807737, guid: 4c243710b947c4b819fc265862ecce1f, type: 3}
+  - slot: NPC_Ambient_C
+    prefab: {fileID: 2128567612894402502, guid: 71faf081a3090496a914a3b6c7bc41ba, type: 3}
+  - slot: BOSS_Stage
+    prefab: {fileID: 7042196595251661803, guid: a163330e2dd684142a9b93a66cd3975a, type: 3}
+  - slot: BOSS_Add_1
+    prefab: {fileID: 3058073435159634518, guid: fa759e25ff87e4972ab32e6ebef31508, type: 3}
+  - slot: BOSS_Add_2
+    prefab: {fileID: 19488095510653121, guid: af63943755785400eb670b430dacf26a, type: 3}
+  - slot: ENEMY_Foothill_1
+    prefab: {fileID: 4949033949383489021, guid: e2e53675d72cf4dac81a424f5388bafc, type: 3}
+  - slot: ENEMY_Peak_1
+    prefab: {fileID: 9030205035067244665, guid: 4fc266e51babf49b8ba25653d2ac3fb0, type: 3}
+  - slot: ENEMY_Annex_1
+    prefab: {fileID: 8596783966023814875, guid: 607a514f8d2b8492bbe2392f36732493, type: 3}

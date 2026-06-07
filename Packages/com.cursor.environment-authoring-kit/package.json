@@ -1,0 +1,12 @@
+{
+  "name": "com.cursor.environment-authoring-kit",
+  "version": "0.3.4",
+  "displayName": "Environment Authoring Kit",
+  "description": "Procedural Florida karst surface terrain grid (~289 tiles default, 17×17 Chebyshev 8; 81-tile core optional), lava-tube cave pipeline, Environment Kit Hub, 122-step queued builds, and optional Cursor SDK automation (URP, XR).",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.render-pipelines.universal": "17.0.0",
+    "com.unity.xr.management": "4.5.0"
+  }
+}

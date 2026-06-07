@@ -1,0 +1,10 @@
+name: Environment Authoring Kit
+
+# Only scan the UPM package (all committed .cs / grader .ts live here).
+paths:
+  - Packages/com.cursor.environment-authoring-kit
+
+paths-ignore:
+  - "**/*.meta"
+  - "**/node_modules/**"
+  - "**/ResearchCache/**"

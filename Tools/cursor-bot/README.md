@@ -1,0 +1,55 @@
+# Hub Cursor bot (orchestration)
+
+Thin wrapper around the existing **cave-grader** Cursor SDK integration.
+
+## Prerequisites
+
+1. Unity 6 project open at `/Users/jacob/Hub` (for re-grade; SDK can edit C# without editor).
+2. Node 18+ and `npm install` in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader`.
+3. `CURSOR_API_KEY` in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/.env` (see `.env.example`).
+
+## One agent session (auto-routes Phase 1 → 2)
+
+```bash
+chmod +x Tools/cursor-bot/run-session.sh Tools/cursor-bot/run-until-demo.sh
+./Tools/cursor-bot/run-session.sh --stream
+```
+
+## Run until playable demo (recommended)
+
+Loops agent sessions through **world gate → gameplay G1–G8** until `HubGameProgress.json` → `demoReady: true`:
+
+```bash
+export UNITY_PATH="/Applications/Unity/Hub/Editor/6000.4.6f1/Unity.app/Contents/MacOS/Unity"
+./Tools/cursor-bot/run-until-demo.sh --stream
+```
+
+Each iteration: agent fix → Unity post-pass (compile + scene fix + re-grade) → next session. Max sessions: `CAVE_UNTIL_DEMO_MAX` (default 64).
+
+Prints `[cursor-bot] mission phase=world → workflow=post_build` (or `gameplay` when world gate passes).
+
+Options pass through to `run-grade-and-fix.sh` (`--cloud`, `--local-only`, `--workflow=terrain|gameplay|post_build`).
+
+Check phase:
+
+```bash
+cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader
+node --import tsx mission-phase.ts
+```
+
+## Watch mode (during Unity builds)
+
+```bash
+cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader
+npm run watch-grade
+```
+
+## Cursor Automation
+
+Import draft from [automation-draft.json](./automation-draft.json) in the Automations editor. Set `gitConfig.repo` to your Hub remote if using cloud agents. Adjust cron to your timezone.
+
+## Docs
+
+- [docs/CURSOR_BOT_ARCHITECTURE.md](../../docs/CURSOR_BOT_ARCHITECTURE.md)
+- [docs/CURSOR_BOT_BACKLOG.md](../../docs/CURSOR_BOT_BACKLOG.md)
+- [AGENTS.md](../../AGENTS.md)

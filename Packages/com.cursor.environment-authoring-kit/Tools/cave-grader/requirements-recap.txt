@@ -1,0 +1,10 @@
+# Producer recap optional Python deps (same python3 as run-producer-recap.py)
+# Narration docs: PERSONAL_VOICE_NARRATION.md, VOICE_HELPERS.md
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+edge-tts>=6.1.0
+Pillow>=10.0.0
+# Word queue concat + ladder: librosa, soundfile, scipy (install if missing)
+# librosa>=0.10
+# soundfile>=0.12
+# scipy>=1.10

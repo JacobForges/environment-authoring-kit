@@ -1,0 +1,78 @@
+# Substance 3D download checklist
+
+Download FBX/GLB from each asset page (subscription required).
+
+- [ ] **W01** Wayfarer blade — Chef Knife 01
+- [ ] **W02** Round ward — Mech Shield Plate 11
+- [ ] **W03** Line hook — Mech Hand Grappling Hook 02
+- [ ] **W04** Return disk — Star Shaped Primitive Shape 01
+- [ ] **W05** Channel staff — Stylized Tree Branch 06
+- [ ] **W07** Stone pick — Climbing Pickaxe
+- [ ] **W08** Brush sickle — Wood Chisel 03
+- [ ] **W09** Signal whistle — Graphic Compass
+- [ ] **W10** Trail compass — Graphic Compass
+- [ ] **A01** Travel cloak — Medieval Chandelier (pendant proxy)
+- [ ] **A02** Layered vest — Roll Top Backpack
+- [ ] **A03** Echo helm — Browse: medieval helmet
+- [ ] **A04** Ridge boots — Leather Handbag Mini (boots proxy)
+- [ ] **A05** Ward amulet — Medieval Chandelier (pendant proxy)
+- [ ] **A06** Mist shawl — Medieval Chandelier (pendant proxy)
+- [ ] **A07** Bark buckler — Wooden Shield — browse
+- [ ] **A08** Root greaves — Leather Handbag Mini (boots proxy)
+- [ ] **P01** Verdant draught — Stylized Potion 01
+- [ ] **P02** Mist flask — Army Flask 02
+- [ ] **P03** Ember tonic — Army Flask 02
+- [ ] **P04** Spring water — Stylized Potion 01
+- [ ] **P05** Antidote phial — Stylized Potion 01
+- [ ] **P06** Trail pack — Roll Top Backpack
+- [ ] **P07** Spore balm — Pendant Light Jar 02
+- [ ] **P08** Ration bundle — Bread Basket
+- [ ] **C01** Copper pile — Clip Clasp Coin Wallet Opened
+- [ ] **C02** Silver pile — Clip Clasp Coin Wallet Opened
+- [ ] **C03** Gold pile — Clip Clasp Coin Wallet Opened
+- [ ] **C04** Platinum ingot — Beverage Dispenser (bar proxy)
+- [ ] **G-T01** Gem tool 1 — Crystal Cluster 09
+- [ ] **G-T02** Gem tool 2 — Crystal Cluster 09
+- [ ] **G-T03** Gem tool 3 — Crystal Cluster 09
+- [ ] **G-T04** Gem tool 4 — Crystal Cluster 09
+- [ ] **G-T05** Gem tool 5 — Crystal Cluster 09
+- [ ] **G-T06** Gem tool 6 — Crystal Cluster 09
+- [ ] **G-C01** Gem cabochon 1 — Crystal Cluster 09
+- [ ] **G-C02** Gem cabochon 2 — Crystal Cluster 09
+- [ ] **G-C03** Gem cabochon 3 — Crystal Cluster 09
+- [ ] **G-C04** Gem cabochon 4 — Crystal Cluster 09
+- [ ] **G-C05** Gem cabochon 5 — Crystal Cluster 09
+- [ ] **G-C06** Gem cabochon 6 — Crystal Cluster 09
+- [ ] **G-G01** Gem cut 1 — Crystal Cluster 09
+- [ ] **G-G02** Gem cut 2 — Crystal Cluster 09
+- [ ] **G-G03** Gem cut 3 — Crystal Cluster 09
+- [ ] **G-G04** Gem cut 4 — Crystal Cluster 09
+- [ ] **G-G05** Gem cut 5 — Crystal Cluster 09
+- [ ] **G-G06** Gem cut 6 — Crystal Cluster 09
+- [ ] **K01** Annex maze key — Fence Wood Old
+- [ ] **K02** Peak gate key — Fence Wood Old
+- [ ] **K03** Hollow sigil — Medieval Chandelier (pendant proxy)
+- [ ] **K04** Trail marker token — Clip Clasp Coin Wallet Opened
+- [ ] **K05** Geode chisel — Wood Chisel 03
+- [ ] **K06** Labyrinth map scrap — Ancient Egyptian Papyrus
+- [ ] **K07** Hermit charm — Medieval Chandelier (pendant proxy)
+- [ ] **K08** Boss trophy shard — Crystal Cluster 09
+- [ ] **B06** Peak iron ore — Cpg Pedestal Rocks Billy Balls
+- [ ] **B07** Basalt shard pile — Cpg Pedestal Rocks Billy Balls
+- [ ] **B08** Mist lantern — Stylized Hanging Lantern 03
+- [ ] **B09** Horizon relic — Fence Stone Set 01
+- [ ] **B10** Annex bench nail — Nail Polish 02 (spike proxy)
+- [ ] **B12** Warzombie tag — Ancient Egyptian Papyrus
+- [ ] **B13** Skeleton rib — Nail Polish 02 (spike proxy)
+- [ ] **B14** Boss horn — Browse: horn trophy
+- [ ] **B15** Platinum vault key — Fence Wood Old
+- [ ] **L01** Hollow Titan tree — Stylized Tree Root 05
+- [ ] **L02** Karst shrine — Fence Stone Set 01
+- [ ] **L03** Foothill cabin — Carport 02 (cabin proxy)
+- [ ] **L04** Trail bridge — Carport 02 (bridge proxy — replace)
+- [ ] **L05** Peak ruin arch — Fence Stone Set 01
+- [ ] **L06** Mine head frame — Commercial Double Door 01
+- [ ] **L07** Horizon hut — Browse: wooden hut
+- [ ] **L08** Stone well — Fence Stone Set 01
+- [ ] **L09** Boulder cluster — Cpg Pedestal Rocks Billy Balls
+- [ ] **L10** Campfire ring — Stylized Bonfire

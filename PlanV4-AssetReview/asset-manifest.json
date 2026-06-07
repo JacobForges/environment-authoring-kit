@@ -1,0 +1,1041 @@
+{
+  "npcs": [
+    {
+      "slot": "NPC_PlayGuide",
+      "mixamoName": "Remy",
+      "role": "Play guide",
+      "characterId": "037852b5-74da-44aa-878b-eccda13e5139",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/037852b5-74da-44aa-878b-eccda13e5139/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Remy&type=Character"
+    },
+    {
+      "slot": "NPC_PlayMerchant",
+      "mixamoName": "Sophie",
+      "role": "Merchant",
+      "characterId": "61bcdb20-7b85-4f2e-a109-2a0fbd54af78",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/61bcdb20-7b85-4f2e-a109-2a0fbd54af78/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Sophie&type=Character"
+    },
+    {
+      "slot": "NPC_FoothillRanger",
+      "mixamoName": "Survivor A Lusth",
+      "role": "Foothill ranger",
+      "characterId": "52dcdacb-b43e-4efc-ab6d-9d2d6e09bc95",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/52dcdacb-b43e-4efc-ab6d-9d2d6e09bc95/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Survivor&type=Character"
+    },
+    {
+      "slot": "NPC_FoothillHerbalist",
+      "mixamoName": "Kate",
+      "role": "Herbalist",
+      "characterId": "aba68976-90b0-4c6d-9f96-922dd1644be5",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/aba68976-90b0-4c6d-9f96-922dd1644be5/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Kate&type=Character"
+    },
+    {
+      "slot": "NPC_PeakHermit",
+      "mixamoName": "Romero",
+      "role": "Peak hermit",
+      "characterId": "576b18a3-2e3e-4f50-b665-cbca337e0757",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/576b18a3-2e3e-4f50-b665-cbca337e0757/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Romero&type=Character"
+    },
+    {
+      "slot": "NPC_PeakOreTrader",
+      "mixamoName": "Peasant Man",
+      "role": "Ore trader",
+      "characterId": "5fb4b535-034a-4011-af3b-2880391547a5",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/5fb4b535-034a-4011-af3b-2880391547a5/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Peasant&type=Character"
+    },
+    {
+      "slot": "NPC_PeakGuard_A",
+      "mixamoName": "Swat Guy",
+      "role": "Tree guard A",
+      "characterId": "cf73b862-b7ca-40e9-a156-1b95393d232e",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/cf73b862-b7ca-40e9-a156-1b95393d232e/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Swat&type=Character"
+    },
+    {
+      "slot": "NPC_PeakGuard_B",
+      "mixamoName": "Swat Guy",
+      "role": "Tree guard B (tint)",
+      "characterId": "cf73b862-b7ca-40e9-a156-1b95393d232e",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/cf73b862-b7ca-40e9-a156-1b95393d232e/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Swat&type=Character"
+    },
+    {
+      "slot": "NPC_HorizonWatcher",
+      "mixamoName": "Mannequin",
+      "role": "Horizon watcher",
+      "characterId": "999a29c0-8fb0-42d4-92c8-5b39ca94bd75",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/999a29c0-8fb0-42d4-92c8-5b39ca94bd75/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Mannequin&type=Character"
+    },
+    {
+      "slot": "NPC_Ambient_A",
+      "mixamoName": "Amy",
+      "role": "Ambient walker",
+      "characterId": "24c3eeb4-6c47-419d-a593-f7b2948b74c7",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/24c3eeb4-6c47-419d-a593-f7b2948b74c7/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Amy&type=Character"
+    },
+    {
+      "slot": "NPC_Ambient_B",
+      "mixamoName": "Brian",
+      "role": "Ambient walker",
+      "characterId": "a58c06c4-3307-40e6-a02d-bfcd658bdbff",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/a58c06c4-3307-40e6-a02d-bfcd658bdbff/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Brian&type=Character"
+    },
+    {
+      "slot": "NPC_Ambient_C",
+      "mixamoName": "Elizabeth",
+      "role": "Ambient walker",
+      "characterId": "5a0e290c-92ea-42e4-afea-cb94ba3fab6d",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/5a0e290c-92ea-42e4-afea-cb94ba3fab6d/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Elizabeth&type=Character"
+    },
+    {
+      "slot": "BOSS_Stage",
+      "mixamoName": "Warrok W Kurniawan",
+      "role": "Boss",
+      "characterId": "efb06b46-a470-49b2-b7da-a06755d4dba7",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/efb06b46-a470-49b2-b7da-a06755d4dba7/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Warrok&type=Character"
+    },
+    {
+      "slot": "BOSS_Add_1",
+      "mixamoName": "Mutant",
+      "role": "Boss add",
+      "characterId": "cccc84b6-d072-4972-99da-75c5702e25f6",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/cccc84b6-d072-4972-99da-75c5702e25f6/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Mutant&type=Character"
+    },
+    {
+      "slot": "BOSS_Add_2",
+      "mixamoName": "Vampire A Lusth",
+      "role": "Boss add",
+      "characterId": "90815396-6b00-4efc-b670-4c3497dbb605",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/90815396-6b00-4efc-b670-4c3497dbb605/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Vampire&type=Character"
+    },
+    {
+      "slot": "ENEMY_Foothill_1",
+      "mixamoName": "Zombiegirl W Kurniawan",
+      "role": "Foothill enemy",
+      "characterId": "2f8e576f-f69d-453e-830e-969a2f0217ea",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/2f8e576f-f69d-453e-830e-969a2f0217ea/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Zombiegirl&type=Character"
+    },
+    {
+      "slot": "ENEMY_Peak_1",
+      "mixamoName": "Warzombie F Pedroso",
+      "role": "Peak enemy",
+      "characterId": "3576fd60-beef-49ec-a3d0-f93231f4fc29",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/3576fd60-beef-49ec-a3d0-f93231f4fc29/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Warzombie&type=Character"
+    },
+    {
+      "slot": "ENEMY_Annex_1",
+      "mixamoName": "Skeletonzombie T Avelange",
+      "role": "Annex enemy",
+      "characterId": "91d02eaa-1b0a-4d34-b859-01bcd092c713",
+      "thumbnail": "https://www.mixamo.com/api/v1/characters/91d02eaa-1b0a-4d34-b859-01bcd092c713/assets/thumbnails/static.png",
+      "mixamoUrl": "https://www.mixamo.com/#/?page=1&query=Skeletonzombie&type=Character"
+    }
+  ],
+  "items": [
+    {
+      "id": "W01",
+      "display": "Wayfarer blade",
+      "archetype": "ARCH_SWORD",
+      "substance": [
+        "Chef Knife 01",
+        "https://substance3d.adobe.com/assets/allassets/ec308aef5a2282c1904684ae54600c33c02b0969",
+        "https://cdn.substance3d.com/v2/files/source/72271f16-bf2e-465e-9172-8f0c542bb5c7?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W02",
+      "display": "Round ward",
+      "archetype": "ARCH_SHIELD",
+      "substance": [
+        "Mech Shield Plate 11",
+        "https://substance3d.adobe.com/assets/allassets/cb3bda22a4bfe4147c7e6765d8ac45805fab56cc",
+        "https://cdn.substance3d.com/v2/files/source/6a91268f-26ec-4658-8444-d160be8b7101?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W03",
+      "display": "Line hook",
+      "archetype": "ARCH_HOOK",
+      "substance": [
+        "Mech Hand Grappling Hook 02",
+        "https://substance3d.adobe.com/assets/allassets/5513657cb9fead5fd7c12537ccd91ca03ffd08b9",
+        "https://cdn.substance3d.com/v2/files/source/28889009-5e09-45df-9012-369cc668272a?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W04",
+      "display": "Return disk",
+      "archetype": "ARCH_DISC",
+      "substance": [
+        "Star Shaped Primitive Shape 01",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=throwing+star",
+        "https://cdn.substance3d.com/v2/files/source/c4fd0998-ac1b-42dc-a8a1-2c3fa859441e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "W05",
+      "display": "Channel staff",
+      "archetype": "ARCH_STAFF",
+      "substance": [
+        "Stylized Tree Branch 06",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=stylized+tree+branch",
+        "https://cdn.substance3d.com/v2/files/source/8f1284dd-b4e0-425c-9245-f3ec3d134a2e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W06",
+      "display": "Trail sling",
+      "archetype": "ARCH_SLING",
+      "substance": [
+        "KIT placeholder",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "W07",
+      "display": "Stone pick",
+      "archetype": "ARCH_PICK",
+      "substance": [
+        "Climbing Pickaxe",
+        "https://substance3d.adobe.com/assets/allassets/ef601c582f58fd795a72d87a2397caa27349589c",
+        "https://cdn.substance3d.com/v2/files/source/197d7a5c-fca4-40c6-be60-90c3d2d402bb?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W08",
+      "display": "Brush sickle",
+      "archetype": "ARCH_SICKLE",
+      "substance": [
+        "Wood Chisel 03",
+        "https://substance3d.adobe.com/assets/allassets/e029e1f921ec9f138b78eec0847e02089cc2fddd",
+        "https://cdn.substance3d.com/v2/files/source/1977eb58-192a-47f1-b2c9-0805c1109310?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W09",
+      "display": "Signal whistle",
+      "archetype": "ARCH_COMPASS",
+      "substance": [
+        "Graphic Compass",
+        "https://substance3d.adobe.com/assets/allassets/51279b98f6d63317bb48e8bac0668fb62103b1bd",
+        "https://cdn.substance3d.com/v2/files/source/a58f6089-6cf8-481d-8bff-c7a9c2300c4a?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "W10",
+      "display": "Trail compass",
+      "archetype": "ARCH_COMPASS",
+      "substance": [
+        "Graphic Compass",
+        "https://substance3d.adobe.com/assets/allassets/51279b98f6d63317bb48e8bac0668fb62103b1bd",
+        "https://cdn.substance3d.com/v2/files/source/a58f6089-6cf8-481d-8bff-c7a9c2300c4a?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "A01",
+      "display": "Travel cloak",
+      "archetype": "ARCH_AMULET",
+      "substance": [
+        "Medieval Chandelier (pendant proxy)",
+        "https://substance3d.adobe.com/assets/allassets/59195be1b6d2e1090619d3b5ba0a90ebb8534838",
+        "https://cdn.substance3d.com/v2/files/source/1e7d2ff4-afbf-45d1-b817-e8bb963f0308?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "A02",
+      "display": "Layered vest",
+      "archetype": "ARCH_PACK",
+      "substance": [
+        "Roll Top Backpack",
+        "https://substance3d.adobe.com/assets/allassets/95c88225d0a806eb1829d1358d859ee360242557",
+        "https://cdn.substance3d.com/v2/files/source/b9e016d5-8038-4106-ae0c-3931dbf1e354?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "A03",
+      "display": "Echo helm",
+      "archetype": "ARCH_HELM",
+      "substance": [
+        "Browse: medieval helmet",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=medieval+helmet",
+        "",
+        "PICK"
+      ]
+    },
+    {
+      "id": "A04",
+      "display": "Ridge boots",
+      "archetype": "ARCH_BOOTS",
+      "substance": [
+        "Leather Handbag Mini (boots proxy)",
+        "https://substance3d.adobe.com/assets/allassets/6ebf1fe8cbc5db1a4f20e1e8b37c58f94026f43e",
+        "https://cdn.substance3d.com/v2/files/source/6808a35f-9d20-4940-8561-3ff5f701b47b?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "A05",
+      "display": "Ward amulet",
+      "archetype": "ARCH_AMULET",
+      "substance": [
+        "Medieval Chandelier (pendant proxy)",
+        "https://substance3d.adobe.com/assets/allassets/59195be1b6d2e1090619d3b5ba0a90ebb8534838",
+        "https://cdn.substance3d.com/v2/files/source/1e7d2ff4-afbf-45d1-b817-e8bb963f0308?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "A06",
+      "display": "Mist shawl",
+      "archetype": "ARCH_AMULET",
+      "substance": [
+        "Medieval Chandelier (pendant proxy)",
+        "https://substance3d.adobe.com/assets/allassets/59195be1b6d2e1090619d3b5ba0a90ebb8534838",
+        "https://cdn.substance3d.com/v2/files/source/1e7d2ff4-afbf-45d1-b817-e8bb963f0308?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "A07",
+      "display": "Bark buckler",
+      "archetype": "ARCH_WOOD_SHIELD",
+      "substance": [
+        "Wooden Shield \u2014 browse",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=wooden+shield",
+        "",
+        "PICK"
+      ]
+    },
+    {
+      "id": "A08",
+      "display": "Root greaves",
+      "archetype": "ARCH_BOOTS",
+      "substance": [
+        "Leather Handbag Mini (boots proxy)",
+        "https://substance3d.adobe.com/assets/allassets/6ebf1fe8cbc5db1a4f20e1e8b37c58f94026f43e",
+        "https://cdn.substance3d.com/v2/files/source/6808a35f-9d20-4940-8561-3ff5f701b47b?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "P01",
+      "display": "Verdant draught",
+      "archetype": "ARCH_POTION",
+      "substance": [
+        "Stylized Potion 01",
+        "https://substance3d.adobe.com/assets/allassets/274eec081f9e6c88edf28d8ade7a235c6f70cd8a",
+        "https://cdn.substance3d.com/v2/files/source/72271f16-bf2e-465e-9172-8f0c542bb5c7?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P02",
+      "display": "Mist flask",
+      "archetype": "ARCH_FLASK",
+      "substance": [
+        "Army Flask 02",
+        "https://substance3d.adobe.com/assets/allassets/5e01f92023bbfc9aaef4eda79bb09a370287b5d9",
+        "https://cdn.substance3d.com/v2/files/source/184372af-9652-49f5-8830-7258342efbc0?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P03",
+      "display": "Ember tonic",
+      "archetype": "ARCH_FLASK",
+      "substance": [
+        "Army Flask 02",
+        "https://substance3d.adobe.com/assets/allassets/5e01f92023bbfc9aaef4eda79bb09a370287b5d9",
+        "https://cdn.substance3d.com/v2/files/source/184372af-9652-49f5-8830-7258342efbc0?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P04",
+      "display": "Spring water",
+      "archetype": "ARCH_POTION",
+      "substance": [
+        "Stylized Potion 01",
+        "https://substance3d.adobe.com/assets/allassets/274eec081f9e6c88edf28d8ade7a235c6f70cd8a",
+        "https://cdn.substance3d.com/v2/files/source/72271f16-bf2e-465e-9172-8f0c542bb5c7?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P05",
+      "display": "Antidote phial",
+      "archetype": "ARCH_POTION",
+      "substance": [
+        "Stylized Potion 01",
+        "https://substance3d.adobe.com/assets/allassets/274eec081f9e6c88edf28d8ade7a235c6f70cd8a",
+        "https://cdn.substance3d.com/v2/files/source/72271f16-bf2e-465e-9172-8f0c542bb5c7?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P06",
+      "display": "Trail pack",
+      "archetype": "ARCH_PACK",
+      "substance": [
+        "Roll Top Backpack",
+        "https://substance3d.adobe.com/assets/allassets/95c88225d0a806eb1829d1358d859ee360242557",
+        "https://cdn.substance3d.com/v2/files/source/b9e016d5-8038-4106-ae0c-3931dbf1e354?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P07",
+      "display": "Spore balm",
+      "archetype": "ARCH_JAR",
+      "substance": [
+        "Pendant Light Jar 02",
+        "https://substance3d.adobe.com/assets/allassets/ab5da71e553e019cb95dab9f0387be27039404c6",
+        "https://cdn.substance3d.com/v2/files/source/7fa85ba7-9d56-4b5f-ae54-42c018347919?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "P08",
+      "display": "Ration bundle",
+      "archetype": "ARCH_FOOD",
+      "substance": [
+        "Bread Basket",
+        "https://substance3d.adobe.com/assets/allassets/3e8c2a98e261509268cb2d18e534a8f5af10bc8b",
+        "https://cdn.substance3d.com/v2/files/source/fb41b7c3-55b3-4a0e-b76b-cee0af0f6fcb?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "C01",
+      "display": "Copper pile",
+      "archetype": "ARCH_COINS",
+      "substance": [
+        "Clip Clasp Coin Wallet Opened",
+        "https://substance3d.adobe.com/assets/allassets/9b775652786379d1cedb7b8454f73737ab1bb140",
+        "https://cdn.substance3d.com/v2/files/source/730583e9-81c0-4e70-b67f-c4b2bfe0b657?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "C02",
+      "display": "Silver pile",
+      "archetype": "ARCH_COINS",
+      "substance": [
+        "Clip Clasp Coin Wallet Opened",
+        "https://substance3d.adobe.com/assets/allassets/9b775652786379d1cedb7b8454f73737ab1bb140",
+        "https://cdn.substance3d.com/v2/files/source/730583e9-81c0-4e70-b67f-c4b2bfe0b657?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "C03",
+      "display": "Gold pile",
+      "archetype": "ARCH_COINS",
+      "substance": [
+        "Clip Clasp Coin Wallet Opened",
+        "https://substance3d.adobe.com/assets/allassets/9b775652786379d1cedb7b8454f73737ab1bb140",
+        "https://cdn.substance3d.com/v2/files/source/730583e9-81c0-4e70-b67f-c4b2bfe0b657?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "C04",
+      "display": "Platinum ingot",
+      "archetype": "ARCH_BAR",
+      "substance": [
+        "Beverage Dispenser (bar proxy)",
+        "https://substance3d.adobe.com/assets/allassets/6326a74c5b638d02b0ae73dd03fb2fca3a5c41f8",
+        "https://cdn.substance3d.com/v2/files/source/f83530eb-4f7c-4c09-9c5d-0018740f0c25?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "G-T01",
+      "display": "Gem tool 1",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-T02",
+      "display": "Gem tool 2",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-T03",
+      "display": "Gem tool 3",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-T04",
+      "display": "Gem tool 4",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-T05",
+      "display": "Gem tool 5",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-T06",
+      "display": "Gem tool 6",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C01",
+      "display": "Gem cabochon 1",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C02",
+      "display": "Gem cabochon 2",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C03",
+      "display": "Gem cabochon 3",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C04",
+      "display": "Gem cabochon 4",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C05",
+      "display": "Gem cabochon 5",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-C06",
+      "display": "Gem cabochon 6",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G01",
+      "display": "Gem cut 1",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G02",
+      "display": "Gem cut 2",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G03",
+      "display": "Gem cut 3",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G04",
+      "display": "Gem cut 4",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G05",
+      "display": "Gem cut 5",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "G-G06",
+      "display": "Gem cut 6",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "K01",
+      "display": "Annex maze key",
+      "archetype": "ARCH_KEY",
+      "substance": [
+        "Fence Wood Old",
+        "https://substance3d.adobe.com/assets/allassets/2b79115f748a73682030fd4ed5f5fba0abc9ff62",
+        "https://cdn.substance3d.com/v2/files/source/9aa2011d-0e5d-4d09-8b81-ee57a7f23be8?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "K02",
+      "display": "Peak gate key",
+      "archetype": "ARCH_KEY",
+      "substance": [
+        "Fence Wood Old",
+        "https://substance3d.adobe.com/assets/allassets/2b79115f748a73682030fd4ed5f5fba0abc9ff62",
+        "https://cdn.substance3d.com/v2/files/source/9aa2011d-0e5d-4d09-8b81-ee57a7f23be8?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "K03",
+      "display": "Hollow sigil",
+      "archetype": "ARCH_AMULET",
+      "substance": [
+        "Medieval Chandelier (pendant proxy)",
+        "https://substance3d.adobe.com/assets/allassets/59195be1b6d2e1090619d3b5ba0a90ebb8534838",
+        "https://cdn.substance3d.com/v2/files/source/1e7d2ff4-afbf-45d1-b817-e8bb963f0308?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "K04",
+      "display": "Trail marker token",
+      "archetype": "ARCH_COINS",
+      "substance": [
+        "Clip Clasp Coin Wallet Opened",
+        "https://substance3d.adobe.com/assets/allassets/9b775652786379d1cedb7b8454f73737ab1bb140",
+        "https://cdn.substance3d.com/v2/files/source/730583e9-81c0-4e70-b67f-c4b2bfe0b657?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "K05",
+      "display": "Geode chisel",
+      "archetype": "ARCH_CHISEL",
+      "substance": [
+        "Wood Chisel 03",
+        "https://substance3d.adobe.com/assets/allassets/e029e1f921ec9f138b78eec0847e02089cc2fddd",
+        "https://cdn.substance3d.com/v2/files/source/1977eb58-192a-47f1-b2c9-0805c1109310?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "K06",
+      "display": "Labyrinth map scrap",
+      "archetype": "ARCH_SCROLL",
+      "substance": [
+        "Ancient Egyptian Papyrus",
+        "https://substance3d.adobe.com/assets/allassets/f55f96b7999fbc3066702465e3d3cb45100c769a",
+        "https://cdn.substance3d.com/v2/files/source/77413cdb-2cae-487b-bd65-b56c433f3829?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "K07",
+      "display": "Hermit charm",
+      "archetype": "ARCH_AMULET",
+      "substance": [
+        "Medieval Chandelier (pendant proxy)",
+        "https://substance3d.adobe.com/assets/allassets/59195be1b6d2e1090619d3b5ba0a90ebb8534838",
+        "https://cdn.substance3d.com/v2/files/source/1e7d2ff4-afbf-45d1-b817-e8bb963f0308?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "K08",
+      "display": "Boss trophy shard",
+      "archetype": "ARCH_GEM",
+      "substance": [
+        "Crystal Cluster 09",
+        "https://substance3d.adobe.com/assets/allassets/2e768bf895441627d323ea78d62c1b8fc9479def",
+        "https://cdn.substance3d.com/v2/files/source/d4934fe6-aadf-46db-9950-3273771f5c7e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "B01",
+      "display": "Karst mushroom cap",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B02",
+      "display": "Crystal bud",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B03",
+      "display": "Moonspindle fiber",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B04",
+      "display": "Rose petal bundle",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B05",
+      "display": "Tropical resin",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B06",
+      "display": "Peak iron ore",
+      "archetype": "ARCH_ROCKS",
+      "substance": [
+        "Cpg Pedestal Rocks Billy Balls",
+        "https://substance3d.adobe.com/assets/allassets/9d332d8be6ee20a410f2710b81fd87e35bc68f25",
+        "https://cdn.substance3d.com/v2/files/source/2f3b6da3-abcb-4fb5-bbd3-58413a7b2a94?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "B07",
+      "display": "Basalt shard pile",
+      "archetype": "ARCH_ROCKS",
+      "substance": [
+        "Cpg Pedestal Rocks Billy Balls",
+        "https://substance3d.adobe.com/assets/allassets/9d332d8be6ee20a410f2710b81fd87e35bc68f25",
+        "https://cdn.substance3d.com/v2/files/source/2f3b6da3-abcb-4fb5-bbd3-58413a7b2a94?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "B08",
+      "display": "Mist lantern",
+      "archetype": "ARCH_LANTERN",
+      "substance": [
+        "Stylized Hanging Lantern 03",
+        "https://substance3d.adobe.com/assets/allassets/d27758768edcd8462618e13e87c1c96a63f764aa",
+        "https://cdn.substance3d.com/v2/files/source/e283ac02-9376-455a-9b18-ca30bba6cf03?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "B09",
+      "display": "Horizon relic",
+      "archetype": "ARCH_STATUE",
+      "substance": [
+        "Fence Stone Set 01",
+        "https://substance3d.adobe.com/assets/allassets/e0127c209eb0d9b93b1b2b9bcd8133ae543f7983",
+        "https://cdn.substance3d.com/v2/files/source/76b1d18b-2f30-4a67-b1fa-3ae69cd7dedc?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "B10",
+      "display": "Annex bench nail",
+      "archetype": "ARCH_SPIKE",
+      "substance": [
+        "Nail Polish 02 (spike proxy)",
+        "https://substance3d.adobe.com/assets/allassets/99a12fa54951b162379b08df292824fef9a1c77c",
+        "https://cdn.substance3d.com/v2/files/source/23b4e2e5-1c18-411d-a72d-07f869b8ba46?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "B11",
+      "display": "Zombie tooth",
+      "archetype": "KIT_PLANT",
+      "substance": [
+        "Hub scene plants",
+        "",
+        "",
+        "KIT"
+      ]
+    },
+    {
+      "id": "B12",
+      "display": "Warzombie tag",
+      "archetype": "ARCH_SCROLL",
+      "substance": [
+        "Ancient Egyptian Papyrus",
+        "https://substance3d.adobe.com/assets/allassets/f55f96b7999fbc3066702465e3d3cb45100c769a",
+        "https://cdn.substance3d.com/v2/files/source/77413cdb-2cae-487b-bd65-b56c433f3829?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "B13",
+      "display": "Skeleton rib",
+      "archetype": "ARCH_SPIKE",
+      "substance": [
+        "Nail Polish 02 (spike proxy)",
+        "https://substance3d.adobe.com/assets/allassets/99a12fa54951b162379b08df292824fef9a1c77c",
+        "https://cdn.substance3d.com/v2/files/source/23b4e2e5-1c18-411d-a72d-07f869b8ba46?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "B14",
+      "display": "Boss horn",
+      "archetype": "ARCH_HORN",
+      "substance": [
+        "Browse: horn trophy",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=horn",
+        "",
+        "PICK"
+      ]
+    },
+    {
+      "id": "B15",
+      "display": "Platinum vault key",
+      "archetype": "ARCH_KEY",
+      "substance": [
+        "Fence Wood Old",
+        "https://substance3d.adobe.com/assets/allassets/2b79115f748a73682030fd4ed5f5fba0abc9ff62",
+        "https://cdn.substance3d.com/v2/files/source/9aa2011d-0e5d-4d09-8b81-ee57a7f23be8?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L01",
+      "display": "Hollow Titan tree",
+      "archetype": "ARCH_DEAD_TREE",
+      "substance": [
+        "Stylized Tree Root 05",
+        "https://substance3d.adobe.com/assets/allassets/5f14bd95775d9904e9a11741502d82c4c388ca4f",
+        "https://cdn.substance3d.com/v2/files/source/c4fd0998-ac1b-42dc-a8a1-2c3fa859441e?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "L02",
+      "display": "Karst shrine",
+      "archetype": "ARCH_SHRINE",
+      "substance": [
+        "Fence Stone Set 01",
+        "https://substance3d.adobe.com/assets/allassets/e0127c209eb0d9b93b1b2b9bcd8133ae543f7983",
+        "https://cdn.substance3d.com/v2/files/source/76b1d18b-2f30-4a67-b1fa-3ae69cd7dedc?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L03",
+      "display": "Foothill cabin",
+      "archetype": "ARCH_CABIN",
+      "substance": [
+        "Carport 02 (cabin proxy)",
+        "https://substance3d.adobe.com/assets/allassets/4884632fd3f97bbac67ef150916d4b45fbee3f49",
+        "https://cdn.substance3d.com/v2/files/source/3047caca-51ae-458a-9c96-54e6d61d8d13?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L04",
+      "display": "Trail bridge",
+      "archetype": "ARCH_BRIDGE",
+      "substance": [
+        "Carport 02 (bridge proxy \u2014 replace)",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=wooden+bridge",
+        "https://cdn.substance3d.com/v2/files/source/3047caca-51ae-458a-9c96-54e6d61d8d13?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "PICK"
+      ]
+    },
+    {
+      "id": "L05",
+      "display": "Peak ruin arch",
+      "archetype": "ARCH_SHRINE",
+      "substance": [
+        "Fence Stone Set 01",
+        "https://substance3d.adobe.com/assets/allassets/e0127c209eb0d9b93b1b2b9bcd8133ae543f7983",
+        "https://cdn.substance3d.com/v2/files/source/76b1d18b-2f30-4a67-b1fa-3ae69cd7dedc?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L06",
+      "display": "Mine head frame",
+      "archetype": "ARCH_MINE",
+      "substance": [
+        "Commercial Double Door 01",
+        "https://substance3d.adobe.com/assets/allassets/f7f01bb08f27d307d9933bed616cf2bb1987b536",
+        "https://cdn.substance3d.com/v2/files/source/606a953d-072c-4c3b-812d-59c506252fcb?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L07",
+      "display": "Horizon hut",
+      "archetype": "ARCH_HUT",
+      "substance": [
+        "Browse: wooden hut",
+        "https://substance3d.adobe.com/assets/allassets?assetType=Model&search=wooden+hut",
+        "",
+        "PICK"
+      ]
+    },
+    {
+      "id": "L08",
+      "display": "Stone well",
+      "archetype": "ARCH_WELL",
+      "substance": [
+        "Fence Stone Set 01",
+        "https://substance3d.adobe.com/assets/allassets/e0127c209eb0d9b93b1b2b9bcd8133ae543f7983",
+        "https://cdn.substance3d.com/v2/files/source/76b1d18b-2f30-4a67-b1fa-3ae69cd7dedc?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "REVIEW"
+      ]
+    },
+    {
+      "id": "L09",
+      "display": "Boulder cluster",
+      "archetype": "ARCH_ROCKS",
+      "substance": [
+        "Cpg Pedestal Rocks Billy Balls",
+        "https://substance3d.adobe.com/assets/allassets/9d332d8be6ee20a410f2710b81fd87e35bc68f25",
+        "https://cdn.substance3d.com/v2/files/source/2f3b6da3-abcb-4fb5-bbd3-58413a7b2a94?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    },
+    {
+      "id": "L10",
+      "display": "Campfire ring",
+      "archetype": "ARCH_CAMPFIRE",
+      "substance": [
+        "Stylized Bonfire",
+        "https://substance3d.adobe.com/assets/allassets/7c34e4ae5abe5cc0b2caddbead6ec7a2a393d7a2",
+        "https://cdn.substance3d.com/v2/files/source/a2e3735e-0a94-44c3-bc4b-c8af16a52536?height=400&width=400&mode=fill&backgroundColor=44,44,44&format=jpg",
+        "OK"
+      ]
+    }
+  ]
+}

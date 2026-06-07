@@ -1,0 +1,17 @@
+{
+  "name": "EnvironmentAuthoringKit.Runtime",
+  "rootNamespace": "EnvironmentAuthoringKit",
+  "references": [
+    "Unity.InputSystem",
+    "Unity.Timeline"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

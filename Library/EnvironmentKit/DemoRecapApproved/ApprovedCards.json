@@ -1,0 +1,291 @@
+{
+  "introVariant": "c",
+  "outroVariant": "b",
+  "introImage": "ApprovedIntro.png",
+  "outroImage": "ApprovedOutro.png",
+  "portraitImage": "DemoRecapPortrait.png",
+  "signatureImage": "DemoRecapSignature.png",
+  "outroPortraitWithSignature": true,
+  "narratorNeverMentionSignature": true,
+  "appliedAt": "2026-06-02",
+  "style": "emerald_documentary",
+  "narratorEngine": "personal",
+  "narratorRequirePersonal": true,
+  "narratorPersonalVoice": "Jacob Adkins",
+  "narratorPersonalHumanize": true,
+  "narratorWordQueue": true,
+  "narratorPortfolioMode": true,
+  "narratorVolume": 1.25,
+  "narratorPreferMysay": true,
+  "narratorSpeechDurationFactor": 0.85,
+  "narratorWordsOnly": true,
+  "narratorTestPhrase": "Okay so— picture this. I'm knee-deep in the cave mesh, seams still warm from the last pass, and the river reads wrong on the north tile. I swear the grid was happy ten minutes ago. Then my kid yells from the porch— DAD, come here, HURRY! —and I'm sprinting with mud on my boots, thinking the dog got out again. Nope. He just found the emerald seam glowing under the porch step, like the whole world-build winked at us. So yeah. That's the recap. grin, keep building.",
+  "narrationEmphasisCapture": false,
+  "narrationEmphasisWithWordQueue": false,
+  "narrationEmphasisMoments": [
+    {
+      "phrase": "I swear the grid was happy ten minutes ago",
+      "sayRateBoost": 18,
+      "pitchUpSemitones": 0.48,
+      "fallSemitones": -0.34,
+      "gainDb": 2.0
+    }
+  ],
+  "narratorMysayTimeoutSec": 180,
+  "narratorMysayTimeoutMaxSec": 420,
+  "narratorPersonalAvSpeechTimeoutSec": 90,
+  "narratorSpeechFadeInSec": 0,
+  "narratorSpeechFadeOutSec": 0,
+  "narratorMinFitAtempo": 1,
+  "narratorMaxFitAtempo": 1,
+  "narrationTailPadSec": 0.5,
+  "narrationMode": "fullScript",
+  "narratorIgnoreCaptions": true,
+  "cursorFullNarration": true,
+  "narrationScriptAfterVideo": true,
+  "requireNarrationBeforeFinalize": true,
+  "fullNarrationFromCaptions": true,
+  "fullNarrationLeadSec": 0.6,
+  "narratorFullScriptMaxAtempo": 1.05,
+  "narrationSyncMode": "speech_first",
+  "narrationPlanMode": "estimate",
+  "timelapseSecPerFrame": 0.09,
+  "maxSubbeats": 10,
+  "videoPlaybackFactor": 1.0,
+  "videoEnhance": true,
+  "sceneUpscale": 2.0,
+  "timelapseEncodeFps": 60,
+  "maxMilestoneHoldSec": 18,
+  "voiceLadder": {
+    "enabled": true,
+    "phases": {
+      "algorithm": ["antiStutter", "lowClean", "deClick", "speakerSafe"],
+      "character": ["character", "casualTone", "warmth", "vocalSpark", "voiceFlair"],
+      "tone": ["naturalPitch", "phraseFall", "phraseDynamics", "ttsSmooth"],
+      "polish": ["deClick", "autoEq25", "midTreble", "autoDynamics", "spatialHarmony", "deEss"],
+      "auditor": true,
+      "finalizer": ["finalizer"]
+    }
+  },
+  "voiceHelpers": {
+    "preset": "ladderDocumentary",
+    "sayRate": 186,
+    "wordQueue": {
+      "enabled": true,
+      "captureMode": "sentence",
+      "watchdog": true,
+      "portfolioFirst": true,
+      "portfolioMaxWords": 220,
+      "pairRiskyWords": true,
+      "maxWords": 28,
+      "maxWordsPerUnit": 18,
+      "minWordsBeforeCommaSplit": 12,
+      "splitOnDash": true,
+      "minWordsBeforeDashSplit": 5,
+      "maxWordsDashRightKeepTogether": 8,
+      "splitOnComma": true,
+      "sayRate": 186,
+      "perSentenceWpmBoost": 0,
+      "perUnitStepWpm": 0.2,
+      "perWordWpmBoost": 0,
+      "perWordStepWpm": 0,
+      "rateBoost": 1.02,
+      "maxSayRate": 226,
+      "mysayTimeoutSec": 48,
+      "mysayTimeoutTinySec": 14,
+      "mysayTimeoutMinSec": 22,
+      "mysayTimeoutMaxSec": 120,
+      "mysayTimeoutPerCharSec": 0.52,
+      "estSecPerUnit": 32,
+      "gapMs": 20,
+      "commaPauseMs": 135,
+      "periodPauseMs": 260,
+      "exclamationPauseMs": 280,
+      "questionPauseMs": 275,
+      "dashPauseMs": 195,
+      "colonPauseMs": 185,
+      "semicolonPauseMs": 205,
+      "endPauseMs": 240,
+      "crossfadeMs": 40,
+      "phraseBoundarySmooth": true,
+      "phraseReleaseMs": 78,
+      "phraseAttackMs": 44,
+      "boundaryDip": 0.07,
+      "boundaryPauseFactor": 0.4,
+      "tailHoldMs": 0,
+      "phraseTailFadeMs": 12,
+      "pronunciationStretchMs": 0,
+      "joinDeclick": {
+        "highpassHz": 95,
+        "window": 78,
+        "overlap": 4
+      },
+      "tailPadMs": 0,
+      "minWordSec": 0.08,
+      "sayAs": {
+        "dad": "Dad, come here, HURRY!",
+        "hurray": "HURRY"
+      }
+    },
+    "antiStutter": {
+      "envelope": 0.22,
+      "winMs": 28,
+      "lightOnSegmentQueue": true,
+      "gapMs": 0
+    },
+    "lowClean": {
+      "highpassHz": 100,
+      "subCutDb": -2.8,
+      "chestCutDb": -1.55,
+      "mudCutDb": -0.95,
+      "declickWindow": 72
+    },
+    "speakerSafe": {
+      "enabled": true,
+      "highpassHz": 104,
+      "subCutDb": -3.0,
+      "bassCutDb": -1.6
+    },
+    "steadyVoice": {
+      "enabled": false,
+      "strength": 0.06,
+      "envelopeBlend": 0.04,
+      "winMs": 26,
+      "skipOnWordQueue": true
+    },
+    "naturalPitch": {
+      "strength": 0.24,
+      "dryMix": 0.82,
+      "maxSemitones": 0.28,
+      "smoothMs": 300,
+      "mode": "contour"
+    },
+    "phraseFall": {
+      "enabled": true,
+      "strength": 0.2,
+      "tailRatio": 0.08
+    },
+    "phraseDynamics": {
+      "enabled": true,
+      "strength": 0.065
+    },
+    "ttsSmooth": {
+      "enabled": true,
+      "skipOnWordQueue": true,
+      "chorus": "0.35:0.75:42|48:0.08:0.2:1.8"
+    },
+    "character": {
+      "bodyDb": 0.48,
+      "midDb": 1.22,
+      "presenceDb": 1.72,
+      "airDb": -0.28,
+      "dynamicDb": 0.52,
+      "highpassHz": 90
+    },
+    "casualTone": {
+      "clarityDb": 0.95,
+      "warmthDb": 0.78
+    },
+    "vocalSpark": {
+      "liftDb": 0.92,
+      "trebleDb": 0.52
+    },
+    "voiceFlair": {
+      "enabled": true,
+      "punchDb": 0.52
+    },
+    "autoDynamics": {
+      "enabled": true,
+      "expandDb": 0.85
+    },
+    "naturalPacing": {
+      "enabled": false
+    },
+    "breathSmooth": {
+      "enabled": false
+    },
+    "warmth": {},
+    "deClick": {
+      "highpassHz": 95,
+      "window": 72,
+      "overlap": 4
+    },
+    "autoEq25": {
+      "bands": 25,
+      "freqMinHz": 100,
+      "freqMaxHz": 11200,
+      "strength": 0.34,
+      "maxGainDb": 1.85,
+      "smoothPasses": 4
+    },
+    "midTreble": {
+      "enabled": true,
+      "midDb": 1.18,
+      "trebleDb": 0.5,
+      "trebleMaxDb": 0.68,
+      "airShelfDb": 0.34
+    },
+    "spatialHarmony": {
+      "enabled": true,
+      "style": "soundcore",
+      "sideBoost": 0.16,
+      "delayLeftMs": 0.28,
+      "delayRightMs": 0.62,
+      "bassMonoCrossHz": 150,
+      "elevationDb": 0.28,
+      "roomMix": 0.018,
+      "dryMix": 0.84
+    },
+    "spatial3d": {
+      "enabled": true,
+      "style": "soundcore"
+    },
+    "deEss": {
+      "cutHz": 5200,
+      "gainDb": -2.2,
+      "cutHz2": 7400,
+      "gainDbHigh": -2.4,
+      "highShelfDb": -0.95
+    },
+    "emphasisMoments": {
+      "segmentGapMs": 14
+    },
+    "breathCue": {
+      "enabled": false
+    },
+    "tailFinish": {
+      "enabled": true,
+      "tailPadMs": 120,
+      "lastWordStretchMs": 0,
+      "skipStretchAfterWordQueue": true,
+      "forceLastWordQueue": false,
+      "lastWordSayRate": 190,
+      "lastWordCrossfadeMs": 18,
+      "lastWordTailPadMs": 70,
+      "replaceBackMs": 160,
+      "trimTailSec": 0,
+      "trimLeadSec": 0
+    },
+    "auditor": {
+      "maxPeakDb": -1.0,
+      "minRmsDb": -27,
+      "trimLeadSec": 0,
+      "trimTailSec": 0
+    },
+    "finalizer": {
+      "loudnormI": -16,
+      "truePeak": -1.5,
+      "lra": 7.5
+    },
+    "pitchAutotune": {
+      "enabled": false
+    }
+  },
+  "narratorPersonalSettings": {
+    "voice": "Jacob Adkins",
+    "sayRate": 186,
+    "delivery": "ladderDocumentary",
+    "personalHumanize": true,
+    "naturalPauses": false
+  }
+}

@@ -1,0 +1,282 @@
+using EnvironmentAuthoringKit.World;
+
+namespace EnvironmentAuthoringKit.Editor.Generation
+{
+    public enum BiomeId
+    {
+        Forest,
+        Jungle,
+        Desert,
+        Snow,
+        Beach,
+        City,
+        Dungeon,
+        Cave
+    }
+
+    public enum CaveGenerationMode
+    {
+        None,
+        EntranceOnly,
+        FullSystem
+    }
+
+    public enum TimeOfDay
+    {
+        Day,
+        Night,
+        Dawn,
+        Dusk,
+        Overcast
+    }
+
+    public enum WeatherKind
+    {
+        Clear,
+        Foggy,
+        Rainy,
+        Stormy
+    }
+
+    public enum ScatterDensityLevel
+    {
+        Empty,
+        Sparse,
+        Normal,
+        Dense
+    }
+
+    public enum TerrainHeightStyle
+    {
+        Flat,
+        Hilly,
+        Mountains
+    }
+
+    public enum BlockoutLayoutKind
+    {
+        None,
+        Arena,
+        Paths,
+        Rooms,
+        CaveSystem,
+        CaveEntrance
+    }
+
+    public sealed class WorldGenerationRequest
+    {
+        public string RawDescription = string.Empty;
+        public BiomeId Biome = BiomeId.Forest;
+        public TimeOfDay Time = TimeOfDay.Day;
+        public WeatherKind Weather = WeatherKind.Clear;
+        public ScatterDensityLevel Density = ScatterDensityLevel.Normal;
+        public TerrainHeightStyle HeightStyle = TerrainHeightStyle.Hilly;
+        public BlockoutLayoutKind BlockoutLayout = BlockoutLayoutKind.None;
+        public CaveGenerationMode CaveMode = CaveGenerationMode.None;
+        public int CaveTunnelSegments = 10;
+        public int CaveChamberCount = 3;
+        /// <summary>Organic enclosed spline mesh (default). When false, legacy prefab ring tunnels (not recommended).</summary>
+        public bool UseSplineMesh = true;
+        /// <summary>Minecraft-style block shell with morphing along the spline (primary cave walls).</summary>
+        public bool UseBlockTunnel = true;
+        /// <summary>Carve terrain heightmap along tunnels and water basin.</summary>
+        public bool UseTerrainCarve = true;
+        /// <summary>Use a single true 3D cave mesh as primary geometry (recommended for stable enclosed caves).</summary>
+        public bool UseTrue3DCaveSystem = true;
+        /// <summary>Underground lava/water pools and branch tubes (off by default — material often breaks).</summary>
+        public bool IncludeCaveWater = false;
+        /// <summary>Layout + flat floor + markers only — no block tunnel, no route ceiling meshes (for art pass / Terrain sculpt).</summary>
+        public bool UseLayoutPrototype = false;
+        public bool AllowCreateTerrain;
+
+        /// <summary>Surface vs cave orchestration. Default <see cref="SurfaceBuildScope.CaveOnly"/> keeps legacy builds unchanged until set.</summary>
+        public SurfaceBuildScope SurfaceScope = SurfaceBuildScope.CaveOnly;
+
+        /// <summary>Radial extent from ground anchor (meters) for trails, water, and mouth markers.</summary>
+        public float SurfaceExtentMeters = 220f;
+
+        /// <summary>Directional complement pass count after Florida DEM (4–16; recipe default 8). Each pass is one compass axis.</summary>
+        public int SurfaceDirectionCount = 8;
+
+        /// <summary>Blend steps toward world-space FBM target (default 12; not additive noise layers).</summary>
+        public int SurfaceTerrainBuildPasses = 12;
+
+        public bool SurfaceIncludeMountains = true;
+        public bool SurfaceIncludeWater = true;
+        public bool SurfaceIncludeRoads = true;
+        public bool SurfaceIncludeTrails = true;
+
+        public float FogDensityMultiplier = 1f;
+        public float ColorMood = 0.5f;
+        public string PropEmphasis = string.Empty;
+        public int Seed = 12345;
+
+        public float CavePathStepLength;
+        public float CavePathDropPerStep;
+        public float CavePathYawVariance;
+        public float CaveChamberSizeMultiplier = 2.35f;
+        public int CavePropScatterCount;
+        public int CaveMinableTarget;
+        public int CaveWaterBranchSegment = -1;
+        public float CaveWaterBranchYaw;
+        public float CaveEntranceYawDegrees;
+
+        /// <summary>Serialized style id from <see cref="CaveBuildStylePalette"/> (per-build roll).</summary>
+        public string BuildVisualStyle = string.Empty;
+
+        /// <summary>Hub generation style preset (<see cref="FullWorldGenerationStylePreset"/>).</summary>
+        public string GenerationStyleId = string.Empty;
+
+        /// <summary>Hub concept layout index 0–9 (<see cref="FullWorldConceptLayoutCatalog"/>).</summary>
+        public int ConceptLayoutIndex = -1;
+
+        /// <summary>Maze generator flavor index (0–5). -1 = pick from seed at generate time.</summary>
+        public int MazeGenFlavor = -1;
+
+        /// <summary>Walkway → labyrinth annex → cavern (Tomb Raider / Dreadhalls research cadence).</summary>
+        public bool UseTombRaiderLabyrinthCadence;
+
+        /// <summary>Asymmetric neighbor-tile pattern (0–47). -1 = roll from seed.</summary>
+        public int SurfaceTileLayoutVariant = -1;
+
+        /// <summary>Surface opening sector index, or -1 to pick a random marker each build.</summary>
+        public int PreferredCaveOpeningSector = -1;
+
+        /// <summary>FullWorld: fixed 3×3 grid (main + 8 neighbors), built sequentially in ring order.</summary>
+        public bool ForceNineTileSquareGrid = true;
+
+        /// <summary>Smaller POI caves at mountain wilderness mouths only (play-disk satellite markers disabled for FullWorld).</summary>
+        public int SatelliteCaveCount = 0;
+
+        /// <summary>After 9-tile merge, raise heightmap on the outer perimeter of the whole square (not per-tile center peaks).</summary>
+        public bool UseOuterRingMountains = true;
+
+        /// <summary>Carve a paced surface labyrinth (walkway + maze annex) in the foothill/peak ring, stitched to the nine-tile play disk.</summary>
+        public bool SurfaceIncludeMountainLabyrinth = true;
+
+        /// <summary>After peak sculpt, dress summits with rounded knolls + rock stacks (not flat plazas by default).</summary>
+        public bool UsePeakSummitCap = true;
+
+        /// <summary>When true with UsePeakSummitCap, flatten walkable plaza on peak plateaus (legacy tabletop).</summary>
+        public bool UseFlatSummitPlaza = false;
+
+        /// <summary>First mountain massif phase — large bowl mouth on one random foothill/peak tile (before labyrinth).</summary>
+        public bool UseMountainWildernessCaveMouth = true;
+
+        /// <summary>When true, aligns play disk to Environment/Grid/EnvironmentRooms (modular kit). Off for open-world terrain.</summary>
+        public bool PreserveBlockoutGridLayout = false;
+
+        /// <summary>Bench terrain under modular room footprints — only with PreserveBlockoutGridLayout.</summary>
+        public bool CarveTerrainToBlockoutFootprints = false;
+
+        /// <summary>DEM elevation-grid supersample target (0 = use CaveBuildCursorSettings). 64–256.</summary>
+        public int DemSupersampleTargetDim;
+
+        /// <summary>Run enhancement catalog hooks (speed/quality/creative) during this build.</summary>
+        public bool RunEnhancementPhases = true;
+
+        /// <summary>Plan v4 — NPC density, loot tables, landmarks (AAA vs light).</summary>
+        public WorldBuildContentTier ContentTier = WorldBuildContentTier.Standard;
+
+        /// <summary>FullWorld: place ~289 terrain tiles (17×17 Chebyshev 8), not 81-only grid.</summary>
+        public bool UseExtendedOpenWorldGrid = true;
+
+        /// <summary>FullWorld always uses 9-tile Florida play disk + outer rings + open-world grid to ~289 tiles.</summary>
+        public void EnsureFullWorldSurfaceContract()
+        {
+            if (SurfaceScope != SurfaceBuildScope.FullWorld)
+                return;
+
+            UseExtendedOpenWorldGrid = true;
+            ForceNineTileSquareGrid = true;
+            UseOuterRingMountains = true;
+            SurfaceIncludeMountains = true;
+            SurfaceIncludeMountainLabyrinth = true;
+            UsePeakSummitCap = true;
+            UseMountainWildernessCaveMouth = true;
+            SatelliteCaveCount = 0;
+            PreserveBlockoutGridLayout = false;
+            CarveTerrainToBlockoutFootprints = false;
+            if (UseTombRaiderLabyrinthCadence)
+                SurfaceIncludeMountainLabyrinth = true;
+        }
+
+        public WorldGenerationRequest Clone()
+        {
+            return new WorldGenerationRequest
+            {
+                RawDescription = RawDescription,
+                Biome = Biome,
+                Time = Time,
+                Weather = Weather,
+                Density = Density,
+                HeightStyle = HeightStyle,
+                BlockoutLayout = BlockoutLayout,
+                CaveMode = CaveMode,
+                CaveTunnelSegments = CaveTunnelSegments,
+                CaveChamberCount = CaveChamberCount,
+                UseSplineMesh = UseSplineMesh,
+                UseBlockTunnel = UseBlockTunnel,
+                UseTerrainCarve = UseTerrainCarve,
+                UseTrue3DCaveSystem = UseTrue3DCaveSystem,
+                IncludeCaveWater = IncludeCaveWater,
+                AllowCreateTerrain = AllowCreateTerrain,
+                SurfaceScope = SurfaceScope,
+                SurfaceExtentMeters = SurfaceExtentMeters,
+                SurfaceDirectionCount = SurfaceDirectionCount,
+                SurfaceTerrainBuildPasses = SurfaceTerrainBuildPasses,
+                SurfaceIncludeMountains = SurfaceIncludeMountains,
+                SurfaceIncludeWater = SurfaceIncludeWater,
+                SurfaceIncludeRoads = SurfaceIncludeRoads,
+                SurfaceIncludeTrails = SurfaceIncludeTrails,
+                FogDensityMultiplier = FogDensityMultiplier,
+                ColorMood = ColorMood,
+                PropEmphasis = PropEmphasis,
+                Seed = Seed,
+                CavePathStepLength = CavePathStepLength,
+                CavePathDropPerStep = CavePathDropPerStep,
+                CavePathYawVariance = CavePathYawVariance,
+                CaveChamberSizeMultiplier = CaveChamberSizeMultiplier,
+                CavePropScatterCount = CavePropScatterCount,
+                CaveMinableTarget = CaveMinableTarget,
+                CaveWaterBranchSegment = CaveWaterBranchSegment,
+                CaveWaterBranchYaw = CaveWaterBranchYaw,
+                CaveEntranceYawDegrees = CaveEntranceYawDegrees,
+                BuildVisualStyle = BuildVisualStyle,
+                GenerationStyleId = GenerationStyleId,
+                ConceptLayoutIndex = ConceptLayoutIndex,
+                MazeGenFlavor = MazeGenFlavor,
+                UseTombRaiderLabyrinthCadence = UseTombRaiderLabyrinthCadence,
+                SurfaceTileLayoutVariant = SurfaceTileLayoutVariant,
+                PreferredCaveOpeningSector = PreferredCaveOpeningSector,
+                ForceNineTileSquareGrid = ForceNineTileSquareGrid,
+                SatelliteCaveCount = SatelliteCaveCount,
+                UseOuterRingMountains = UseOuterRingMountains,
+                SurfaceIncludeMountainLabyrinth = SurfaceIncludeMountainLabyrinth,
+                UsePeakSummitCap = UsePeakSummitCap,
+                UseFlatSummitPlaza = UseFlatSummitPlaza,
+                UseMountainWildernessCaveMouth = UseMountainWildernessCaveMouth,
+                PreserveBlockoutGridLayout = PreserveBlockoutGridLayout,
+                CarveTerrainToBlockoutFootprints = CarveTerrainToBlockoutFootprints,
+                DemSupersampleTargetDim = DemSupersampleTargetDim,
+                RunEnhancementPhases = RunEnhancementPhases,
+                ContentTier = ContentTier,
+                UseExtendedOpenWorldGrid = UseExtendedOpenWorldGrid,
+            };
+        }
+
+        public static WorldGenerationRequest LoadOrDefault()
+        {
+            var randomize = UnityEditor.EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true);
+            return new WorldGenerationRequest
+            {
+                Seed = randomize ? 0 : UnityEditor.EditorPrefs.GetInt("CaveBuild_LastSeed", 0),
+                SurfaceExtentMeters = UnityEditor.EditorPrefs.GetFloat("CaveBuild_SurfaceExtent", 220f),
+                SurfaceIncludeTrails = true,
+                SurfaceIncludeRoads = true,
+                UseTerrainCarve = true,
+                UseExtendedOpenWorldGrid = true,
+            };
+        }
+    }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "Hub — phased mission (world → demo)",
+  "description": "Weekday agent pass: auto-route Phase 1 ladder fix or Phase 2 gameplay milestone. Does not run FullWorld rebuild.",
+  "workflow": {
+    "triggers": [
+      {
+        "cron": {
+          "cron": "0 9 * * 1-5"
+        }
+      }
+    ],
+    "actions": [],
+    "prompts": [
+      {
+        "prompt": "You are finishing the Hub Unity project at /Users/jacob/Hub.\n\nREAD FIRST:\n1. AGENTS.md\n2. docs/CURSOR_BOT_PHASED_MISSION.md\n3. docs/CURSOR_BOT_BACKLOG.md\n\nPHASE ROUTING:\n- Read Assets/EnvironmentKit/Generated/CaveBuildQualityReport.json\n- If buildAcceptable is false OR overallScore < 85 → PHASE 1 (world):\n  - Read CaveBuildGeneratedJsonManifest.json and active ladder rung\n  - Use skill hub-game-completion\n  - Fix ONE rung only under Packages/.../Editor/\n- Else read Assets/Scripts/HubGameProgress.json\n- If demoReady is false → PHASE 2 (gameplay):\n  - Use skill hub-gameplay-completion\n  - Complete ONE pending milestone G1–G8 in Assets/Scripts/\n  - Update HubGameProgress.json status\n- Else → PHASE 3 polish (Stream E, human-directed scope only)\n\nRULES:\n- Do NOT start Full AAA Rebuild unless human explicitly asked.\n- JSON on disk is truth.\n\nWHEN DONE:\n- Summarize phase, milestone/rung, and files changed.\n- Tell human to re-grade (Phase 1) or Play Mode smoke test (Phase 2).\n"
+      }
+    ],
+    "model": "",
+    "gitConfig": {
+      "repo": "https://github.com/JacobForges/environment-authoring-kit.git",
+      "branch": "main"
+    },
+    "agentOptions": {
+      "skipInstall": false
+    },
+    "memoryEnabled": true
+  }
+}

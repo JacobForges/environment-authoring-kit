@@ -1,0 +1,23 @@
+{
+  "name": "EnvironmentAuthoringKit.Editor",
+  "rootNamespace": "EnvironmentAuthoringKit.Editor",
+  "references": [
+    "EnvironmentAuthoringKit.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.AI.Navigation",
+    "Unity.AI.Navigation.Editor",
+    "Unity.Timeline"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,177 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6558dd4829570480cbe1ef18f996061b, type: 3}
+  m_Name: item-prefab-registry
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Editor:EnvironmentAuthoringKit.Editor.World:Cc0PrefabRegistry
+  entries:
+  - slot: A01
+    prefab: {fileID: 8912498106386829403, guid: 2f0dec010a68541758ea5c8d5d9ae5e7, type: 3}
+  - slot: A02
+    prefab: {fileID: 6067505789680584101, guid: af28f910ef94243828a3a7e788dab0c4, type: 3}
+  - slot: A03
+    prefab: {fileID: 8907795209161872862, guid: 766494307000d4880b98eb8cc08d1c57, type: 3}
+  - slot: A04
+    prefab: {fileID: 5224466103914295233, guid: 95390c56445864c8b8976104a8423eea, type: 3}
+  - slot: A05
+    prefab: {fileID: 2188611422279115275, guid: b22f14ba82e80472aa68797531b0d556, type: 3}
+  - slot: A06
+    prefab: {fileID: 8988388715865616534, guid: de3a614129fdb42c981e30f99cccdb63, type: 3}
+  - slot: A07
+    prefab: {fileID: 8832799218157359102, guid: 0318e9b7a7dae4b5eb307d538ca89333, type: 3}
+  - slot: A08
+    prefab: {fileID: 6829375531392948044, guid: b36ae6ed7a631404d87dd5dbc0abe811, type: 3}
+  - slot: B01
+    prefab: {fileID: 5756447698034371364, guid: 6ae843e4fb48944398395d6c0df52c0c, type: 3}
+  - slot: B02
+    prefab: {fileID: 4797444590208763688, guid: bc59edfcd440c4d58a21467a7bc5b22a, type: 3}
+  - slot: B03
+    prefab: {fileID: 7750676899485477967, guid: 36921bb6dd25145539d222f536acb2cb, type: 3}
+  - slot: B04
+    prefab: {fileID: 3518103631143998339, guid: 81919ea43f275415ca1cd8f228f25838, type: 3}
+  - slot: B05
+    prefab: {fileID: 2263503316969418379, guid: 11d2147ea78054c3881d4e138708b098, type: 3}
+  - slot: B06
+    prefab: {fileID: 6028299868104983524, guid: e5c7747280bdf4dad91089274e218883, type: 3}
+  - slot: B07
+    prefab: {fileID: 2836735646588298852, guid: b3f81801950a7445f8c2aa59bb1ad2bb, type: 3}
+  - slot: B08
+    prefab: {fileID: 2724530671947245254, guid: 1e6a73ab7c30c4c148ae6fa4edcae091, type: 3}
+  - slot: B09
+    prefab: {fileID: 7869635988661876083, guid: 0e7080cbc84f140cb8ea853590e7ea43, type: 3}
+  - slot: B10
+    prefab: {fileID: 5103883702161013914, guid: b03c18d99cbd04aa1bebfb4f9496edeb, type: 3}
+  - slot: B11
+    prefab: {fileID: 7564244006940315062, guid: e9609daa97b7d45b28a062eedbccb0b3, type: 3}
+  - slot: B12
+    prefab: {fileID: 7475488912682683822, guid: af1f8427fb3ac426391f01a451b286f9, type: 3}
+  - slot: B13
+    prefab: {fileID: 2563761602500131410, guid: fccfa9cb472fc40a0bdf047d7ff9811b, type: 3}
+  - slot: B14
+    prefab: {fileID: 3602917103965574876, guid: 62179531c5d054def9818d6d45d3b9f1, type: 3}
+  - slot: B15
+    prefab: {fileID: 7826061747559510274, guid: f57f7ebe8103b49e28efca7945c06460, type: 3}
+  - slot: C01
+    prefab: {fileID: 6192088188997411694, guid: e61983fa4ca5643718da1961cddd9ccc, type: 3}
+  - slot: C02
+    prefab: {fileID: 4375154314559251088, guid: f0bd46635e34146e1a843645542f6eed, type: 3}
+  - slot: C03
+    prefab: {fileID: 9220852771394039703, guid: 26c622169a09444feab04ba5cc7ab17c, type: 3}
+  - slot: C04
+    prefab: {fileID: 7843407967599789382, guid: 7588369042682433ea2548fba474fa1c, type: 3}
+  - slot: G-C01
+    prefab: {fileID: 1593092084569489383, guid: f95757cf59f6b448b8ee2841eaf1c6a6, type: 3}
+  - slot: G-C02
+    prefab: {fileID: 4793339790876854096, guid: 4209216489a5c497082d2e33b2556d05, type: 3}
+  - slot: G-C03
+    prefab: {fileID: 8635642186897787118, guid: ea0e5077171a0477aae618883b3d5289, type: 3}
+  - slot: G-C04
+    prefab: {fileID: 3850596625992954902, guid: 8385067c454954d969d954d48053e4d6, type: 3}
+  - slot: G-C05
+    prefab: {fileID: 6506593664773916687, guid: ddf67cbbab2b54e7e86b91c9819e6fa0, type: 3}
+  - slot: G-C06
+    prefab: {fileID: 4385183339330498187, guid: e2745911798a945c3a78f0cb8e871504, type: 3}
+  - slot: G-G01
+    prefab: {fileID: 3264825073559289717, guid: a58b7cd2342584aaf8b546276ee0b9a8, type: 3}
+  - slot: G-G02
+    prefab: {fileID: 1701144606233808881, guid: b9e700048c61047fb9cba7f8972eeb45, type: 3}
+  - slot: G-G03
+    prefab: {fileID: 633543149984897999, guid: a595fdeb401744297aa5d4c2045b78a1, type: 3}
+  - slot: G-G04
+    prefab: {fileID: 8867574949381046017, guid: a28a9106354d64af7b5974afbb117961, type: 3}
+  - slot: G-G05
+    prefab: {fileID: 6846177513127668592, guid: f80b186d6a1d84b8aa31ab87e0496187, type: 3}
+  - slot: G-G06
+    prefab: {fileID: 1982928357280347109, guid: 3d4ff14ccc047440cb8fe82f7789adcd, type: 3}
+  - slot: G-T01
+    prefab: {fileID: 6592110158126175942, guid: 09b50e8885cbf4fe5af6061317b30ddd, type: 3}
+  - slot: G-T02
+    prefab: {fileID: 4813621012224325542, guid: 736ecc1b4a1ba4065b7b7b718a7f7898, type: 3}
+  - slot: G-T03
+    prefab: {fileID: 3833704354697374031, guid: 97c0f75c4334a4715ba3a128387c4b0d, type: 3}
+  - slot: G-T04
+    prefab: {fileID: 3883422348156475398, guid: 6267a72bb1dba4e3fa6a307cfeb1ecd3, type: 3}
+  - slot: G-T05
+    prefab: {fileID: 598636583055661837, guid: c6d5633ce7ace4314a73378f96721ac6, type: 3}
+  - slot: G-T06
+    prefab: {fileID: 8615958497982492588, guid: 75dc18c035d05491393344aaf8769a8b, type: 3}
+  - slot: K01
+    prefab: {fileID: 8764761692201040073, guid: 73e9578d03a5f4f70bbf86bbd062331e, type: 3}
+  - slot: K02
+    prefab: {fileID: 6619620051429563389, guid: 710cf9c51dad744098cd29b4a3aa6395, type: 3}
+  - slot: K03
+    prefab: {fileID: 7587222585629734538, guid: 2b5e26645d8d34697adfbbe95a3317da, type: 3}
+  - slot: K04
+    prefab: {fileID: 1571166852190096491, guid: 20d22cd6d304648e3a1dade3c89dd4f3, type: 3}
+  - slot: K05
+    prefab: {fileID: 802804068838197254, guid: c7ab485f834314ddd92bd5116f44dd86, type: 3}
+  - slot: K06
+    prefab: {fileID: 71105657112348478, guid: 61d2703d9ac724f1c95fbf0664fa19da, type: 3}
+  - slot: K07
+    prefab: {fileID: 4101710886919822878, guid: ef92f7ae290874e21b5d7049ba754331, type: 3}
+  - slot: K08
+    prefab: {fileID: 1436162311334287943, guid: 617c656a49d554581badce113bc8fb8d, type: 3}
+  - slot: L01
+    prefab: {fileID: 4377714158895221006, guid: 3294070bb3a5244a08a573dc0d38c369, type: 3}
+  - slot: L02
+    prefab: {fileID: 8359392697787378210, guid: 6b0ffe8e62c3a45a8a338cd9b0ab58d5, type: 3}
+  - slot: L03
+    prefab: {fileID: 5472280110567738621, guid: 81d3a082643424b9698417b3d32249f2, type: 3}
+  - slot: L04
+    prefab: {fileID: 8696398753643073491, guid: 549855c07844745b7804893d53fce7ca, type: 3}
+  - slot: L05
+    prefab: {fileID: 8377426112783508350, guid: aed5d9e84763649349a21bb2a2311a18, type: 3}
+  - slot: L06
+    prefab: {fileID: 2367563725842540838, guid: 7ff76ff17412848c58cb16964999730c, type: 3}
+  - slot: L07
+    prefab: {fileID: 8718272774911208556, guid: cf6a6507b8a034589a203848e6d4c1be, type: 3}
+  - slot: L08
+    prefab: {fileID: 8968367785215514826, guid: 69b5073430c1d45eebfebed205e3182d, type: 3}
+  - slot: L09
+    prefab: {fileID: 9029544443478907739, guid: 870255f6d67794e27995f766358041be, type: 3}
+  - slot: L10
+    prefab: {fileID: 8461106124516867172, guid: 5e1b7f10a7cce4fad95610368889350b, type: 3}
+  - slot: P01
+    prefab: {fileID: 4158434250097583077, guid: 287e447e065e6410ca48967ab7687d0b, type: 3}
+  - slot: P02
+    prefab: {fileID: 8240623983039809262, guid: dc7da38bccd0e4b3487ba2fd2efe17b6, type: 3}
+  - slot: P03
+    prefab: {fileID: 4252200563923952892, guid: 2822f7661f89343cda1322bdaff637fb, type: 3}
+  - slot: P04
+    prefab: {fileID: 6198503977420199040, guid: cfcebf9d0732a43eb9583f02db58a691, type: 3}
+  - slot: P05
+    prefab: {fileID: 2026212773494959015, guid: a4f292d90cbdd4a1aafe2a702fb29e83, type: 3}
+  - slot: P06
+    prefab: {fileID: 2026978326681211891, guid: e40b2b89affd24d5b8d488623442ac22, type: 3}
+  - slot: P07
+    prefab: {fileID: 3626544035908345322, guid: 76eb02f81de33476b85214cf0d619014, type: 3}
+  - slot: P08
+    prefab: {fileID: 8026326347688411849, guid: 456987cf2f6e14a20964162165bb7ce9, type: 3}
+  - slot: W01
+    prefab: {fileID: 1511654282710689857, guid: b4b9b78b0bf3b42429583fbcc453459d, type: 3}
+  - slot: W02
+    prefab: {fileID: 1485864993022086588, guid: d69fc5f8a0c33485d9726f5ffd11ec75, type: 3}
+  - slot: W03
+    prefab: {fileID: 8983419813386190817, guid: 85d17b5a20c8d4a73b7e21af8b52a841, type: 3}
+  - slot: W04
+    prefab: {fileID: 3672530610254284677, guid: 3ef9d9e4640254b8cbbdb69e51a281e5, type: 3}
+  - slot: W05
+    prefab: {fileID: 2144722539881444462, guid: 34f8e285941b246eda8e18644cc0b646, type: 3}
+  - slot: W06
+    prefab: {fileID: 7347450205088376963, guid: 6aa35a76c70f543bfba9e2cf91153f61, type: 3}
+  - slot: W07
+    prefab: {fileID: 6962199693312224364, guid: 1b131182b232e47c7acd08589767c4ad, type: 3}
+  - slot: W08
+    prefab: {fileID: 7210519270103865642, guid: ae1890c96f3ab4cc080d8277a08af407, type: 3}
+  - slot: W09
+    prefab: {fileID: 7808383700579300262, guid: b43f0da28864f4b0283e1086844523a1, type: 3}
+  - slot: W10
+    prefab: {fileID: 8247270297776958011, guid: 884092ff237624115ad6ac8caf40768e, type: 3}

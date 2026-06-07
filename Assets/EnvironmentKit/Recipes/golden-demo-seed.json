@@ -1,0 +1,7 @@
+{
+  "recipeId": "golden-demo-seed",
+  "seed": 2048271449,
+  "notes": "Pinned demo seed — bot compares quality JSON against this golden master after post-pass.",
+  "minOverallScore": 75,
+  "requiredStages": ["path", "geometry_integrity", "block_tunnel"]
+}

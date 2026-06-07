@@ -1,0 +1,906 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02a450eb8d52c482987387a330809067, type: 3}
+  m_Name: WorldItemCatalog
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Runtime::EnvironmentAuthoringKit.World.WorldItemCatalogAsset
+  entries:
+  - id: W01
+    displayName: Wayfarer blade
+    archetype: ARCH_SWORD
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W02
+    displayName: Round ward
+    archetype: ARCH_SHIELD
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W03
+    displayName: Line hook
+    archetype: ARCH_HOOK
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W04
+    displayName: Return disk
+    archetype: ARCH_DISC
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W05
+    displayName: Channel staff
+    archetype: ARCH_STAFF
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W06
+    displayName: Trail sling
+    archetype: ARCH_SLING
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W07
+    displayName: Stone pick
+    archetype: ARCH_PICK
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W08
+    displayName: Brush sickle
+    archetype: ARCH_SICKLE
+    category: 0
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 180
+    sellPriceCopper: 90
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W09
+    displayName: Signal whistle
+    archetype: ARCH_COMPASS
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: W10
+    displayName: Trail compass
+    archetype: ARCH_COMPASS
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A01
+    displayName: Travel cloak
+    archetype: ARCH_AMULET
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A02
+    displayName: Layered vest
+    archetype: ARCH_PACK
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A03
+    displayName: Echo helm
+    archetype: ARCH_HELM
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A04
+    displayName: Ridge boots
+    archetype: ARCH_BOOTS
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A05
+    displayName: Ward amulet
+    archetype: ARCH_AMULET
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A06
+    displayName: Mist shawl
+    archetype: ARCH_AMULET
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A07
+    displayName: Bark buckler
+    archetype: ARCH_WOOD_SHIELD
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: A08
+    displayName: Root greaves
+    archetype: ARCH_BOOTS
+    category: 1
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 140
+    sellPriceCopper: 70
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P01
+    displayName: Verdant draught
+    archetype: ARCH_POTION
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P02
+    displayName: Mist flask
+    archetype: ARCH_FLASK
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P03
+    displayName: Ember tonic
+    archetype: ARCH_FLASK
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P04
+    displayName: Spring water
+    archetype: ARCH_POTION
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P05
+    displayName: Antidote phial
+    archetype: ARCH_POTION
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P06
+    displayName: Trail pack
+    archetype: ARCH_PACK
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P07
+    displayName: Spore balm
+    archetype: ARCH_JAR
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: P08
+    displayName: Ration bundle
+    archetype: ARCH_FOOD
+    category: 2
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 35
+    sellPriceCopper: 17
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: C01
+    displayName: Copper pile
+    archetype: ARCH_COINS
+    category: 3
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 1
+    sellPriceCopper: 1
+    stackMax: 999
+    isCurrency: 1
+    isLandmark: 0
+  - id: C02
+    displayName: Silver pile
+    archetype: ARCH_COINS
+    category: 3
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 1
+    sellPriceCopper: 1
+    stackMax: 999
+    isCurrency: 1
+    isLandmark: 0
+  - id: C03
+    displayName: Gold pile
+    archetype: ARCH_COINS
+    category: 3
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 1
+    sellPriceCopper: 1
+    stackMax: 999
+    isCurrency: 1
+    isLandmark: 0
+  - id: C04
+    displayName: Platinum ingot
+    archetype: ARCH_BAR
+    category: 3
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 1
+    sellPriceCopper: 1
+    stackMax: 999
+    isCurrency: 1
+    isLandmark: 0
+  - id: G-T01
+    displayName: Gem tool 1
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 0
+    gemFamily: G-T
+    buyPriceCopper: 25
+    sellPriceCopper: 12
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-T02
+    displayName: Gem tool 2
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 1
+    gemFamily: G-T
+    buyPriceCopper: 120
+    sellPriceCopper: 60
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-T03
+    displayName: Gem tool 3
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-T
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-T04
+    displayName: Gem tool 4
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-T
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-T05
+    displayName: Gem tool 5
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-T
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-T06
+    displayName: Gem tool 6
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-T
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C01
+    displayName: Gem cabochon 1
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 0
+    gemFamily: G-C
+    buyPriceCopper: 25
+    sellPriceCopper: 12
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C02
+    displayName: Gem cabochon 2
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 1
+    gemFamily: G-C
+    buyPriceCopper: 120
+    sellPriceCopper: 60
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C03
+    displayName: Gem cabochon 3
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-C
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C04
+    displayName: Gem cabochon 4
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-C
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C05
+    displayName: Gem cabochon 5
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-C
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-C06
+    displayName: Gem cabochon 6
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-C
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G01
+    displayName: Gem cut 1
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 0
+    gemFamily: G-G
+    buyPriceCopper: 25
+    sellPriceCopper: 12
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G02
+    displayName: Gem cut 2
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 1
+    gemFamily: G-G
+    buyPriceCopper: 120
+    sellPriceCopper: 60
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G03
+    displayName: Gem cut 3
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-G
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G04
+    displayName: Gem cut 4
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-G
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G05
+    displayName: Gem cut 5
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-G
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: G-G06
+    displayName: Gem cut 6
+    archetype: ARCH_GEM
+    category: 4
+    gemGrade: 2
+    gemFamily: G-G
+    buyPriceCopper: 480
+    sellPriceCopper: 240
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K01
+    displayName: Annex maze key
+    archetype: ARCH_KEY
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K02
+    displayName: Peak gate key
+    archetype: ARCH_KEY
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K03
+    displayName: Hollow sigil
+    archetype: ARCH_AMULET
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K04
+    displayName: Trail marker token
+    archetype: ARCH_COINS
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K05
+    displayName: Geode chisel
+    archetype: ARCH_CHISEL
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K06
+    displayName: Labyrinth map scrap
+    archetype: ARCH_SCROLL
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K07
+    displayName: Hermit charm
+    archetype: ARCH_AMULET
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: K08
+    displayName: Boss trophy shard
+    archetype: ARCH_GEM
+    category: 5
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 90
+    sellPriceCopper: 45
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B01
+    displayName: Karst mushroom cap
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B02
+    displayName: Crystal bud
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B03
+    displayName: Moonspindle fiber
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B04
+    displayName: Rose petal bundle
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B05
+    displayName: Tropical resin
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B06
+    displayName: Peak iron ore
+    archetype: ARCH_ROCKS
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B07
+    displayName: Basalt shard pile
+    archetype: ARCH_ROCKS
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B08
+    displayName: Mist lantern
+    archetype: ARCH_LANTERN
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B09
+    displayName: Horizon relic
+    archetype: ARCH_STATUE
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B10
+    displayName: Annex bench nail
+    archetype: ARCH_SPIKE
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B11
+    displayName: Zombie tooth
+    archetype: KIT_PLANT
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B12
+    displayName: Warzombie tag
+    archetype: ARCH_SCROLL
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B13
+    displayName: Skeleton rib
+    archetype: ARCH_SPIKE
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B14
+    displayName: Boss horn
+    archetype: ARCH_HORN
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: B15
+    displayName: Platinum vault key
+    archetype: ARCH_KEY
+    category: 6
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 0
+  - id: L01
+    displayName: Hollow Titan tree
+    archetype: ARCH_DEAD_TREE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L02
+    displayName: Karst shrine
+    archetype: ARCH_SHRINE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L03
+    displayName: Foothill cabin
+    archetype: ARCH_CABIN
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L04
+    displayName: Trail bridge
+    archetype: ARCH_BRIDGE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L05
+    displayName: Peak ruin arch
+    archetype: ARCH_SHRINE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L06
+    displayName: Mine head frame
+    archetype: ARCH_MINE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L07
+    displayName: Horizon hut
+    archetype: ARCH_HUT
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L08
+    displayName: Stone well
+    archetype: ARCH_WELL
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L09
+    displayName: Boulder cluster
+    archetype: ARCH_ROCKS
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
+  - id: L10
+    displayName: Campfire ring
+    archetype: ARCH_CAMPFIRE
+    category: 7
+    gemGrade: 0
+    gemFamily: 
+    buyPriceCopper: 20
+    sellPriceCopper: 10
+    stackMax: 99
+    isCurrency: 0
+    isLandmark: 1
