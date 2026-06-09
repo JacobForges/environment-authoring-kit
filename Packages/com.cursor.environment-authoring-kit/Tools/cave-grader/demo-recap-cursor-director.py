@@ -213,6 +213,7 @@ def narration_outline_rows(milestones: list[dict[str, Any]]) -> list[dict[str, A
                 "sub": m.get("sub", "") or m.get("subAction", ""),
                 "subAction": m.get("subAction", ""),
                 "teachingFocus": m.get("teachingFocus", ""),
+                "narratorScript": (m.get("narratorScript") or "").strip(),
                 "line1": lines[0],
                 "line2": lines[1],
                 "line3": lines[2],
@@ -245,11 +246,17 @@ def ensure_full_narration_script(
     ns.loader.exec_module(narr)
 
     spec = narr.flatten_narrator_personal_settings(spec)
-    existing = narr.resolve_full_narration_script(run, spec, milestones)
     json_path = run / "DemoRecapFullNarration.json"
-    if existing and json_path.is_file() and not regen:
-        print(f"Full narration: reusing {json_path.name}", flush=True)
-        return existing
+    tl_path = run / "DemoRecapTimeline.json"
+    if tl_path.is_file():
+        try:
+            tl = json.loads(tl_path.read_text(encoding="utf-8"))
+            full_ms = tl.get("milestones") if isinstance(tl, dict) else tl
+            if isinstance(full_ms, list) and len(full_ms) > len(milestones):
+                milestones = full_ms
+        except Exception:
+            pass
+    existing = narr.resolve_full_narration_script(run, spec, milestones)
 
     target_sec = float(spec.get("fullNarrationTargetSec") or spec.get("targetDurationSec") or 480)
     if graded_video.is_file():
@@ -262,11 +269,43 @@ def ensure_full_narration_script(
         except Exception as exc:
             print(f"Full narration: could not probe video ({exc})", file=sys.stderr)
 
-    if prefer_local and not regen:
+    if existing and json_path.is_file() and not regen:
+        try:
+            cached = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(cached, dict) and not narr.narration_script_needs_finalize(
+                cached, spec, target_sec
+            ):
+                print(f"Full narration: reusing finalized {json_path.name}", flush=True)
+                return existing
+            print(
+                "Full narration: cached script needs meat-loop (duration drift or grade)…",
+                flush=True,
+            )
+            script, grade = narr.finalize_narration_script(
+                existing, milestones, spec, target_sec, run_dir=run, source="cached_regrade"
+            )
+            ladder = narr._load_narration_script_ladder()
+            ladder.save_finalized_narration_script(
+                run, script, grade, spec, narr_mod=narr, source="cached_regrade"
+            )
+            return script
+        except Exception as exc:
+            print(f"Full narration: cache regrade failed ({exc}) — regenerating", flush=True)
+
+    if prefer_local:
         print(
             "Full narration: local script for Personal Voice (skipping Cursor Agent in Terminal pass)",
             flush=True,
         )
+        if existing:
+            script, grade = narr.finalize_narration_script(
+                existing, milestones, spec, target_sec, run_dir=run, source="local_refinalize"
+            )
+            ladder = narr._load_narration_script_ladder()
+            ladder.save_finalized_narration_script(
+                run, script, grade, spec, narr_mod=narr, source="local_refinalize"
+            )
+            return script
         return narr.write_local_full_narration_script(
             run, milestones, spec, target_sec=target_sec
         )
@@ -331,13 +370,22 @@ def apply_cursor_full_narration_script(
         say_r = narr.personal_say_rate(spec)
     except Exception:
         narr = None
-        say_r = int(spec.get("narratorPersonalSayRate") or spec.get("narratorRate", 183))
+        say_r = int(spec.get("narratorPersonalSayRate") or spec.get("narratorRate", 186))
 
+    map_status = spec.get("mapCompletionStatus") or spec.get("recapMapStatus")
+    if not map_status and narr:
+        map_status = narr.infer_map_completion_status(milestones, spec)
     req = run / "DemoRecapFullNarrationRequest.json"
     req.write_text(
         json.dumps(
             {
                 "buildMode": build_mode,
+                "mapCompletionStatus": map_status or "partial",
+                "narrationScriptDensityMultiplier": float(
+                    spec.get("narrationScriptDensityMultiplier")
+                    or spec.get("narrationDensityMultiplier")
+                    or 2.0
+                ),
                 "targetDurationSec": target_sec,
                 "sayRateWpm": say_r,
                 "introTitle": spec.get("introTitle", "World Build Recap"),
@@ -366,23 +414,37 @@ def apply_cursor_full_narration_script(
     if not script:
         return None
 
-    payload = {
-        "script": script,
-        "wordCount": out.get("wordCount", len(script.split())),
-        "targetDurationSec": target_sec,
-        "sayRateWpm": say_r,
-        "source": "cursor",
-    }
-    payload.update(narr.narration_voice_metadata(spec, run) if narr else {})
-    path = run / "DemoRecapFullNarration.json"
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    (run / "DemoRecapFullNarration.txt").write_text(script + "\n", encoding="utf-8")
     if narr:
+        script, grade = narr.finalize_narration_script(
+            script, milestones, spec, target_sec, run_dir=run, source="cursor"
+        )
+        ladder = narr._load_narration_script_ladder()
+        ladder.save_finalized_narration_script(
+            run, script, grade, spec, narr_mod=narr, source="cursor"
+        )
         narr.write_narration_voice_guide(
             run, spec, milestones, target_sec=target_sec, script_preview=script
         )
-    print(
-        f"Full narration script: {payload['wordCount']} words → {path.name}",
-        flush=True,
-    )
+        print(
+            f"Full narration script: {len(script.split())} words "
+            f"(grade {grade.get('score')}) → DemoRecapFullNarration.json",
+            flush=True,
+        )
+    else:
+        path = run / "DemoRecapFullNarration.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "script": script,
+                    "wordCount": len(script.split()),
+                    "targetDurationSec": target_sec,
+                    "sayRateWpm": say_r,
+                    "source": "cursor",
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (run / "DemoRecapFullNarration.txt").write_text(script + "\n", encoding="utf-8")
     return script

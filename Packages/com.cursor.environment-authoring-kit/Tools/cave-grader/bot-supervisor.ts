@@ -5,7 +5,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadBotProductionConfig, resolveMaxIterations, type BotProductionConfig } from "./bot-production-config.js";
-import { formatPlaybookBlock, pickPlaybook } from "./bot-playbooks/index.js";
+import { formatPlaybookBlock, pickPlaybookFromSession } from "./bot-playbooks/index.js";
+import { formatHubBotSetupBlock } from "./bot-hub-setup.js";
 import { loadCheckpoint, recordStall, saveCheckpoint } from "./bot-session-checkpoint.js";
 import {
   demoWorldGatePassed,
@@ -93,9 +94,9 @@ export function resolveIterationCap(hubRoot: string): number {
 
 export function preSessionPromptAugment(hubRoot: string): string {
   const issue = loadFailingIssueText(hubRoot);
-  const pb = pickPlaybook(issue);
+  const pb = pickPlaybookFromSession(hubRoot, issue);
   const cp = loadCheckpoint(hubRoot);
-  const blocks: string[] = [];
+  const blocks: string[] = [formatHubBotSetupBlock(hubRoot)];
   if (pb) blocks.push(formatPlaybookBlock(hubRoot, issue));
   if (cp.lastPlaybookId && cp.lastPlaybookId !== pb?.id) {
     blocks.push(`Previous playbook ${cp.lastPlaybookId} did not clear — try deep repair or adjacent rung.`);
@@ -127,7 +128,7 @@ export function evaluatePostUnity(
   const q = loadQuality(hubRoot);
   const notes: string[] = [];
   const issue = loadFailingIssueText(hubRoot);
-  const pb = pickPlaybook(issue);
+  const pb = pickPlaybookFromSession(hubRoot, issue);
   const playbookId = pb?.id ?? "";
 
   if (scoreBefore - q.overallScore >= cfg.rollbackScoreDrop) {

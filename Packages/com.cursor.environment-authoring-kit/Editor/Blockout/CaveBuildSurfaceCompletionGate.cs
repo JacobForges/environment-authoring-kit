@@ -2,6 +2,7 @@
 using EnvironmentAuthoringKit.Cave;
 using EnvironmentAuthoringKit.Editor;
 using EnvironmentAuthoringKit.Editor.Generation;
+using EnvironmentAuthoringKit.Editor.World;
 using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
@@ -29,6 +30,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>FullWorld: terrain ladder + meat loop finished for this build session.</summary>
         public static bool IsTerrainGradingComplete => _terrainGradingComplete;
 
+        /// <summary>Hub reconcile — grid/surface latches stuck after crash or Play Mode without finish.</summary>
+        public static void ClearOrphanedActiveFlags()
+        {
+            if (!_surfaceBuildActive && !_fullWorldGridPipelineActive)
+                return;
+
+            _fullWorldGridPipelineActive = false;
+            _surfaceBuildActive = false;
+            Debug.LogWarning("[CaveBuild] Cleared orphaned surface/grid pipeline active flags.");
+        }
+
         public static void ResetForNewBuildSession()
         {
             CaveBuildSurfaceTerrainLock.ResetForNewBuildSession();
@@ -50,9 +62,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _fullWorldGridPipelineActive = true;
             _surfaceBuildActive = true;
             if (tilePlanCount <= 0)
-                tilePlanCount = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                    ? SurfaceOpenWorldGridExpansion.ExtendedBuildTileSlotCount
-                    : SurfaceTerrainTileExpansion.FullWorldTerrainTileCount;
+            {
+                var active = CaveBuildAaaSessionPolicy.ActiveRequest;
+                tilePlanCount = active != null
+                    ? FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(active)
+                    : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                        ? SurfaceOpenWorldGridExpansion.ExtendedBuildTileSlotCount
+                        : SurfaceTerrainTileExpansion.FullWorldTerrainTileCount;
+            }
+            if (CaveBuildAaaSessionPolicy.ActiveRequest != null)
+                CaveBuildStepCounter.ConfigureForRequest(CaveBuildAaaSessionPolicy.ActiveRequest);
+            else if (tilePlanCount > 81)
+                CaveBuildStepCounter.ConfigureForExtendedTilePlan(tilePlanCount);
+            else
+                CaveBuildStepCounter.ConfigureForBuild(SurfaceBuildScope.FullWorld, extendedOpenWorldGrid: false);
+
             CaveBuildPipelinePhaseTracker.OnFlatGridPipelineStarted(tilePlanCount);
             LogState($"FullWorld grid pipeline started (~{tilePlanCount} tiles)");
         }
@@ -61,6 +85,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _fullWorldGridPipelineActive = false;
             CaveBuildPipelinePhaseTracker.OnFlatGridPipelineFinished(success);
+            if (success)
+                WorldItemCatalogBuilder.QueuePacedSaveIfDirty();
             LogState(success
                 ? "FullWorld grid pipeline finished (terraform done; surface finish steps may continue)"
                 : "FullWorld grid pipeline finished (failed)");

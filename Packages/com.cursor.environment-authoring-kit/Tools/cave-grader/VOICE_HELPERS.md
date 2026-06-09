@@ -13,17 +13,20 @@ Configure in `~/Hub/Library/EnvironmentKit/DemoRecapApproved/ApprovedCards.json`
 "voiceLadder": {
   "enabled": true,
   "phases": {
-    "algorithm": ["antiStutter", "lowClean", "speakerSafe", "steadyVoice"],
-    "character": ["character", "casualTone", "warmth", "breathSmooth", "vocalSpark"],
-    "tone": ["naturalPitch", "phraseFall", "phraseDynamics", "ttsSmooth"],
-    "polish": ["deClick", "autoEq25", "midTreble", "autoDynamics", "spatialHarmony", "deEss"],
+    "algorithm": ["antiStutter", "lowClean", "speakerSafe"],
+    "character": ["character", "casualTone", "warmth"],
+    "tone": ["naturalPitch", "phraseFall", "ttsSmooth"],
+    "polish": ["deClick", "autoEq25", "midTreble", "spatialHarmony", "deEss", "segmentVolume"],
     "auditor": true,
+    "static": ["gapDehiss", "staticClean", "gapDehiss"],
     "finalizer": ["finalizer"]
   }
 },
 "voiceHelpers": {
   "preset": "ladderDocumentary",
-  "sayRate": 190
+  "sayRate": 186,
+  "gapDehiss": { "enabled": true, "gapGain": 0.1 },
+  "staticClean": { "enabled": true, "hissShelfDb": -1.2 }
 }
 ```
 
@@ -46,8 +49,9 @@ Flat chain (no ladder):
 | **algorithm** | De-stutter, tame sub/chest (`lowClean`, `speakerSafe`), optional level ride (`steadyVoice`) |
 | **character** | Body, warmth, plosive smoothing, spark |
 | **tone** | Contour pitch (`naturalPitch`), phrase fall/dynamics, optional `ttsSmooth` |
-| **polish** | deClick, **autoEq25**, mids/treble, dynamics, **spatialHarmony**, deEss |
+| **polish** | deClick, **autoEq25**, mids/treble, deEss, segmentVolume (`spatialHarmony` skipped on dry master) |
 | **auditor** | Peak/RMS/tail QC; trim disabled when tail finish needs full ending |
+| **static** | **gapDehiss** (silence-only), **staticClean** (treble tame) — voice-safe, no broadband pump |
 | **finalizer** | loudnorm (I=-16) + limiter |
 
 List default phase map:

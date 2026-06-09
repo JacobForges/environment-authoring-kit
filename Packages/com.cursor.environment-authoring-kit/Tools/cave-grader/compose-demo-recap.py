@@ -21,6 +21,8 @@ except ImportError:
 W, H = 1920, 1080
 BAR = 294
 HEADER = 63
+CAPTION_MIN_PT = 32
+CAPTION_KEY_PT = 36
 FPS = 24
 SCENE_BOTTOM = H - BAR  # scene stays full brightness above caption bar
 
@@ -167,6 +169,14 @@ def render_captioned_frame(
     cinematic_mode: str = "auto",
     cinematic_seed: int = 0,
     scene_fit: str = "cover",
+    javafx_effects: bool = False,
+    frame_index: int = 0,
+    total_frames: int = 1,
+    javafx_spec: dict | None = None,
+    caption_bullets: list[str] | None = None,
+    future_hint: str | None = None,
+    bullet_alphas: list[float] | None = None,
+    hold_time_sec: float | None = None,
 ) -> Image.Image:
     # Fit scene into upper area — keep it sharp; captions only in bottom bar.
     scene_h = SCENE_BOTTOM - HEADER
@@ -192,8 +202,13 @@ def render_captioned_frame(
     # Grade once in ffmpeg on export — avoid stacked sharpen/contrast here.
     if cinematic_t is not None:
         try:
+            jfx = javafx_spec or {}
             scene = _visual_enhance_module().apply_cinematic_motion(
-                scene, cinematic_t, mode=cinematic_mode, seed=cinematic_seed
+                scene,
+                cinematic_t,
+                mode="static" if jfx.get("staticSceneMotion") else cinematic_mode,
+                seed=cinematic_seed,
+                disable_pan=bool(jfx.get("disablePanMotion", True)),
             )
         except Exception:
             pass
@@ -221,15 +236,34 @@ def render_captioned_frame(
     header = Image.new("RGBA", (W, HEADER), (8, 12, 20, 175))
     img.paste(header, (0, 0), header)
     draw = ImageDraw.Draw(img)
-    draw.text((24, 8), "ENVIRONMENT KIT · BUILD RECAP", fill=(170, 188, 210), font=load_font(12, bold=True))
-    sub = "Build lecture · AI directed" if lecture_mode else "AI-narrated checkpoints"
-    draw.text((24, 24), sub, fill=(230, 236, 245), font=load_font(10))
+    draw.text((24, 8), "JACOB ADKINS'S BOT · BUILD RECAP", fill=(170, 188, 210), font=load_font(14, bold=True))
+    sub = "On-screen study guide · voice script is separate" if lecture_mode else "AI-narrated checkpoints"
+    draw.text((24, 26), sub, fill=(230, 236, 245), font=load_font(11))
 
     pill = chapter[:52]
     pw = int(draw.textlength(pill, font=load_font(12))) + 22
     px = W - pw - 20
-    draw.rounded_rectangle([px, 8, px + pw, 34], radius=9, fill=accent)
-    draw.text((px + 11, 12), pill, fill=(255, 255, 255), font=load_font(12, bold=True))
+    frame_t = frame_index / max(1, total_frames - 1)
+    pill_scale = 1.0
+    if javafx_effects:
+        try:
+            import demo_recap_javafx_effects as jfx
+            pill_scale = jfx.javafx_scale(frame_t, delay=0.05, duration=0.45)
+        except Exception:
+            pass
+    if pill_scale < 0.99:
+        cx, cy = px + pw // 2, 21
+        pill_layer = Image.new("RGBA", (W, HEADER), (0, 0, 0, 0))
+        pdraw = ImageDraw.Draw(pill_layer)
+        sw, sh = int(pw * pill_scale), int(26 * pill_scale)
+        sx, sy = cx - sw // 2, cy - sh // 2
+        pdraw.rounded_rectangle([sx, sy, sx + sw, sy + sh], radius=9, fill=accent)
+        pdraw.text((sx + 11, sy + 4), pill, fill=(255, 255, 255), font=load_font(12, bold=True))
+        img = Image.alpha_composite(img.convert("RGBA"), pill_layer).convert("RGB")
+        draw = ImageDraw.Draw(img)
+    else:
+        draw.rounded_rectangle([px, 8, px + pw, 34], radius=9, fill=accent)
+        draw.text((px + 11, 12), pill, fill=(255, 255, 255), font=load_font(12, bold=True))
     draw_progress(draw, index, total, accent)
     draw.text((W - 88, 6), f"{index + 1:02}/{total:02}", fill=(255, 255, 255), font=load_font(13, bold=True))
 
@@ -246,49 +280,122 @@ def render_captioned_frame(
         a = max(0.0, min(1.0, a))
         return (int(rgb[0] * a), int(rgb[1] * a), int(rgb[2] * a))
 
+    right_inset = 0
+    if javafx_spec and javafx_spec.get("botAvatarOverlay", True):
+        try:
+            right_inset = int(
+                javafx_spec.get("botAvatarCaptionTextInsetRight")
+                or (
+                    int(javafx_spec.get("botAvatarOverlayScale", 240) or 240)
+                    + int(javafx_spec.get("botAvatarOverlayMarginX", 12) or 12)
+                    + 16
+                )
+            )
+        except (TypeError, ValueError):
+            right_inset = 0
+    caption_max_w = max(240, W - 48 - max(0, right_inset))
+
     x = 24
     y = bar_top + 10
+    jfx_mod = None
+    if javafx_effects:
+        try:
+            import importlib.util
+            _jfx_path = Path(__file__).resolve().parent / "demo-recap-javafx-effects.py"
+            _spec = importlib.util.spec_from_file_location("demo_recap_javafx_effects", _jfx_path)
+            jfx_mod = importlib.util.module_from_spec(_spec)
+            assert _spec.loader
+            _spec.loader.exec_module(jfx_mod)
+        except Exception:
+            jfx_mod = None
+
+    bullets = list(caption_bullets or [])
+    if not bullets and line2:
+        bullets = [line2]
+    future = (future_hint or line3 or "").strip()
+
     if line1_alpha > 0.02 and (line1 or not lecture_mode):
-        draw.text(
-            (x, y),
-            line1 or "Build checkpoint",
-            fill=_fade((255, 255, 255), line1_alpha),
-            font=load_font(23, bold=True),
-        )
-        y += 30
+        ty = y
+        ty = y
+        l1_fill = _fade((255, 255, 255), line1_alpha)
+        l1_font = load_font(max(CAPTION_MIN_PT, CAPTION_KEY_PT), bold=True)
+        l1_text = line1 or "Build checkpoint"
+        for l1_line in wrap(draw, l1_text, l1_font, caption_max_w):
+            if jfx_mod:
+                jfx_mod.javafx_glow_text(draw, (x, ty), l1_line, l1_font, l1_fill, glow_level=0.5)
+            else:
+                draw.text((x, ty), l1_line, fill=l1_fill, font=l1_font)
+            ty += CAPTION_MIN_PT + 4
+        y = ty + 2
 
     if meta and not lecture_mode:
-        for mline in wrap(draw, meta, load_font(11), W - 48):
+        for mline in wrap(draw, meta, load_font(11), caption_max_w):
             draw.text((x, y), mline, fill=(130, 145, 165), font=load_font(11))
             y += 14
         y += 4
 
     if lecture_mode:
-        if line2_alpha > 0.02:
-            for line in wrap(draw, line2 or "", load_font(17), W - 48):
-                draw.text((x, y), line, fill=_fade((236, 240, 248), line2_alpha), font=load_font(17))
-                y += 22
-        if line3 and line3_alpha > 0.02:
-            y += 6
-            for line in wrap(draw, line3, load_font(14), W - 48):
-                draw.text((x, y), line, fill=_fade((188, 196, 208), line3_alpha), font=load_font(14))
-                y += 18
+        if bullets:
+            bullet_font = load_font(CAPTION_MIN_PT)
+            for bi, bullet in enumerate(bullets[:3]):
+                ba = (
+                    bullet_alphas[bi]
+                    if bullet_alphas and bi < len(bullet_alphas)
+                    else line2_alpha
+                )
+                if ba <= 0.02:
+                    continue
+                ty2 = y
+                bullet_text = f"•  {bullet}"
+                for bline in wrap(draw, bullet_text, bullet_font, caption_max_w - 8):
+                    l2_fill = _fade((236, 240, 248), ba)
+                    if jfx_mod:
+                        jfx_mod.javafx_glow_text(draw, (x, ty2), bline, bullet_font, l2_fill, glow_level=0.22)
+                    else:
+                        draw.text((x, ty2), bline, fill=l2_fill, font=bullet_font)
+                    ty2 += CAPTION_MIN_PT + 2
+                y = ty2 + 1
+        if future and line3_alpha > 0.02:
+            y += 4
+            ty3 = y
+            draw.rounded_rectangle([x, ty3 + 1, x + 58, ty3 + 22], radius=4, fill=accent)
+            draw.text((x + 10, ty3 + 3), "NEXT", fill=(255, 255, 255), font=load_font(11, bold=True))
+            fx = x + 68
+            future_font = load_font(CAPTION_MIN_PT)
+            for fline in wrap(draw, future, future_font, caption_max_w - (fx - x) - 8):
+                l3_fill = _fade((160, 220, 190), line3_alpha)
+                if jfx_mod:
+                    jfx_mod.javafx_glow_text(draw, (fx, ty3), fline, future_font, l3_fill, glow_level=0.2)
+                else:
+                    draw.text((fx, ty3), fline, fill=l3_fill, font=future_font)
+                ty3 += CAPTION_MIN_PT + 2
+                y = ty3
     else:
         why_w = 44
         draw.rounded_rectangle([x, y + 1, x + why_w, y + 19], radius=4, fill=accent)
         draw.text((x + 9, y + 2), "WHY", fill=(255, 255, 255), font=load_font(9, bold=True))
         tx = x + why_w + 8
-        for line in wrap(draw, line2 or "", load_font(16), W - tx - 28):
-            draw.text((tx, y), line, fill=(236, 240, 248), font=load_font(16))
-            y += 20
+        for line in wrap(draw, line2 or "", load_font(CAPTION_MIN_PT), caption_max_w - (tx - x)):
+            draw.text((tx, y), line, fill=(236, 240, 248), font=load_font(CAPTION_MIN_PT))
+            y += CAPTION_MIN_PT + 2
         if line3:
             y += 4
             draw.rounded_rectangle([x, y + 1, x + 52, y + 17], radius=3, fill=(55, 65, 80))
             draw.text((x + 8, y + 2), "NOTE", fill=(200, 208, 220), font=load_font(9, bold=True))
             nx = x + 60
-            for line in wrap(draw, line3, load_font(14), W - nx - 24):
-                draw.text((nx, y), line, fill=(188, 196, 208), font=load_font(14))
-                y += 17
+            for line in wrap(draw, line3, load_font(CAPTION_MIN_PT), caption_max_w - (nx - x) - 8):
+                draw.text((nx, y), line, fill=(188, 196, 208), font=load_font(CAPTION_MIN_PT))
+                y += CAPTION_MIN_PT + 2
+
+    if javafx_effects and jfx_mod:
+        spec_jfx = {**(javafx_spec or {}), "javafxEffects": True, "captionBarRatio": BAR / H}
+        img = jfx_mod.apply_frame_effects(
+            img,
+            frame_index=frame_index,
+            total_frames=total_frames,
+            accent=accent,
+            spec=spec_jfx,
+        )
 
     return img
 

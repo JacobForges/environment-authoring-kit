@@ -177,7 +177,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             SurfaceTerrainTileExpansion.SetLiveTerrainFocus(terrain);
             _rig.EventSerial++;
-            var profile = ShotProfileFor(ShotRoleFor(CameraBeat.TerrainTilePlaced));
+            if (_demoRecordingDepth > 0)
+                force = true;
+
+            var profile = ShotProfileFor(
+                _demoRecordingDepth > 0 ? ShotRole.DemoHero : ShotRoleFor(CameraBeat.TerrainTilePlaced));
             if (!force && profile.ReframeEveryNthEvent > 0 && _rig.EventSerial % profile.ReframeEveryNthEvent != 0)
                 return;
 
@@ -193,6 +197,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void RequestBuildArea() =>
             TryRequest(CameraBeat.BuildArea, force: true);
 
+        /// <summary>Hub zoom slider — apply immediately; do not wait for EditorPrefs poll.</summary>
+        public static void NotifyLiveZoomChanged(float sliderValue)
+        {
+            var clamped = Mathf.Clamp(sliderValue, ZoomSliderMin, ZoomSliderExtendedMax);
+            if (Mathf.Approximately(clamped, _zoomOutMultiplier))
+                return;
+
+            _zoomOutMultiplier = clamped;
+            EditorPrefs.SetFloat("CaveBuild_LiveSceneCameraZoomOut", clamped);
+            _forceInstantSnapOnce = true;
+            if (CanOperate())
+                PulseLiveView(force: true);
+        }
+
         /// <summary>Force one accurate cinematic frame before Scene-view PNG capture (demo timelapse).</summary>
         public static void ApplyDemoCaptureFrame()
         {
@@ -203,7 +221,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     ShotProfileFor(ShotRole.DemoHero),
                     out var bounds,
                     out var pivot,
-                    allowWidePlacedBounds: true))
+                    allowWidePlacedBounds: !ShouldFrameLiveWorkTile()))
                 return;
 
             var sv = SceneView.lastActiveSceneView ?? ResolveAnySceneView();
@@ -215,7 +233,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 bounds,
                 pivot,
                 ShotProfileFor(ShotRole.DemoHero),
-                snapFraming: true,
+                snapFraming: false,
                 resetOrbit: false);
             sv.Repaint();
         }
@@ -323,16 +341,32 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!force && now - _lastEventPulseAt < profile.HoldSeconds)
                 return;
 
-            var wideBeat = _pendingBeat is CameraBeat.SessionOpen or CameraBeat.PhaseChange or CameraBeat.BuildArea;
+            var wideBeat = _pendingBeat is CameraBeat.SessionOpen or CameraBeat.PhaseChange or CameraBeat.BuildArea
+                           && !ShouldFrameLiveWorkTile();
             if (!TryResolveActiveBuildBounds(profile, out var bounds, out var pivot, allowWidePlacedBounds: wideBeat))
                 return;
 
             _lastEventPulseAt = now;
             _rig.LastReframeAt = now;
             _rig.LastBeat = _pendingBeat;
+            var resetOrbit = _forceInstantSnapOnce && !ShouldFrameLiveWorkTile();
             if (_forceInstantSnapOnce)
                 BeginOrbitHold(now, profile, snapYaw: _rig.Yaw);
-            ApplyWideShot(bounds, pivot, profile, snapFraming: _forceInstantSnapOnce, resetOrbit: _forceInstantSnapOnce);
+            ApplyWideShot(bounds, pivot, profile, snapFraming: _forceInstantSnapOnce, resetOrbit: resetOrbit);
+        }
+
+        /// <summary>Demo timelapse + active sculpt tile — orbit the tile being worked, not the whole grid.</summary>
+        static bool ShouldFrameLiveWorkTile()
+        {
+            if (SurfaceTerrainTileExpansion.LiveFocusTerrain == null)
+                return false;
+            if (_demoRecordingDepth > 0)
+                return true;
+            if (!_sessionActive)
+                return false;
+
+            return _pendingBeat is CameraBeat.TerrainTilePlaced or CameraBeat.TerrainGridWork
+                   || ShotRoleFor(_pendingBeat) == ShotRole.MediumCoverage;
         }
 
         static bool TryResolveActiveBuildBounds(
@@ -343,7 +377,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             pivot = Vector3.zero;
             var tileSpan = ResolveTypicalTileSpan();
-            var preferPlacedWork = allowWidePlacedBounds || (_cinematicEnabled && _sessionActive);
+
+            if (ShouldFrameLiveWorkTile() &&
+                SurfaceTerrainTileExpansion.TryResolveLiveTerrainFocusBounds(out bounds))
+            {
+                pivot = bounds.center;
+                TightenTileBounds(ref bounds, profile.PaddingFraction, tileSpan);
+                return true;
+            }
+
+            var preferPlacedWork = allowWidePlacedBounds || (_cinematicEnabled && _sessionActive && _demoRecordingDepth == 0);
             var useTileTight = !_sessionActive &&
                 (_pendingBeat == CameraBeat.TerrainTilePlaced ||
                  ShotRoleFor(_pendingBeat) == ShotRole.MediumCoverage);
@@ -522,16 +565,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var horizontalSpan = Mathf.Max(bounds.size.x, bounds.size.z);
             var verticalSpan = Mathf.Max(bounds.size.y, 96f);
             var coverageSpan = Mathf.Max(horizontalSpan, verticalSpan * 0.55f);
-            var targetDistance = ComputeFramingDistance(coverageSpan, profile.DistanceScale);
-            var lookSize = ComputeLookAtSize(coverageSpan, profile.DistanceScale);
+            var now = EditorApplication.timeSinceStartup;
+            var dolly = SampleRecordingDollyScale(now);
+            var pitchWobble = SampleRecordingPitchWobble(now, profile);
+            var targetDistance = ComputeFramingDistance(coverageSpan, profile.DistanceScale) * dolly;
+            var lookSize = ComputeLookAtSize(coverageSpan, profile.DistanceScale) * dolly;
 
             _targets.Pivot = pivot;
-            _targets.Pitch = profile.Pitch;
+            _targets.Pitch = profile.Pitch + pitchWobble;
             _targets.Distance = targetDistance;
             _targets.LookSize = lookSize;
             _appliedZoomOutMultiplier = _zoomOutMultiplier;
 
-            var now = EditorApplication.timeSinceStartup;
             if (resetOrbit && snapFraming)
                 BeginOrbitHold(now, profile, snapYaw: _rig.Yaw);
 
@@ -619,8 +664,34 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _orbitArcStart = now;
             _orbitArcEnd = now + profile.OrbitArcSec;
             _orbitYawFrom = _orbitRestYaw;
-            _orbitYawTo = _orbitRestYaw + profile.OrbitArcDegrees * _orbitArcSign;
+            var arcDegrees = profile.OrbitArcDegrees;
+            if (_demoRecordingDepth > 0)
+                arcDegrees *= 1f + 0.15f * ((_rig.EventSerial % 3) - 1);
+            _orbitYawTo = _orbitRestYaw + arcDegrees * _orbitArcSign;
             _orbitArcSign = -_orbitArcSign;
+        }
+
+        static float SampleRecordingDollyScale(double now)
+        {
+            if (_demoRecordingDepth <= 0)
+                return 1f;
+
+            // Hub zoom slider is authoritative — never auto pull-in closer than user framing.
+            if (_zoomOutMultiplier > ZoomSliderStandardMax)
+                return 1f;
+
+            var cycle = 16.0 + (_rig.EventSerial % 5) * 2.5;
+            var t = (float)((now % cycle) / cycle);
+            var wobble = 0.5f + 0.5f * Mathf.Sin(t * Mathf.PI * 2f);
+            return 1f + 0.06f * wobble;
+        }
+
+        static float SampleRecordingPitchWobble(double now, ShotProfile profile)
+        {
+            if (_demoRecordingDepth <= 0)
+                return 0f;
+
+            return Mathf.Sin((float)now * 0.17f) * 3.5f;
         }
 
         static float SampleProfessionalOrbitYaw(double now, ShotProfile profile)
@@ -717,15 +788,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 default:
                     return new ShotProfile
                     {
-                        PaddingFraction = 0.2f,
-                        DistanceScale = 1.1f,
-                        Pitch = 51f,
-                        FocusPivotBlend = 0.18f,
+                        PaddingFraction = 0.12f,
+                        DistanceScale = 0.78f,
+                        Pitch = 44f,
+                        FocusPivotBlend = 0.95f,
                         ReframeEveryNthEvent = 1,
-                        HoldSeconds = 0.8,
-                        OrbitDwellSec = 6.0,
-                        OrbitArcSec = 36.0,
-                        OrbitArcDegrees = 28f,
+                        HoldSeconds = 0.25,
+                        OrbitDwellSec = 1.4,
+                        OrbitArcSec = 11.0,
+                        OrbitArcDegrees = 42f,
                     };
             }
         }
@@ -753,10 +824,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static void RefreshSettingsIfNeeded()
         {
             // Zoom slider must apply immediately — not on a 0.75s throttle.
-            _zoomOutMultiplier = Mathf.Clamp(
-                EditorPrefs.GetFloat("CaveBuild_LiveSceneCameraZoomOut", 3f),
-                ZoomSliderMin,
-                ZoomSliderExtendedMax);
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            var prefZoom = EditorPrefs.GetFloat(
+                "CaveBuild_LiveSceneCameraZoomOut",
+                settings.liveSceneCameraZoomOut);
+            var newZoom = Mathf.Clamp(prefZoom, ZoomSliderMin, ZoomSliderExtendedMax);
+            if (!Mathf.Approximately(newZoom, _zoomOutMultiplier))
+            {
+                _zoomOutMultiplier = newZoom;
+                _forceInstantSnapOnce = true;
+            }
+            else
+            {
+                _zoomOutMultiplier = newZoom;
+            }
 
             var now = EditorApplication.timeSinceStartup;
             if (now < _nextSettingsRefreshAt)
@@ -780,11 +861,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var role = _demoRecordingDepth > 0 ? ShotRole.DemoHero : ShotRoleFor(_rig.LastBeat);
             var profile = ShotProfileFor(role);
-            if (!TryResolveActiveBuildBounds(
-                    profile,
-                    out var bounds,
-                    out var pivot,
-                    allowWidePlacedBounds: _sessionActive || PreferWideBuildBounds()))
+            var allowWide = (_sessionActive || PreferWideBuildBounds()) && !ShouldFrameLiveWorkTile();
+            if (!TryResolveActiveBuildBounds(profile, out var bounds, out var pivot, allowWidePlacedBounds: allowWide))
                 return;
 
             ApplyWideShot(bounds, pivot, profile, snapFraming: false);

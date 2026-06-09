@@ -1,3 +1,6 @@
+#if UNITY_EDITOR
+using EnvironmentAuthoringKit.Editor.Blockout;
+#endif
 using EnvironmentAuthoringKit.World;
 
 namespace EnvironmentAuthoringKit.Editor.Generation
@@ -181,22 +184,32 @@ namespace EnvironmentAuthoringKit.Editor.Generation
         /// <summary>FullWorld: place ~289 terrain tiles (17×17 Chebyshev 8), not 81-only grid.</summary>
         public bool UseExtendedOpenWorldGrid = true;
 
-        /// <summary>FullWorld always uses 9-tile Florida play disk + outer rings + open-world grid to ~289 tiles.</summary>
+        /// <summary>
+        /// Universal FullWorld baselines. When <see cref="ConceptLayoutIndex"/> is set (0–9),
+        /// preset-specific tile counts and style flags are left to the Hub concept Apply delegate.
+        /// </summary>
         public void EnsureFullWorldSurfaceContract()
         {
             if (SurfaceScope != SurfaceBuildScope.FullWorld)
                 return;
 
-            UseExtendedOpenWorldGrid = true;
             ForceNineTileSquareGrid = true;
-            UseOuterRingMountains = true;
+            PreserveBlockoutGridLayout = false;
+            CarveTerrainToBlockoutFootprints = false;
             SurfaceIncludeMountains = true;
+
+            if (ConceptLayoutIndex >= 0)
+                return;
+
+            if (string.Equals(GenerationStyleId, "session_config", System.StringComparison.Ordinal))
+                return;
+
+            UseExtendedOpenWorldGrid = true;
+            UseOuterRingMountains = true;
             SurfaceIncludeMountainLabyrinth = true;
             UsePeakSummitCap = true;
             UseMountainWildernessCaveMouth = true;
             SatelliteCaveCount = 0;
-            PreserveBlockoutGridLayout = false;
-            CarveTerrainToBlockoutFootprints = false;
             if (UseTombRaiderLabyrinthCadence)
                 SurfaceIncludeMountainLabyrinth = true;
         }
@@ -268,15 +281,20 @@ namespace EnvironmentAuthoringKit.Editor.Generation
         public static WorldGenerationRequest LoadOrDefault()
         {
             var randomize = UnityEditor.EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true);
+            var seed = randomize ? 0 : UnityEditor.EditorPrefs.GetInt("CaveBuild_LastSeed", 0);
+#if UNITY_EDITOR
+            return FullWorldConceptLayoutCatalog.CreateHubBoundRequest(seed);
+#else
             return new WorldGenerationRequest
             {
-                Seed = randomize ? 0 : UnityEditor.EditorPrefs.GetInt("CaveBuild_LastSeed", 0),
-                SurfaceExtentMeters = UnityEditor.EditorPrefs.GetFloat("CaveBuild_SurfaceExtent", 220f),
+                Seed = seed,
+                SurfaceExtentMeters = 220f,
                 SurfaceIncludeTrails = true,
                 SurfaceIncludeRoads = true,
                 UseTerrainCarve = true,
                 UseExtendedOpenWorldGrid = true,
             };
+#endif
         }
     }
 }

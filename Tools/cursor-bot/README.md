@@ -44,6 +44,14 @@ cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader
 npm run watch-grade
 ```
 
+## Production playbooks (20)
+
+Each bot session gets a **Hub bot setup** block plus one matching playbook from `Tools/cursor-bot/playbooks/`:
+
+`MISSING_SPLINE`, `MOUTH_DEPTH_50M`, `SPARSE_BLOCK_TUNNEL`, `GEOMETRY_VOID`, `COMPILE_GATE`, `ROUTE_PROBE_FAIL`, `PERF_TRI_BUDGET`, `LAYOUT_AUDIT_SEAMS`, `STALE_CHECKPOINT`, `PLANNER_FAST_DEMO`, `POST_BUILD_PLAYTHROUGH`, `TERRAIN_SEAM_NINETILE`, `NAVMESH_PARTIAL`, `PROP_FLOATERS`, `PREBUILD_GATE_BLOCK`, `DEMO_RECAP_COMPOSE`, `DISK_FULL_PACED`, `GAMEPLAY_MILESTONE`, `STEP_COUNTER_ETC`, `EXTERNAL_STORAGE`.
+
+Playbook selection reads `CaveBuildActiveSessionConfig.json` when issue text has no trigger match (fast demo / caves-off sessions).
+
 ## Cursor Automation
 
 Import draft from [automation-draft.json](./automation-draft.json) in the Automations editor. Set `gitConfig.repo` to your Hub remote if using cloud agents. Adjust cron to your timezone.

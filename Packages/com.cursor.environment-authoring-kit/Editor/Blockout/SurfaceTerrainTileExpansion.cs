@@ -88,6 +88,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static bool _fullWorldTerrainPurgedThisBuild;
         static bool _fullWorldGroundLaidThisBuild;
+        static bool _fullWorldGridSnappedThisBuild;
         static FullWorldGridPhase _liveFullWorldGridPhase;
         static Terrain _liveFocusTerrain;
         static int _liveTerraformStep;
@@ -159,9 +160,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (tile != null)
             {
                 SetLiveTerrainFocus(tile);
+                var microStride = CaveBuildDemoAutoRecorder.IsRecording ? 3 : 8;
                 var pulseCamera = microStep <= 1 ||
                                   microStep == microTotal ||
-                                  microStep % 8 == 0;
+                                  microStep % microStride == 0;
                 CaveBuildLiveSceneFeedback.NotifyTerrainTile(
                     tile,
                     banner,
@@ -200,17 +202,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return true;
         }
 
+        static bool _terrainTilesReadyForHollowTitan;
+
+        /// <summary>True after all ground terrain tiles + foothill pass — Hollow Titan may sculpt stump bowl.</summary>
+        public static bool IsTerrainReadyForHollowTitan => _terrainTilesReadyForHollowTitan;
+
+        internal static void ResetHollowTitanTerrainGateForNewBuild() =>
+            _terrainTilesReadyForHollowTitan = false;
+
         /// <summary>Call when a new FullWorld build session starts (before the first purge).</summary>
         public static void ResetFullWorldTerrainPurgeLatch()
         {
             _fullWorldTerrainPurgedThisBuild = false;
             _fullWorldGroundLaidThisBuild = false;
+            _fullWorldGridSnappedThisBuild = false;
+            _terrainTilesReadyForHollowTitan = false;
             _liveFullWorldGridPhase = FullWorldGridPhase.Research;
         }
 
         public static bool FullWorldTerrainPurgedThisBuild => _fullWorldTerrainPurgedThisBuild;
 
         public static bool FullWorldGroundTilesLaidThisBuild => _fullWorldGroundLaidThisBuild;
+
+        public static bool FullWorldGridSnappedThisBuild => _fullWorldGridSnappedThisBuild;
 
         /// <summary>Removes stale play + wilderness terrains after ladder invalidation (terrain-first FullWorld).</summary>
         public static int PurgeFullWorldTerrainForRebuild()
@@ -434,7 +448,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return 0;
 
             var removed = ConsolidateScatteredPlayNeighbors(mainTerrain);
-            removed += ConsolidateScatteredWildernessTiles(mainTerrain);
+            if (!CaveBuildSessionConfig.HasFinalizedActive ||
+                !CaveBuildSessionConfig.AllowsFloatingWildernessTiles())
+                removed += ConsolidateScatteredWildernessTiles(mainTerrain);
 
             if (removed > 0)
             {
@@ -1077,10 +1093,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 forceUnityConsole: true);
 
             var surfaceRoot = GameObject.Find(SurfaceWorldPaths.RootName)?.transform;
-            BiomeGrassScatterAuthor.EnsureBiomePropsScattered(
-                mainTerrain,
-                WorldGenerationRequest.LoadOrDefault(),
-                surfaceRoot);
+            var scatterRequest = CaveBuildAaaSessionPolicy.ActiveRequest ??
+                                 FullWorldConceptLayoutCatalog.CreateHubBoundRequest();
+            if (!CaveBuildSessionConfig.IsSessionRequest(scatterRequest) ||
+                CaveBuildSessionConfig.ShouldScatterBiomeProps())
+            {
+                BiomeGrassScatterAuthor.EnsureBiomePropsScattered(
+                    mainTerrain,
+                    scatterRequest,
+                    surfaceRoot);
+            }
             LavaTubeCaveBuildPipeline.EnsurePlayDiskCenterSpawn(ground);
         }
 
@@ -1466,6 +1488,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             for (var ring = 1; ring <= FullWorldChebyshevRadius; ring++)
                 list.AddRange(BuildChebyshevRingOffsets(ring));
 
+            return list.ToArray();
+        }
+
+        /// <summary>Planner floating-islands demo — 3×3 play disk + four cardinal wilderness tiles (13 total).</summary>
+        public const int FloatingIslandsTerrainTileCount = 13;
+
+        public static Vector2Int[] BuildFloatingIslandsPlaceOrder()
+        {
+            var list = new List<Vector2Int>(FloatingIslandsTerrainTileCount);
+            for (var y = -1; y <= 1; y++)
+            {
+                for (var x = -1; x <= 1; x++)
+                    list.Add(new Vector2Int(x, y));
+            }
+
+            list.Add(new Vector2Int(0, 2));
+            list.Add(new Vector2Int(2, 0));
+            list.Add(new Vector2Int(0, -2));
+            list.Add(new Vector2Int(-2, 0));
             return list.ToArray();
         }
 
@@ -4531,7 +4572,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (onComplete == null)
                 return;
 
-            request?.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
 
             if (mainTerrain == null || request == null || !request.SurfaceIncludeMountains ||
                 !request.UseOuterRingMountains ||
@@ -5383,33 +5424,76 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             bool stitchPlayPerimeterAfter,
             Action onComplete)
         {
-            CaveBuildActionPacing.ScheduleHeavy(
+            if (tiles == null || tiles.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var batchThreshold = CaveBuildMicroProcessQueue.ResolveBatchSize(
+                CaveBuildMicroProcessQueue.WorkKind.SurfaceSeam);
+            if (tiles.Length <= batchThreshold)
+            {
+                CaveBuildActionPacing.ScheduleHeavy(
+                    () =>
+                    {
+                        CaveBuildActionPacing.TouchQueueActivity();
+                        for (var i = 0; i < tiles.Length; i++)
+                        {
+                            var tile = tiles[i];
+                            if (tile?.terrainData == null)
+                                continue;
+
+                            if (!TryResolveSurfaceTileGridOffset(mainTerrain, tile, out var off))
+                                off = Vector2Int.zero;
+
+                            CaveBuildRunStatusPublisher.PulseSubOperation("surface seams", $"stitch {tile.name}");
+                            var edges = CollectSeamEdges(tile, mainTerrain, off, group);
+                            for (var e = 0; e < edges.Count; e++)
+                                BlendSharedEdgeSync(edges[e]);
+                            tile.Flush();
+                        }
+
+                        RefreshMountainTerrainConnectivity(mainTerrain);
+                        if (stitchPlayPerimeterAfter)
+                            QueueStitchPlayPerimeterToWilderness(mainTerrain, onComplete);
+                        else
+                            onComplete?.Invoke();
+                    },
+                    CaveBuildPipelineDomains.QueueLabel($"surface seams — batch ({tiles.Length} tiles)"));
+                return;
+            }
+
+            CaveBuildMicroProcessQueue.RunIndexedBatches(
+                tiles.Length,
+                0,
+                CaveBuildMicroProcessQueue.WorkKind.SurfaceSeam,
+                "surface seams",
+                index =>
+                {
+                    var tile = tiles[index];
+                    if (tile?.terrainData == null)
+                        return;
+
+                    if (!TryResolveSurfaceTileGridOffset(mainTerrain, tile, out var off))
+                        off = Vector2Int.zero;
+
+                    var edges = CollectSeamEdges(tile, mainTerrain, off, group);
+                    for (var e = 0; e < edges.Count; e++)
+                        BlendSharedEdgeSync(edges[e]);
+                    tile.Flush();
+                },
                 () =>
                 {
-                    CaveBuildActionPacing.TouchQueueActivity();
-                    for (var i = 0; i < tiles.Length; i++)
-                    {
-                        var tile = tiles[i];
-                        if (tile?.terrainData == null)
-                            continue;
-
-                        if (!TryResolveSurfaceTileGridOffset(mainTerrain, tile, out var off))
-                            off = Vector2Int.zero;
-
-                        CaveBuildRunStatusPublisher.PulseSubOperation("surface seams", $"stitch {tile.name}");
-                        var edges = CollectSeamEdges(tile, mainTerrain, off, group);
-                        for (var e = 0; e < edges.Count; e++)
-                            BlendSharedEdgeSync(edges[e]);
-                        tile.Flush();
-                    }
-
                     RefreshMountainTerrainConnectivity(mainTerrain);
                     if (stitchPlayPerimeterAfter)
                         QueueStitchPlayPerimeterToWilderness(mainTerrain, onComplete);
                     else
                         onComplete?.Invoke();
                 },
-                CaveBuildPipelineDomains.QueueLabel($"surface seams — batch ({tiles.Length} tiles)"));
+                (_, total) => { },
+                (done, total, detail) =>
+                    CaveBuildRunStatusPublisher.PulseSubOperation("surface seams", detail));
         }
 
         /// <summary>After labyrinth corridor carve: seam only tiles touched by that segment.</summary>
@@ -6684,7 +6768,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 NormalizeFullWorldGridRootTransforms(session);
                 SyncFullWorldGridToGroundLevel(session);
                 EnsureFullWorldGridAnchorTransform(session);
-                ForceSnapEntireFullWorldGrid(session);
+                session.GridAnchorLocked = true;
+                session.LockedMainOrigin = session.MainTerrain.transform.position;
                 return;
             }
 
@@ -6698,9 +6783,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             session.MainTerrain.transform.localPosition = Vector3.zero;
             if (session.GridAnchor != null)
                 session.GridAnchor.position = session.LockedMainOrigin;
+
+            if (CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive)
+            {
+                CaveBuildEditorLog.LogSurfaceWarning(
+                    $"[Surface] FullWorld grid anchor drifted ({delta.magnitude:F1}m) — reset main (skip full re-snap mid-pipeline).");
+                return;
+            }
+
             ForceSnapEntireFullWorldGrid(session);
             CaveBuildEditorLog.LogSurfaceWarning(
-                $"[Surface] FullWorld grid anchor drifted ({delta.magnitude:F1}m) — reset main and re-snapped all 49 slot(s).");
+                $"[Surface] FullWorld grid anchor drifted ({delta.magnitude:F1}m) — reset main and re-snapped all slot(s).");
         }
 
         static void NormalizeFullWorldGridRootTransforms(FullWorldGridSession session)
@@ -6835,6 +6928,89 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 forceUnityConsole: true);
 
             PurgeMisalignedFullWorldStrays(session);
+        }
+
+        static void QueueForceSnapEntireFullWorldGridPaced(
+            FullWorldGridSession session,
+            Action onComplete,
+            string queueLabelPrefix = "FullWorld grid snap")
+        {
+            if (session?.MainTerrain == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            if (order == null || order.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            CaveBuildActionPacing.ScheduleBuildStep(
+                () =>
+                {
+                    EnsureFullWorldGridAnchorTransform(session);
+                    CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", "snap prep — consolidate scattered");
+                    CaveBuildMicroProcessQueue.ScheduleConsolidateScattered(
+                        session.MainTerrain,
+                        $"{queueLabelPrefix} — prep consolidate",
+                        () => QueueForceSnapEntireFullWorldGridPacedTiles(session, order, onComplete, queueLabelPrefix));
+                },
+                CaveBuildPipelineDomains.QueueLabel($"{queueLabelPrefix} — prep anchor"),
+                CaveBuildActionPacing.ActionWeight.Light);
+
+            void QueueForceSnapEntireFullWorldGridPacedTiles(
+                FullWorldGridSession snapSession,
+                Vector2Int[] snapOrder,
+                Action snapComplete,
+                string labelPrefix)
+            {
+                CaveBuildMicroProcessQueue.RunIndexedBatches(
+                    snapOrder.Length,
+                    0,
+                    CaveBuildMicroProcessQueue.WorkKind.SurfaceGridSnap,
+                    labelPrefix,
+                    index =>
+                    {
+                        var off = snapOrder[index];
+                        if (!TryForceResolveFullWorldTileAtOffset(snapSession, off, out var tile) || tile == null)
+                        {
+                            if (off == Vector2Int.zero)
+                                ApplyFullWorldGridSlot(snapSession, snapSession.MainTerrain, Vector2Int.zero);
+                            return;
+                        }
+
+                        ApplyFullWorldGridSlot(snapSession, tile, off);
+                    },
+                    () => QueueForceSnapEntireFullWorldGridPacedFinalize(snapSession, snapOrder, snapComplete, labelPrefix),
+                    (done, total) => CaveBuildStepCounter.PulseFlatGridPostPlaceProgress(
+                        $"Grid snap {done}/{total}",
+                        done / (float)total),
+                    (_, total, detail) => CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", detail));
+            }
+
+            void QueueForceSnapEntireFullWorldGridPacedFinalize(
+                FullWorldGridSession snapSession,
+                Vector2Int[] snapOrder,
+                Action snapComplete,
+                string labelPrefix)
+            {
+                CaveBuildActionPacing.ScheduleLight(
+                    () =>
+                    {
+                        CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", "snap finalize — connectivity");
+                        RefreshMountainTerrainConnectivity(snapSession.MainTerrain);
+                        PurgeMisalignedFullWorldStrays(snapSession);
+                        _fullWorldGridSnappedThisBuild = true;
+                        CaveBuildEditorLog.LogSurface(
+                            $"[Surface] FullWorld grid snap — {snapOrder.Length} slot(s) edge-to-edge on {FullWorldGridAnchorName}.",
+                            forceUnityConsole: true);
+                        snapComplete?.Invoke();
+                    },
+                    CaveBuildPipelineDomains.QueueLabel($"{labelPrefix} — finalize"));
+            }
         }
 
         /// <summary>Destroy foothill/peak duplicates that stayed off the 7×7 anchor grid after snap.</summary>
@@ -7048,8 +7224,46 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void QueueWeldFullWorldGridEdges(FullWorldGridSession session, Action onComplete)
         {
-            WeldFullWorldGridEdgesSync(session);
-            onComplete?.Invoke();
+            if (session?.MainTerrain == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            if (order == null || order.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", $"weld edges 0/{order.Length}");
+            CaveBuildMicroProcessQueue.RunIndexedBatches(
+                order.Length,
+                0,
+                CaveBuildMicroProcessQueue.WorkKind.SurfaceGridWeld,
+                "FullWorld grid weld",
+                index =>
+                {
+                    var off = order[index];
+                    if (!TryForceResolveFullWorldTileAtOffset(session, off, out var tile) || tile == null)
+                        return;
+
+                    WeldFullWorldTileToCardinalNeighbors(session, tile, off);
+                },
+                () =>
+                {
+                    CaveBuildTerrainHeightmapMemory.QueueFlushAllSurfaceTerrainsPaced(
+                        session.MainTerrain,
+                        () =>
+                        {
+                            RefreshMountainTerrainConnectivity(session.MainTerrain);
+                            onComplete?.Invoke();
+                        });
+                },
+                (done, total) =>
+                    CaveBuildStepCounter.PulseFlatGridWeldProgress(done, total, $"Weld edges {done}/{total}"),
+                (_, total, detail) => CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", detail));
         }
 
         internal static void QueueIncrementalFullWorldTileEdgeWeld(
@@ -7105,46 +7319,36 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            WeldFullWorldGridEdgesSync(session);
-            onComplete?.Invoke();
+            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            if (order == null || order.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            CaveBuildMicroProcessQueue.RunIndexedBatches(
+                order.Length,
+                0,
+                CaveBuildMicroProcessQueue.WorkKind.SurfaceGridWeld,
+                "FullWorld grid weld (scene)",
+                index =>
+                {
+                    var off = order[index];
+                    if (!TryForceResolveFullWorldTileAtOffset(session, off, out var tile) || tile == null)
+                        return;
+
+                    WeldFullWorldTileToCardinalNeighbors(session, tile, off);
+                },
+                () =>
+                {
+                    CaveBuildTerrainHeightmapMemory.FlushAllSurfaceTerrains(mainTerrain);
+                    RefreshMountainTerrainConnectivity(mainTerrain);
+                    onComplete?.Invoke();
+                });
         }
 
         static void BeginFullWorldTerraform(FullWorldGridSession session)
         {
-            if (HollowTitanLandmarkMeatPhases.IsBlockingSurfaceTerraform ||
-                HollowTitanStumpSculptPhases.IsRunning)
-            {
-                CaveBuildEditorLog.LogSurface(
-                    "[Surface] Waiting for Hollow Titan meat + stump sculpt before terraform…",
-                    forceUnityConsole: false);
-                CaveBuildActionPacing.ScheduleHeavy(
-                    () => BeginFullWorldTerraform(session),
-                    CaveBuildPipelineDomains.QueueLabel("FullWorld terraform — wait Hollow Titan"));
-                return;
-            }
-
-            var titanRoot = GameObject.Find(HollowTitanLandmarkAuthor.RootName);
-            if (session?.Request != null &&
-                session.Request.SurfaceScope == SurfaceBuildScope.FullWorld &&
-                CaveBuildCursorSettings.LoadOrCreate().requireHollowTitanOnSurface &&
-                (titanRoot == null || !HollowTitanLandmarkAuthor.IsMeatBuildComplete(titanRoot.transform)))
-            {
-                CaveBuildEditorLog.LogSurface(
-                    "[Surface] Hollow Titan not complete — building sync before terraform.",
-                    forceUnityConsole: true);
-                HollowTitanLandmarkAuthor.PlaceAaaBeforeTerraform(
-                    session.MainTerrain,
-                    session.Request,
-                    onComplete: () => BeginFullWorldTerraform(session));
-                return;
-            }
-
-            if (!CaveBuildQualityFastGates.RequireHollowTitanOnSurface(session.Request, out var titanMsg))
-            {
-                if (!string.IsNullOrEmpty(titanMsg))
-                    CaveBuildEditorLog.LogSurface("[FastGate] " + titanMsg, forceUnityConsole: false);
-                CaveBuildQualityFastGates.EnsureHollowTitanOnSurface(session.MainTerrain, session.Request);
-            }
             if (session?.MainTerrain == null)
                 return;
 
@@ -7179,32 +7383,140 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var deferSeams = PreferDeferSeamsUntilFullWorldTerraformComplete;
+            var queueLabel = deferSeams
+                ? "Full AAA — CC0 + biomes (Hollow Titan after terrain; seams after terraform)"
+                : "Full AAA — CC0 + biomes + peak weld (Hollow Titan after terrain)";
+
+            if (CaveBuildSessionConfig.IsSessionRequest(session.Request) &&
+                !CaveBuildSessionConfig.ShouldImport3DObjects())
+            {
+                QueueAaaPreTerraformAfterImport(session, onComplete, deferSeams);
+                return;
+            }
+
+            CaveBuildRunStatusPublisher.SetSubOperation("Full AAA", $"{queueLabel} — CC0 import queued");
+            Cc0ContentImportPipeline.QueueEnsureAll(
+                importItems: true,
+                () => QueueAaaPreTerraformAfterImport(session, onComplete, deferSeams));
+        }
+
+        static void QueueAaaPreTerraformAfterImport(
+            FullWorldGridSession session,
+            Action onComplete,
+            bool deferSeams)
+        {
             CaveBuildActionPacing.ScheduleHeavy(
                 () =>
                 {
-                    Cc0ContentImportUtility.EnsureAll(importItems: true);
-                    ForceSnapEntireFullWorldGrid(session);
-                    HollowTitanLandmarkAuthor.PlaceAaaBeforeTerraform(
+                    CaveBuildMemoryGuard.PreparePostCc0Handoff(session.MainTerrain);
+                    QueueAaaPreTerraformAfterMemoryRelease(session, onComplete, deferSeams);
+                },
+                CaveBuildPipelineDomains.QueueLabel("Full AAA — post-CC0 memory release"));
+        }
+
+        static void QueueAaaPreTerraformAfterMemoryRelease(
+            FullWorldGridSession session,
+            Action onComplete,
+            bool deferSeams)
+        {
+            if (_fullWorldGridSnappedThisBuild)
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[Surface] Full AAA — grid already snapped this build; skipping redundant pre-terraform snap.",
+                    forceUnityConsole: false);
+                QueueAaaHollowTitanBiomesAndProceed(session, onComplete, deferSeams);
+                return;
+            }
+
+            CaveBuildRunStatusPublisher.PulseSubOperation("Full AAA", "grid snap before boss tree");
+            QueueForceSnapEntireFullWorldGridPaced(
+                session,
+                () => QueueAaaHollowTitanBiomesAndProceed(session, onComplete, deferSeams),
+                "Full AAA pre-terraform snap");
+        }
+
+        static void QueueAaaHollowTitanBiomesAndProceed(
+            FullWorldGridSession session,
+            Action onComplete,
+            bool deferSeams)
+        {
+            CaveBuildRunStatusPublisher.PulseSubOperation("Full AAA", "biome tags — terrain sculpt next");
+            CaveBuildActionPacing.ScheduleLight(
+                () =>
+                {
+                    SurfaceWorldBiomeAuthor.TagAllGroundTerrains(
                         session.MainTerrain,
-                        session.Request,
-                        onComplete: () =>
+                        session.Request.Seed);
+                    CaveBuildRunStatusPublisher.PulseSubOperation(
+                        "Full AAA",
+                        deferSeams ? "biome tags — terraform next" : "biome tags — peak weld next");
+                    if (deferSeams)
+                    {
+                        onComplete?.Invoke();
+                        return;
+                    }
+
+                    SurfaceTerrainSeamWelds.QueuePeakFoothillSeamWeld(
+                        session.MainTerrain,
+                        () => QueueFullWorldProceedToTerraformAfterOuterRingSeam(onComplete));
+                },
+                CaveBuildPipelineDomains.QueueLabel("Full AAA — biome tags before terraform"));
+        }
+
+        static void QueueFullWorldPostWeldFinalize(FullWorldGridSession session, Action proceedAfterLandmark)
+        {
+            if (session?.MainTerrain == null)
+            {
+                proceedAfterLandmark?.Invoke();
+                return;
+            }
+
+            CaveBuildActionPacing.ScheduleLight(
+                () =>
+                {
+                    CaveBuildRunStatusPublisher.SetSubOperation("FullWorld grid", "grid manifest — reindex");
+                    SurfaceTerrainGridRegistry.ReindexFromMain(session.MainTerrain, playDiskLocked: false);
+                    CaveBuildActionPacing.ScheduleLight(
+                        () =>
                         {
-                            SurfaceWorldBiomeAuthor.TagAllGroundTerrains(session.MainTerrain, session.Request.Seed);
-                            if (deferSeams)
+                            CaveBuildRunStatusPublisher.SetSubOperation("FullWorld grid", "grid manifest — write");
+                            var builtRadius = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                                ? SurfaceOpenWorldGridExpansion.MaxChebyshevRadius
+                                : FullWorldChebyshevRadius;
+                            SurfaceOpenWorldGridExpansion.WriteManifest(new SurfaceOpenWorldGridExpansion.Manifest
                             {
-                                onComplete?.Invoke();
+                                builtChebyshevRadius = builtRadius,
+                                targetChebyshevRadius = SurfaceOpenWorldGridExpansion.GetTargetChebyshevRadius(),
+                                targetTileCount = SurfaceOpenWorldGridExpansion.TargetTileCount,
+                            });
+
+                            var foothills = CollectMountainFoothillTiles(session.MainTerrain).Length;
+                            var peaks = CollectMountainPeakTiles(session.MainTerrain).Length;
+                            var tileCount = session.PlaceOffsets?.Length ?? FullWorldTerrainTileCount;
+                            CaveBuildEditorLog.LogSurface(
+                                CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                                    ? $"[Surface] Full AAA flat grid welded — {tileCount} tile(s) edge-to-edge (9 play + {foothills} foothill + {peaks} peak + open world)."
+                                    : $"[Surface] FullWorld 9×9 grid complete — {FullWorldTerrainTileCount} tiles " +
+                                      $"(9 play + {foothills} foothill + {peaks} peak). " +
+                                      (PreferDeferSeamsUntilFullWorldTerraformComplete
+                                          ? "Grid edges welded; LiDAR sculpt all tiles, then batch seams…"
+                                          : "Grid edges welded; starting outer ring stitch, then LiDAR sculpt…"),
+                                forceUnityConsole: true);
+
+                            var placedCount = CollectAllFullWorldTerrains(session.MainTerrain).Length;
+                            CaveBuildQualityFastGates.ValidateFlatGridTileCount(placedCount, tileCount, out _);
+
+                            if (CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid)
+                            {
+                                QueueAaaPreTerraformLandmarkAndSeams(session, proceedAfterLandmark);
                                 return;
                             }
 
-                            SurfaceTerrainSeamWelds.QueuePeakFoothillSeamWeld(
-                                session.MainTerrain,
-                                () => QueueFullWorldProceedToTerraformAfterOuterRingSeam(onComplete));
-                        });
+                            proceedAfterLandmark?.Invoke();
+                        },
+                        CaveBuildPipelineDomains.QueueLabel("FullWorld grid post-weld manifest"));
                 },
-                CaveBuildPipelineDomains.QueueLabel(
-                    deferSeams
-                        ? "Full AAA — boss tree + biomes (seams after terraform)"
-                        : "Full AAA — boss tree + biomes + peak/foothill weld"));
+                CaveBuildPipelineDomains.QueueLabel("FullWorld grid post-weld reindex"));
         }
 
         static void QueueFullWorldProceedAfterFlatGridComplete(FullWorldGridSession session)
@@ -7212,86 +7524,55 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (session?.MainTerrain == null)
                 return;
 
-            ForceSnapEntireFullWorldGrid(session);
-
             var snapTileCount = session.PlaceOffsets?.Length ?? FullWorldTerrainTileCount;
             CaveBuildProgressUI.ShowThrottled(
                 "Environment Kit",
                 $"[Surface] snapping all {snapTileCount} tiles to ground level…",
                 0.855f);
+            CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", "snap + align to ground");
 
-            CaveBuildActionPacing.ScheduleLight(
+            QueueForceSnapEntireFullWorldGridPaced(
+                session,
                 () =>
                 {
-                    SnapAllFortyNineTilesToGroundLevel(session);
-                    ForceSnapEntireFullWorldGrid(session);
-
-                    CaveBuildProgressUI.ShowThrottled(
-                        "Environment Kit",
-                        "[Surface] welding 9×9 grid edges (remove tile lines)…",
-                        0.86f);
-
-                    QueueWeldFullWorldGridEdges(session, () =>
-                    {
-                        SurfaceTerrainGridRegistry.ReindexFromMain(session.MainTerrain, playDiskLocked: false);
-                        var builtRadius = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                            ? SurfaceOpenWorldGridExpansion.MaxChebyshevRadius
-                            : FullWorldChebyshevRadius;
-                        SurfaceOpenWorldGridExpansion.WriteManifest(new SurfaceOpenWorldGridExpansion.Manifest
+                    CaveBuildActionPacing.ScheduleLight(
+                        () =>
                         {
-                            builtChebyshevRadius = builtRadius,
-                            targetChebyshevRadius = SurfaceOpenWorldGridExpansion.GetTargetChebyshevRadius(),
-                            targetTileCount = SurfaceOpenWorldGridExpansion.TargetTileCount,
-                        });
+                            SnapAllFortyNineTilesToGroundLevel(session);
+                            CaveBuildStepCounter.PulseFlatGridPostPlaceProgress("Ground level sync", 0.72f);
 
-                        var foothills = CollectMountainFoothillTiles(session.MainTerrain).Length;
-                        var peaks = CollectMountainPeakTiles(session.MainTerrain).Length;
-                        var tileCount = session.PlaceOffsets?.Length ?? FullWorldTerrainTileCount;
-                        CaveBuildEditorLog.LogSurface(
-                            CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                                ? $"[Surface] Full AAA flat grid welded — {tileCount} tile(s) edge-to-edge (9 play + {foothills} foothill + {peaks} peak + open world)."
-                                : $"[Surface] FullWorld 9×9 grid complete — {FullWorldTerrainTileCount} tiles " +
-                                  $"(9 play + {foothills} foothill + {peaks} peak). " +
-                                  (PreferDeferSeamsUntilFullWorldTerraformComplete
-                                      ? "Grid edges welded; LiDAR sculpt all tiles, then batch seams…"
-                                      : "Grid edges welded; starting outer ring stitch, then LiDAR sculpt…"),
-                            forceUnityConsole: true);
+                            CaveBuildProgressUI.ShowThrottled(
+                                "Environment Kit",
+                                "[Surface] welding 9×9 grid edges (remove tile lines)…",
+                                0.86f);
+                            CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", "weld grid edges");
 
-                        var placedCount = CollectAllFullWorldTerrains(session.MainTerrain).Length;
-                        CaveBuildQualityFastGates.ValidateFlatGridTileCount(
-                            placedCount,
-                            tileCount,
-                            out _);
-
-                        void ProceedAfterHollowTitan()
-                        {
-                            if (PreferDeferSeamsUntilFullWorldTerraformComplete)
+                            QueueWeldFullWorldGridEdges(session, () =>
                             {
-                                BeginFullWorldTerraform(session);
-                                return;
-                            }
+                                void ProceedAfterGridReadyForTerraform()
+                                {
+                                    if (PreferDeferSeamsUntilFullWorldTerraformComplete)
+                                    {
+                                        BeginFullWorldTerraform(session);
+                                        return;
+                                    }
 
-                            CaveBuildActionPacing.ScheduleHeavyChain(
-                                () => QueueFullWorldOuterRingSeamPipeline(session.MainTerrain, () =>
-                                    QueueFullWorldProceedToTerraformAfterOuterRingSeam(() =>
-                                        BeginFullWorldTerraform(session))),
-                                CaveBuildPipelineDomains.QueueLabel("FullWorld outer ring seam"));
-                        }
+                                    CaveBuildActionPacing.ScheduleHeavyChain(
+                                        () => QueueFullWorldOuterRingSeamPipeline(session.MainTerrain, () =>
+                                            QueueFullWorldProceedToTerraformAfterOuterRingSeam(() =>
+                                                BeginFullWorldTerraform(session))),
+                                        CaveBuildPipelineDomains.QueueLabel("FullWorld outer ring seam"));
+                                }
 
-                        if (CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid)
-                        {
-                            QueueAaaPreTerraformLandmarkAndSeams(session, ProceedAfterHollowTitan);
-                            return;
-                        }
-
-                        HollowTitanLandmarkAuthor.PlaceAaaBeforeTerraform(
-                            session.MainTerrain,
-                            session.Request,
-                            onComplete: ProceedAfterHollowTitan);
-                    });
+                                CaveBuildActionPacing.ScheduleLight(
+                                    () => QueueFullWorldPostWeldFinalize(session, ProceedAfterGridReadyForTerraform),
+                                    CaveBuildPipelineDomains.QueueLabel("FullWorld grid post-weld finalize"));
+                            });
+                        },
+                        CaveBuildPipelineDomains.QueueLabel(
+                            $"FullWorld grid ground sync (~{snapTileCount} tiles)"));
                 },
-                CaveBuildPipelineDomains.QueueLabel(
-                    $"FullWorld grid ground snap (~{session.PlaceOffsets?.Length ?? FullWorldTerrainTileCount} tiles)"));
+                "FullWorld grid snap");
         }
 
         /// <summary>
@@ -7615,7 +7896,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            request.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             if (request.SurfaceScope != SurfaceBuildScope.FullWorld ||
                 !UsesFixedNineTileSquare(request, fullWorld: true))
             {
@@ -7623,13 +7904,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            PrepareExtendedOpenWorldManifestIfNeeded();
-            var placeOffsets = ResolveFullWorldPlaceOffsets();
+            PrepareExtendedOpenWorldManifestIfNeeded(request);
+            var placeOffsets = ResolveFullWorldPlaceOffsets(request);
             var tilePlanCount = placeOffsets.Length;
             CaveBuildEditorLog.LogSurface(
                 $"[Surface] LAY ALL GROUND FIRST — placing {tilePlanCount} flat terrain tile(s) on grid. " +
                 "No seams, LiDAR, sculpt, or terraform until every slot exists.",
                 forceUnityConsole: true);
+
+            CaveBuildActionPacing.PreparePipelineChainKickoff();
+            CaveBuildSurfaceCompletionGate.MarkFullWorldGridPipelineStarted(tilePlanCount);
+            CaveBuildRunStatusPublisher.PulseSubOperation(
+                "FullWorld grid",
+                $"prepare + lay (~{tilePlanCount} tiles, flat height only)");
+            CaveBuildLiveSceneFeedback.NotifySurfacePhase(
+                $"FullWorld grid — laying {tilePlanCount} ground tiles (same safeguards as Full AAA Rebuild)");
 
             var session = CreateFullWorldGridSession(
                 mainTerrain,
@@ -7639,16 +7928,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 onComplete,
                 markGridPipelineFinished: false);
             session.LayOnlyPass = true;
-            session.Phase = FullWorldGridPhase.PlaceAll;
-            _liveFullWorldGridPhase = FullWorldGridPhase.PlaceAll;
-            session.PreparedScene = true;
-            session.Index = 0;
-            EnforcePlayDiskGridLayout(mainTerrain, ground);
-            SyncFullWorldGridToGroundLevel(session);
-            LockFullWorldGridAnchor(session);
-            EnsureFullWorldGridAnchorTransform(session);
-            BeginFullWorldGroundLayPhase(session);
-            ScheduleFullWorldStep(session);
+            BeginFullWorldGridFailSafeSession(session, tilePlanCount, "ground lay only");
+            CaveBuildActionPacing.SchedulePipelineFirstStep(
+                () => RunFullWorldGridPrepare(session),
+                CaveBuildPipelineDomains.SurfaceQueueLabel("FullWorld ground lay prepare"));
         }
 
         public static void QueueFullWorldDirectionalPipeline(
@@ -7663,7 +7946,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            request.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             if (request.SurfaceScope != SurfaceBuildScope.FullWorld ||
                 !UsesFixedNineTileSquare(request, fullWorld: true))
             {
@@ -7677,17 +7960,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            PrepareExtendedOpenWorldManifestIfNeeded();
-            var placeOffsets = ResolveFullWorldPlaceOffsets();
+            PrepareExtendedOpenWorldManifestIfNeeded(request);
+            var placeOffsets = ResolveFullWorldPlaceOffsets(request);
             var tilePlanCount = placeOffsets.Length;
             CaveBuildEditorLog.LogSurface(
-                CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                ResolveExtendedGridForRequest(request)
                     ? $"[Surface] Full AAA grid — weld + sculpt after all {tilePlanCount} ground tiles exist."
                     : $"[Surface] FullWorld grid — place then weld/sculpt ({tilePlanCount} tiles).",
                 forceUnityConsole: true);
 
             CaveBuildActionPacing.PreparePipelineChainKickoff();
             CaveBuildSurfaceCompletionGate.MarkFullWorldGridPipelineStarted(tilePlanCount);
+            CaveBuildRunStatusPublisher.PulseSubOperation(
+                "FullWorld grid",
+                $"prepare + place (~{tilePlanCount} tiles)");
+            CaveBuildLiveSceneFeedback.NotifySurfacePhase(
+                $"FullWorld grid — placing/sculpting {tilePlanCount} tiles (watch tile counter in Hub)");
 
             var session = CreateFullWorldGridSession(mainTerrain, ground, request, placeOffsets, onComplete);
             BeginFullWorldGridFailSafeSession(session, tilePlanCount, "pipeline start");
@@ -7696,13 +7984,61 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildPipelineDomains.SurfaceQueueLabel("FullWorld grid prepare"));
         }
 
+        static void QueueFullWorldPostLayPreparePaced(FullWorldGridSession session) =>
+            QueueFullWorldPostLayPrepareStep(session, 0);
+
+        static void QueueFullWorldPostLayPrepareStep(FullWorldGridSession session, int stepIndex)
+        {
+            const int totalSteps = 4;
+            CaveBuildActionPacing.ScheduleLight(
+                () =>
+                {
+                    CaveBuildActionPacing.TouchQueueActivity();
+                    CaveBuildStepCounter.PulseFlatGridPostPlaceProgress(
+                        $"Post-lay prep {stepIndex + 1}/{totalSteps}",
+                        (stepIndex + 1) / (float)totalSteps * 0.35f);
+
+                    switch (stepIndex)
+                    {
+                        case 0:
+                            PurgeOrphanPlayDiskTerrains(session.MainTerrain);
+                            CaveBuildRunStatusPublisher.PulseSubOperation(
+                                "FullWorld grid",
+                                "post-lay — purge play-disk orphans");
+                            QueueFullWorldPostLayPrepareStep(session, 1);
+                            break;
+                        case 1:
+                            PurgeOrphanWildernessTerrains(session.MainTerrain);
+                            CaveBuildRunStatusPublisher.PulseSubOperation(
+                                "FullWorld grid",
+                                "post-lay — purge wilderness orphans");
+                            QueueFullWorldPostLayPrepareStep(session, 2);
+                            break;
+                        case 2:
+                            CaveBuildMicroProcessQueue.ScheduleConsolidateScattered(
+                                session.MainTerrain,
+                                "FullWorld post-lay — consolidate grid slots",
+                                () => QueueFullWorldPostLayPrepareStep(session, 3));
+                            break;
+                        case 3:
+                            CaveBuildRunStatusPublisher.PulseSubOperation(
+                                "FullWorld grid",
+                                "post-lay prep done — snap + weld + terraform");
+                            QueueFullWorldProceedAfterFlatGridComplete(session);
+                            break;
+                    }
+                },
+                CaveBuildPipelineDomains.QueueLabel($"FullWorld post-lay prep {stepIndex + 1}/{totalSteps}"));
+        }
+
         static void QueueFullWorldPostLayWorkPipeline(
             Terrain mainTerrain,
             SceneGroundInfo ground,
             WorldGenerationRequest request,
             Action<int, string> onComplete)
         {
-            var placeOffsets = ResolveFullWorldPlaceOffsets();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
+            var placeOffsets = ResolveFullWorldPlaceOffsets(request);
             var tilePlanCount = placeOffsets.Length;
             CaveBuildEditorLog.LogSurface(
                 $"[Surface] All {tilePlanCount} ground tiles already laid — starting weld/terraform (seams after sculpt).",
@@ -7710,31 +8046,42 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             CaveBuildActionPacing.PreparePipelineChainKickoff();
             CaveBuildSurfaceCompletionGate.MarkFullWorldGridPipelineStarted(tilePlanCount);
+            CaveBuildStepCounter.SetFlatGridPlaceProgress(tilePlanCount, tilePlanCount);
+            CaveBuildRunStatusPublisher.PulseSubOperation(
+                "FullWorld grid",
+                $"post-lay weld + terraform (~{tilePlanCount} tiles, ground already laid)");
+            CaveBuildLiveSceneFeedback.NotifySurfacePhase(
+                $"FullWorld grid — placing/sculpting {tilePlanCount} tiles (watch tile counter in Hub)");
 
             var session = CreateFullWorldGridSession(mainTerrain, ground, request, placeOffsets, onComplete);
             BeginFullWorldGridFailSafeSession(session, tilePlanCount, "post-lay resume");
             session.PreparedScene = true;
             session.Index = placeOffsets.Length;
             CaveBuildActionPacing.SchedulePipelineFirstStep(
-                () =>
-                {
-                    PurgeOrphanPlayDiskTerrains(session.MainTerrain);
-                    PurgeOrphanWildernessTerrains(session.MainTerrain);
-                    ConsolidateScatteredFullWorldTerrains(session.MainTerrain);
-                    ForceSnapEntireFullWorldGrid(session);
-                    QueueFullWorldProceedAfterFlatGridComplete(session);
-                },
+                () => QueueFullWorldPostLayPreparePaced(session),
                 CaveBuildPipelineDomains.SurfaceQueueLabel("FullWorld post-lay work"));
         }
 
-        static Vector2Int[] ResolveFullWorldPlaceOffsets() =>
-            CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+        static bool ResolveExtendedGridForRequest(WorldGenerationRequest request) =>
+            request?.SurfaceScope == SurfaceBuildScope.FullWorld
+                ? request.UseExtendedOpenWorldGrid
+                : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid;
+
+        static Vector2Int[] ResolveFullWorldPlaceOffsets(WorldGenerationRequest request = null)
+        {
+            request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+                return BuildFloatingIslandsPlaceOrder();
+
+            return ResolveExtendedGridForRequest(request)
                 ? SurfaceOpenWorldGridExpansion.BuildAaaExtendedPlaceOrder()
                 : BuildFullWorldPlaceOrder();
+        }
 
-        static void PrepareExtendedOpenWorldManifestIfNeeded()
+        static void PrepareExtendedOpenWorldManifestIfNeeded(WorldGenerationRequest request = null)
         {
-            if (!CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid)
+            request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
+            if (!ResolveExtendedGridForRequest(request))
                 return;
 
             PreferSkipFlatGridPerTileSeams = true;
@@ -7755,9 +8102,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Action<int, string> onComplete,
             bool markGridPipelineFinished = true)
         {
-            var terraformOffsets = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+            var terraformOffsets = CaveBuildSessionConfig.IsFloatingIslandsDemo(request)
                 ? placeOffsets
-                : SurfaceFullWorldDirectionalBuild.BuildDirectionalOffsetOrder();
+                : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                    ? placeOffsets
+                    : SurfaceFullWorldDirectionalBuild.BuildDirectionalOffsetOrder();
 
             return new FullWorldGridSession
             {
@@ -7797,9 +8146,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             var tileCount = session.PlaceOffsets?.Length ?? session.Offsets?.Length ?? 0;
-            if (tileCount > 81)
-                CaveBuildFullWorldGridCheckpoint.Save(session, reason);
             CaveBuildMemoryGuard.OnFullWorldQueueStepCompleted(tileCount);
+            if (tileCount > 81 &&
+                CaveBuildFullWorldGridCheckpoint.ShouldWriteProgressCheckpoint(session, reason))
+                CaveBuildFullWorldGridCheckpoint.Save(session, reason);
         }
 
         /// <summary>Reconstruct session after crash/memory pause and continue the grid chain.</summary>
@@ -7814,7 +8164,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Action<int, string> onComplete)
         {
             _fullWorldGroundLaidThisBuild = groundLaid;
-            var placeOffsets = ResolveFullWorldPlaceOffsets();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
+            var placeOffsets = ResolveFullWorldPlaceOffsets(request);
             var session = CreateFullWorldGridSession(mainTerrain, ground, request, placeOffsets, onComplete);
             session.Phase = phase;
             _liveFullWorldGridPhase = phase;
@@ -7834,7 +8185,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             CaveBuildMemoryGuard.ClearMemoryPause();
-            CaveBuildPauseController.Continue();
+            CaveBuildPauseController.ClearPauseFlagOnly();
+            CaveBuildActionPacing.PreparePipelineChainKickoff();
             BeginFullWorldGridFailSafeSession(
                 session,
                 session.PlaceOffsets?.Length ?? session.Offsets?.Length ?? 0,
@@ -7953,31 +8305,83 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (session?.MainTerrain == null)
                 return;
 
+            CaveBuildRunStatusPublisher.PulseSubOperation("FullWorld grid", "prepare — purge orphans");
+            QueueFullWorldGridPrepareStep(session, 0);
+        }
+
+        static void QueueFullWorldGridPrepareStep(FullWorldGridSession session, int stepIndex)
+        {
+            const int totalSteps = 8;
             CaveBuildActionPacing.ScheduleLight(
                 () =>
                 {
-                    PurgeOrphanPlayDiskTerrains(session.MainTerrain);
-                    PurgeOrphanWildernessTerrains(session.MainTerrain);
-                    if (session.TilesRoot != null)
-                        RemoveStaleGameplayTiles(session.TilesRoot);
-                    if (session.WildernessRoot != null)
-                        RemoveStaleMountainWildernessTiles(session.WildernessRoot);
-                    EnsureMainTerrainIdentity(session.MainTerrain);
-                    PurgeFullWorldWildernessResolutionMismatches(session.MainTerrain);
-                    if (session.Ground != null)
-                        EnforcePlayDiskGridLayout(session.MainTerrain, session.Ground);
-                    SyncFullWorldGridToGroundLevel(session);
-                    LockFullWorldGridAnchor(session);
-                    ConsolidateScatteredFullWorldTerrains(session.MainTerrain);
+                    CaveBuildActionPacing.TouchQueueActivity();
+                    CaveBuildStepCounter.PulseFlatGridPrepareProgress(
+                        stepIndex + 1,
+                        totalSteps,
+                        $"Grid prepare {stepIndex + 1}/{totalSteps}");
 
-                    session.PreparedScene = true;
-                    session.Phase = FullWorldGridPhase.PlaceAll;
-                    _liveFullWorldGridPhase = FullWorldGridPhase.PlaceAll;
-                    session.Index = 0;
-                    BeginFullWorldGroundLayPhase(session);
-                    ScheduleFullWorldStep(session);
+                    switch (stepIndex)
+                    {
+                        case 0:
+                            PurgeOrphanPlayDiskTerrains(session.MainTerrain);
+                            CaveBuildRunStatusPublisher.PulseSubOperation(
+                                "FullWorld grid",
+                                "prepare — purge play-disk orphans");
+                            QueueFullWorldGridPrepareStep(session, 1);
+                            break;
+                        case 1:
+                            PurgeOrphanWildernessTerrains(session.MainTerrain);
+                            CaveBuildRunStatusPublisher.PulseSubOperation(
+                                "FullWorld grid",
+                                "prepare — purge wilderness orphans");
+                            QueueFullWorldGridPrepareStep(session, 2);
+                            break;
+                        case 2:
+                            if (session.TilesRoot != null)
+                                RemoveStaleGameplayTiles(session.TilesRoot);
+                            QueueFullWorldGridPrepareStep(session, 3);
+                            break;
+                        case 3:
+                            if (session.WildernessRoot != null)
+                                RemoveStaleMountainWildernessTiles(session.WildernessRoot);
+                            QueueFullWorldGridPrepareStep(session, 4);
+                            break;
+                        case 4:
+                            EnsureMainTerrainIdentity(session.MainTerrain);
+                            PurgeFullWorldWildernessResolutionMismatches(session.MainTerrain);
+                            QueueFullWorldGridPrepareStep(session, 5);
+                            break;
+                        case 5:
+                            if (session.Ground != null)
+                                EnforcePlayDiskGridLayout(session.MainTerrain, session.Ground);
+                            QueueFullWorldGridPrepareStep(session, 6);
+                            break;
+                        case 6:
+                            SyncFullWorldGridToGroundLevel(session);
+                            LockFullWorldGridAnchor(session);
+                            QueueFullWorldGridPrepareStep(session, 7);
+                            break;
+                        case 7:
+                            CaveBuildMicroProcessQueue.ScheduleConsolidateScattered(
+                                session.MainTerrain,
+                                "FullWorld grid prepare — consolidate",
+                                () =>
+                                {
+                                    session.PreparedScene = true;
+                                    session.Phase = FullWorldGridPhase.PlaceAll;
+                                    _liveFullWorldGridPhase = FullWorldGridPhase.PlaceAll;
+                                    session.Index = 0;
+                                    BeginFullWorldGroundLayPhase(session);
+                                    CaveBuildRunStatusPublisher.SetSubOperation(
+                                        "FullWorld grid",
+                                        "prepare done — ground lay batches");
+                                    ScheduleFullWorldStep(session);
+                                });
+                            break;
+                    }
                 },
-                CaveBuildPipelineDomains.QueueLabel("FullWorld grid purge"));
+                CaveBuildPipelineDomains.QueueLabel($"FullWorld grid prepare {stepIndex + 1}/{totalSteps}"));
         }
 
         static void BeginFullWorldGroundLayPhase(FullWorldGridSession session)
@@ -7990,9 +8394,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 forceUnityConsole: true);
         }
 
-        /// <summary>4–8 tiles per queue step — lower on conserve-GPU / low RAM budgets.</summary>
+        /// <summary>Extended grid: 1 tile/queue step. Core 81-tile grid may batch more on 18GB+ RAM.</summary>
         static int ResolveFullWorldGroundLayBatchSize()
         {
+            if (CaveBuildMicroProcessQueue.PreferOneTilePerQueueStep)
+                return CaveBuildMicroProcessQueue.ResolveBatchSize(
+                    CaveBuildMicroProcessQueue.WorkKind.SurfaceGridPlace);
+
             if (EnvironmentKitHardwareBudget.Active.ConserveGpuMemory)
                 return 4;
 
@@ -8045,10 +8453,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         ? "No weld/seams/sculpt until the next pipeline step."
                         : "Starting weld/seams/sculpt next."),
                     forceUnityConsole: true);
-                ForceSnapEntireFullWorldGrid(session);
                 if (session.LayOnlyPass)
                 {
-                    session.OnComplete?.Invoke(placed, $"Ground lay complete — {placed} terrain(s).");
+                    QueueForceSnapEntireFullWorldGridPaced(
+                        session,
+                        () => session.OnComplete?.Invoke(placed, $"Ground lay complete — {placed} terrain(s)."));
                     return;
                 }
 
@@ -8127,7 +8536,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         laidTiles.Add(tile);
                         laidThisStep++;
 
-                        if (step == 1 || step == total || step % 24 == 0)
+                        var layCameraStride = CaveBuildDemoAutoRecorder.IsRecording ? 4 : 24;
+                        if (step == 1 || step == total || step % layCameraStride == 0)
                             CaveBuildLiveSceneFeedback.NotifyTerrainTile(tile, $"lay ground {step}/{total}");
                     }
 
@@ -9032,10 +9442,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 GameplayRoot = session.TilesRoot,
             };
             QueueCompleteOuterRingTileAfterSeed(ringSession, tile, () =>
-            {
-                HollowTitanLandmarkAuthor.TrySculptStumpAfterTileTerraform(session.MainTerrain, tile);
-                ScheduleDirectionalStep(session, index + 1);
-            });
+                ScheduleDirectionalStep(session, index + 1));
         }
 
         static void BeginFullWorldSeamAllPhase(FullWorldGridSession session)
@@ -9065,9 +9472,77 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void QueueFinalizeDirectionalFullWorldBuild(FullWorldGridSession session)
         {
-            ForceSnapEntireFullWorldGrid(session);
-            RefreshMountainTerrainConnectivity(session.MainTerrain);
+            if (_fullWorldGridSnappedThisBuild)
+            {
+                CaveBuildActionPacing.ScheduleLight(
+                    () =>
+                    {
+                        RefreshMountainTerrainConnectivity(session.MainTerrain);
+                        RunFinalizeDirectionalFullWorldBuildAfterSnap(session);
+                    },
+                    CaveBuildPipelineDomains.QueueLabel("FullWorld terraform finalize — skip redundant snap"));
+                return;
+            }
 
+            QueueForceSnapEntireFullWorldGridPaced(
+                session,
+                () =>
+                {
+                    CaveBuildActionPacing.ScheduleLight(
+                        () =>
+                        {
+                            RefreshMountainTerrainConnectivity(session.MainTerrain);
+                            RunFinalizeDirectionalFullWorldBuildAfterSnap(session);
+                        },
+                        CaveBuildPipelineDomains.QueueLabel("FullWorld terraform finalize — connectivity"));
+                },
+                "FullWorld terraform finalize snap");
+        }
+
+        static void QueueHollowTitanLandmarkAfterTerrain(FullWorldGridSession session, Action onComplete)
+        {
+            if (session?.MainTerrain == null || session.Request == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            settings.LoadFromPrefs();
+            if (FullWorldConceptLayoutCatalog.IsSpeedMinimal(session.Request))
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var requireTitan = settings.requireHollowTitanOnSurface ||
+                               CaveBuildQualityFastGates.RequireHollowTitanOnSurface(session.Request, out _);
+            if (!requireTitan)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            _terrainTilesReadyForHollowTitan = true;
+            if (!CaveBuildLateBuildPerformance.PreferLightweightTerrainFlush)
+                CaveBuildTerrainHeightmapMemory.FlushAllSurfaceTerrains(session.MainTerrain);
+            CaveBuildFullWorldGridCheckpoint.SaveActiveSceneMilestone(
+                "post-terrain tiles complete — before Hollow Titan");
+            CaveBuildRunStatusPublisher.PulseSubOperation(
+                "FullWorld",
+                "Hollow Titan — after terrain complete (before props)");
+            CaveBuildEditorLog.LogSurface(
+                "[Surface] All ground terrain tiles complete — building Hollow Titan before props/seam dress.",
+                forceUnityConsole: true);
+
+            HollowTitanLandmarkAuthor.PlaceAaaAfterTerrainComplete(
+                session.MainTerrain,
+                session.Request,
+                onComplete);
+        }
+
+        static void RunFinalizeDirectionalFullWorldBuildAfterSnap(FullWorldGridSession session)
+        {
             void FinishDirectional()
             {
                 SurfaceFloridaDemBuildState.MarkNineTilePlayDiskPolishCompleted();
@@ -9075,36 +9550,58 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfaceTerrainGridRegistry.ReindexFromMain(session.MainTerrain, playDiskLocked: true);
 
                 var surfaceRoot = session.MainTerrain.transform.parent;
-                if (CaveBuildAaaSessionPolicy.IsFullAaaRebuild && session.Request != null)
+
+                void FinishAfterSurfaceProps()
                 {
+                    if (CaveBuildAaaSessionPolicy.IsFullAaaRebuild && session.Request != null)
+                        WorldPlanV4RuntimeSystemsAuthor.EnsureInScene();
+
+                    var placed = CollectAllFullWorldTerrains(session.MainTerrain).Length;
+                    var foothills = CollectMountainFoothillTiles(session.MainTerrain).Length;
+                    var peaks = CollectMountainPeakTiles(session.MainTerrain).Length;
+                    var horizon = CollectMountainHorizonTiles(session.MainTerrain).Length;
+                    var openWorld = CollectOpenWorldTiles(session.MainTerrain).Length;
+                    var msg = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                        ? $"Full AAA directional build complete — {placed} terrain(s) " +
+                          $"(9 play + {foothills} foothill + {peaks} peak + {horizon} horizon + {openWorld} open world)."
+                        : $"FullWorld directional build complete — {FullWorldTerrainTileCount} tiles " +
+                          $"(9 play + {foothills} foothill + {peaks} peak + {horizon} horizon), outer rings seamed and locked.";
+                    CaveBuildEditorLog.LogSurface("[Surface] " + msg, forceUnityConsole: true);
+                    if (PipelineContentPreservePolicy.IntegrateOnlyActive)
+                    {
+                        var playTiles = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(session.MainTerrain).Count;
+                        CaveBuildEditorLog.LogSurface(
+                            $"[PipelineIntegrate] Playable merge check — {playTiles}/9 play-disk tiles kept; " +
+                            "new sculpt/props layered onto existing world (no blanket delete).",
+                            forceUnityConsole: true);
+                    }
+
+                    session.OnComplete?.Invoke(placed, msg);
+                }
+
+                if (session.Request != null &&
+                    (CaveBuildAaaSessionPolicy.IsFullAaaRebuild ||
+                     CaveBuildSpeedDemoPolicy.IsActive(session.Request) ||
+                     (CaveBuildSessionConfig.IsSessionRequest(session.Request) &&
+                      CaveBuildSessionConfig.ShouldScatterBiomeProps())))
+                {
+                    if (CaveBuildEditorResponsiveness.IsLongBuildActive)
+                    {
+                        BiomeGrassScatterAuthor.QueueEnsureBiomePropsScattered(
+                            session.MainTerrain,
+                            session.Request,
+                            surfaceRoot,
+                            FinishAfterSurfaceProps);
+                        return;
+                    }
+
                     BiomeGrassScatterAuthor.EnsureBiomePropsScattered(
                         session.MainTerrain,
                         session.Request,
                         surfaceRoot);
-                    WorldPlanV4RuntimeSystemsAuthor.EnsureInScene();
                 }
 
-                var placed = CollectAllFullWorldTerrains(session.MainTerrain).Length;
-                var foothills = CollectMountainFoothillTiles(session.MainTerrain).Length;
-                var peaks = CollectMountainPeakTiles(session.MainTerrain).Length;
-                var horizon = CollectMountainHorizonTiles(session.MainTerrain).Length;
-                var openWorld = CollectOpenWorldTiles(session.MainTerrain).Length;
-                var msg = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                    ? $"Full AAA directional build complete — {placed} terrain(s) " +
-                      $"(9 play + {foothills} foothill + {peaks} peak + {horizon} horizon + {openWorld} open world)."
-                    : $"FullWorld directional build complete — {FullWorldTerrainTileCount} tiles " +
-                      $"(9 play + {foothills} foothill + {peaks} peak + {horizon} horizon), outer rings seamed and locked.";
-                CaveBuildEditorLog.LogSurface("[Surface] " + msg, forceUnityConsole: true);
-                if (PipelineContentPreservePolicy.IntegrateOnlyActive)
-                {
-                    var playTiles = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(session.MainTerrain).Count;
-                    CaveBuildEditorLog.LogSurface(
-                        $"[PipelineIntegrate] Playable merge check — {playTiles}/9 play-disk tiles kept; " +
-                        "new sculpt/props layered onto existing world (no blanket delete).",
-                        forceUnityConsole: true);
-                }
-
-                session.OnComplete?.Invoke(placed, msg);
+                FinishAfterSurfaceProps();
             }
 
             void AfterSeamsDressAndFinish()
@@ -9138,17 +9635,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 QueueFullWorldOuterRingSeamPipeline(session.MainTerrain, AfterSeamsDressAndFinish);
             }
 
-            void AfterFoothillResnapAndGridWeld()
+            void AfterHollowTitanSeamsAndProps()
             {
-                HollowTitanLandmarkAuthor.ResnapToTerrain(session.MainTerrain);
                 HollowTitanLandmarkMeatPhases.EnsureLandmarkExteriorVisible();
-                WeldFullWorldGridEdgesSync(session);
-                RunSeamPipelineAfterGridWeld();
+                QueueWeldFullWorldGridEdges(session, RunSeamPipelineAfterGridWeld);
+            }
+
+            void AfterAllGroundTerrainSculpt()
+            {
+                QueueHollowTitanLandmarkAfterTerrain(session, AfterHollowTitanSeamsAndProps);
             }
 
             if (session?.Request != null &&
                 session.Request.SurfaceIncludeMountains &&
-                session.Request.UseOuterRingMountains)
+                session.Request.UseOuterRingMountains &&
+                !CaveBuildSpeedDemoPolicy.IsActive(session.Request))
             {
                 CaveBuildEditorLog.LogSurface(
                     "[Surface] Final foothill rolling-hills pass (Appalachian relief + outer bowl dip)…",
@@ -9156,11 +9657,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 SurfaceOuterRingMountainsAuthor.QueueApplyFoothillRing(
                     session.MainTerrain,
                     session.Request,
-                    AfterFoothillResnapAndGridWeld);
+                    AfterAllGroundTerrainSculpt);
             }
             else
             {
-                AfterFoothillResnapAndGridWeld();
+                AfterAllGroundTerrainSculpt();
             }
         }
     }

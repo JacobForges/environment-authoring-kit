@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using EnvironmentAuthoringKit.Cave;
+using EnvironmentAuthoringKit.Editor.Blockout;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace EnvironmentAuthoringKit.Editor.World
 {
@@ -53,9 +55,25 @@ namespace EnvironmentAuthoringKit.Editor.World
 
         static void EnsureAllCore(bool importItems, bool reimportFbx)
         {
+            var characterPrefabs = new Dictionary<string, GameObject>();
+            var itemPrefabs = new Dictionary<string, GameObject>();
+            RunEnsureAllPrep(reimportFbx);
+            RunEnsureAllCharacters(characterPrefabs, reimportFbx);
+            if (importItems)
+            {
+                FixAllItemModelImportSettings(reimport: reimportFbx);
+                foreach (var path in CollectItemMeshFullPaths())
+                    TryEnsureOneItem(path, reimportFbx, itemPrefabs);
+            }
+
+            RunEnsureAllFinalize(characterPrefabs, itemPrefabs, syncAssetRefresh: false);
+        }
+
+        internal static void RunEnsureAllPrep(bool reimportFbx)
+        {
             if (reimportFbx)
             {
-                var patchedPaths = new System.Collections.Generic.List<string>();
+                var patchedPaths = new List<string>();
                 Cc0PropRigFixUtility.PatchStaleMetaFiles(patchedPaths);
                 Cc0PropRigFixUtility.ReimportAllStaticProps(
                     log: false,
@@ -64,14 +82,21 @@ namespace EnvironmentAuthoringKit.Editor.World
             }
             else
             {
-                // Meta-only; no bulk reimport on pipeline import (manual menu if needed).
                 Cc0PropRigFixUtility.PatchStaleMetaFiles(null);
             }
+
             Cc0BlenderSourceStripper.StripUnderCc0Imports();
             EnsureFolder(CharacterPrefabFolder);
             EnsureFolder(ItemPrefabFolder);
+        }
 
-            var characterPrefabs = new Dictionary<string, GameObject>();
+        internal static void RunEnsureAllCharacters(
+            Dictionary<string, GameObject> characterPrefabs,
+            bool reimportFbx)
+        {
+            if (characterPrefabs == null)
+                return;
+
             foreach (var slot in CharacterSlots)
             {
                 var fbx = $"{CharacterFbxFolder}/{slot}.fbx";
@@ -93,37 +118,82 @@ namespace EnvironmentAuthoringKit.Editor.World
             }
 
             Cc0CharacterPrefabRegistry.Save(characterPrefabs);
+        }
 
-            if (importItems)
+        internal static string[] CollectItemMeshFullPaths()
+        {
+            if (!Directory.Exists(ItemFbxFolder))
+                return new string[0];
+
+            var meshFiles = Directory.GetFiles(ItemFbxFolder, "*.fbx");
+            var objs = Directory.GetFiles(ItemFbxFolder, "*.obj");
+            var combined = new string[meshFiles.Length + objs.Length];
+            meshFiles.CopyTo(combined, 0);
+            objs.CopyTo(combined, meshFiles.Length);
+            return combined;
+        }
+
+        internal static bool TryEnsureOneItem(
+            string fullPath,
+            bool reimportFbx,
+            Dictionary<string, GameObject> itemPrefabs)
+        {
+            if (string.IsNullOrEmpty(fullPath) || itemPrefabs == null)
+                return false;
+
+            var id = Path.GetFileNameWithoutExtension(fullPath);
+            ConfigurePropFbx(ToAssetPath(fullPath));
+            var prefab = EnsureItemPrefab(fullPath, id);
+            if (prefab == null)
+                return false;
+
+            itemPrefabs[id] = prefab;
+            return true;
+        }
+
+        internal const string ItemRegistryAssetPath = Cc0Root + "/item-prefab-registry.asset";
+
+        internal static void SaveItemRegistryIfNeeded(Dictionary<string, GameObject> itemPrefabs)
+        {
+            if (itemPrefabs == null || itemPrefabs.Count == 0)
+                return;
+
+            Cc0ItemPrefabRegistry.Save(itemPrefabs);
+        }
+
+        internal static void SaveItemRegistryAsset()
+        {
+            if (CaveBuildEditorResponsiveness.IsLongBuildActive)
             {
-                FixAllItemModelImportSettings(reimport: reimportFbx);
-                var itemPrefabs = new Dictionary<string, GameObject>();
-                if (Directory.Exists(ItemFbxFolder))
-                {
-                    var meshFiles = Directory.GetFiles(ItemFbxFolder, "*.fbx");
-                    var objs = Directory.GetFiles(ItemFbxFolder, "*.obj");
-                    var combined = new string[meshFiles.Length + objs.Length];
-                    meshFiles.CopyTo(combined, 0);
-                    objs.CopyTo(combined, meshFiles.Length);
-                    foreach (var fbx in combined)
-                    {
-                        var id = Path.GetFileNameWithoutExtension(fbx);
-                        ConfigurePropFbx(ToAssetPath(fbx));
-                        var prefab = EnsureItemPrefab(fbx, id);
-                        if (prefab != null)
-                            itemPrefabs[id] = prefab;
-                    }
-                }
-
-                Cc0ItemPrefabRegistry.Save(itemPrefabs);
+                var reg = AssetDatabase.LoadAssetAtPath<Cc0PrefabRegistry>(ItemRegistryAssetPath);
+                if (reg != null && EditorUtility.IsDirty(reg))
+                    AssetDatabase.SaveAssetIfDirty(reg);
+                return;
             }
+
+            var regSync = AssetDatabase.LoadAssetAtPath<Cc0PrefabRegistry>(ItemRegistryAssetPath);
+            if (regSync != null && EditorUtility.IsDirty(regSync))
+                AssetDatabase.SaveAssetIfDirty(regSync);
+        }
+
+        internal static void RunEnsureAllFinalize(
+            Dictionary<string, GameObject> characterPrefabs,
+            Dictionary<string, GameObject> itemPrefabs,
+            bool syncAssetRefresh)
+        {
+            if (itemPrefabs != null && itemPrefabs.Count > 0)
+                Cc0ItemPrefabRegistry.Save(itemPrefabs);
 
             WorldItemCatalogBuilder.BuildFromManifest();
             WorldRuntimeResourcesAuthor.EnsureHollowTitanLandmarkPrefabsInResources();
+            SaveItemRegistryAsset();
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            Debug.Log("[CC0] Import complete — prefabs in CC0Imports/Prefabs/.", AssetDatabase.LoadMainAssetAtPath(CharacterPrefabFolder));
+            if (syncAssetRefresh)
+                AssetDatabase.Refresh();
+
+            Debug.Log(
+                "[CC0] Import complete — prefabs in CC0Imports/Prefabs/.",
+                AssetDatabase.LoadMainAssetAtPath(CharacterPrefabFolder));
         }
 
         public static GameObject LoadCharacterPrefab(string slot) =>

@@ -175,6 +175,41 @@ HELPER_CATALOG: dict[str, dict[str, str]] = {
         "summary": "Gentle level rider — evens loud/quiet words automatically.",
         "roboticRisk": "low",
     },
+    "staticClean": {
+        "title": "Static Clean",
+        "summary": "Denoise + hiss tame — runs in static phase and after loudnorm.",
+        "roboticRisk": "low",
+    },
+    "hissGate": {
+        "title": "Hiss Gate",
+        "summary": "Gates low-level synth hiss between words and phrase tails.",
+        "roboticRisk": "low",
+    },
+    "grainPull": {
+        "title": "Grain Pull",
+        "summary": "Stronger spectral denoise for Personal Voice synth grain.",
+        "roboticRisk": "low",
+    },
+    "synthHissCut": {
+        "title": "Synth Hiss Cut",
+        "summary": "Notch EQ at typical TTS hiss bands (4.8–11 kHz).",
+        "roboticRisk": "low",
+    },
+    "noiseFloor": {
+        "title": "Noise Floor",
+        "summary": "Tight band-pass + residual bed-noise suppression.",
+        "roboticRisk": "low",
+    },
+    "staticSeal": {
+        "title": "Static Seal",
+        "summary": "Final declick/de-ess/limit pass before broadcast loudnorm.",
+        "roboticRisk": "low",
+    },
+    "gapDehiss": {
+        "title": "Gap Dehiss",
+        "summary": "Attenuate hiss only between words — speech stays untouched.",
+        "roboticRisk": "low",
+    },
 }
 
 HELPER_PRESETS: dict[str, list[str]] = {
@@ -209,8 +244,20 @@ def _run_ffmpeg_af(wav: Path, af: str) -> bool:
         )
         tmp.replace(wav)
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as exc:
+        err = (exc.stderr or exc.stdout or "")[:240].strip()
+        if err:
+            print(f"  ffmpeg af failed: {err}", file=sys.stderr)
         return False
+
+
+def _run_ffmpeg_af_steps(wav: Path, filters: list[str]) -> int:
+    """Apply filters one at a time so a single unsupported filter does not skip the rest."""
+    applied = 0
+    for af in filters:
+        if af and _run_ffmpeg_af(wav, af):
+            applied += 1
+    return applied
 
 
 def _load_mono_stereo(wav: Path, sr: int = 48000) -> tuple[np.ndarray, int]:
@@ -321,6 +368,66 @@ def apply_anti_stutter(wav: Path, spec: dict[str, Any]) -> bool:
     except Exception as exc:
         print(f"antiStutter: {exc}", file=sys.stderr)
     return _run_ffmpeg_af(wav, "highpass=f=88,alimiter=limit=0.98:attack=80:release=320")
+
+
+def apply_twang_voice(wav: Path, spec: dict[str, Any]) -> bool:
+    """Cut boxy mids, add presence bite — streamer-forward twang without harsh sibilance."""
+    cfg = _helper_cfg(spec, "twangVoice")
+    if cfg.get("enabled") is False:
+        return False
+    mid_cut = float(cfg.get("midCutDb", -1.5))
+    presence = float(cfg.get("presenceDb", 1.25))
+    bite = float(cfg.get("biteDb", 0.85))
+    af = ",".join(
+        [
+            f"equalizer=f=750:width_type=o:width=1.4:g={mid_cut}",
+            f"equalizer=f=1200:width_type=o:width=1.2:g={mid_cut * 0.85}",
+            f"equalizer=f=1800:width_type=o:width=1.5:g={mid_cut * 0.55}",
+            f"equalizer=f=2900:width_type=o:width=1.3:g={presence}",
+            f"equalizer=f=3800:width_type=o:width=1.8:g={bite}",
+            "acompressor=threshold=-28dB:ratio=1.12:attack=110:release=620:makeup=1.05",
+        ]
+    )
+    ok = _run_ffmpeg_af(wav, af)
+    if ok:
+        print(
+            f"  twangVoice: mids {mid_cut:.1f} dB, presence +{presence:.1f} dB",
+            flush=True,
+        )
+    return ok
+
+
+def apply_mythical_voice(wav: Path, spec: dict[str, Any]) -> bool:
+    """Deeper bass, rolled-off highs, subtle mythical pitch weight."""
+    cfg = _helper_cfg(spec, "mythicalVoice")
+    if cfg.get("enabled") is False:
+        return False
+    bass = float(cfg.get("bassDb", 2.8))
+    low_mid = float(cfg.get("lowMidDb", 1.1))
+    treble_cut = float(cfg.get("trebleCutDb", -2.4))
+    air_cut = float(cfg.get("airCutDb", -1.8))
+    pitch_ratio = float(cfg.get("pitchRatio", 0.985))  # ~-0.26 semitone
+    af = ",".join(
+        [
+            "highpass=f=72",
+            f"equalizer=f=95:width_type=o:width=1.2:g={bass}",
+            f"equalizer=f=180:width_type=o:width=1.4:g={low_mid * 0.6}",
+            f"equalizer=f=320:width_type=o:width=1:g={low_mid}",
+            f"equalizer=f=4500:width_type=o:width=2:g={treble_cut}",
+            f"equalizer=f=7200:width_type=o:width=2:g={treble_cut * 0.85}",
+            f"highshelf=f=9000:width_type=o:width=2:g={air_cut}",
+            f"asetrate=48000*{pitch_ratio:.5f},aresample=48000",
+            "acompressor=threshold=-30dB:ratio=1.08:attack=120:release=520:makeup=1.04",
+        ]
+    )
+    ok = _run_ffmpeg_af(wav, af)
+    if ok:
+        print(
+            f"  mythicalVoice: bass +{bass:.1f} dB, treble {treble_cut:.1f} dB, "
+            f"pitch {pitch_ratio:.3f}",
+            flush=True,
+        )
+    return ok
 
 
 def apply_character(wav: Path, spec: dict[str, Any]) -> bool:
@@ -498,25 +605,24 @@ def apply_speaker_safe(wav: Path, spec: dict[str, Any]) -> bool:
 
 
 def apply_tts_smooth(wav: Path, spec: dict[str, Any]) -> bool:
-    """Soften synthetic TTS edges — glue, warmth, micro-width (not robotic shine)."""
+    """Soften synthetic TTS edges — EQ glue only (no afftdn/chorus; those add hiss on master)."""
     cfg = _helper_cfg(spec, "ttsSmooth")
     if cfg.get("enabled") is False:
+        return True
+    if spec.get("narratorDryVoiceMaster") and not cfg.get("allowOnDryMaster", False):
         return True
     if cfg.get("skipOnWordQueue", True) and (
         spec.get("narratorCaptureMode") == "word"
         or spec.get("narratorUsedSegmentQueue")
     ):
         return True
-    chorus = str(cfg.get("chorus", "0.42:0.82:48|52:0.12:0.28:2.2"))
     af = ",".join(
         [
-            "afftdn=nf=-32",
-            "asoftclip=type=tanh:param=0.72",
-            f"chorus={chorus}",
-            "equalizer=f=380:width_type=o:width=1.2:g=-0.55",
-            "equalizer=f=2100:width_type=o:width=1.4:g=0.45",
-            "acompressor=threshold=-30dB:ratio=1.04:attack=220:release=950:makeup=1.02",
-            "alimiter=limit=0.97:attack=55:release=280",
+            "asoftclip=type=tanh:param=0.68",
+            "equalizer=f=380:width_type=o:width=1.2:g=-0.45",
+            "equalizer=f=2100:width_type=o:width=1.4:g=0.35",
+            "acompressor=threshold=-30dB:ratio=1.03:attack=240:release=1000:makeup=1.01",
+            "alimiter=limit=0.97:attack=60:release=300",
         ]
     )
     ok = _run_ffmpeg_af(wav, af)
@@ -943,7 +1049,7 @@ def _auto_eq20_apply_stft(
 def apply_natural_pitch(wav: Path, spec: dict[str, Any]) -> bool:
     """Light pitch contour smoothing + high dry mix — natural fall, not robotic."""
     cfg = _helper_cfg(spec, "naturalPitch")
-    if cfg.get("enabled") is False:
+    if cfg.get("enabled") is False or spec.get("narratorDryVoiceMaster"):
         return True
     at_path = _TOOLS / "personal-voice-autotune.py"
     if not at_path.is_file():
@@ -976,7 +1082,7 @@ def apply_natural_pitch(wav: Path, spec: dict[str, Any]) -> bool:
 def apply_phrase_fall(wav: Path, spec: dict[str, Any]) -> bool:
     """Gentle energy dip at phrase ends — skip only for per-word queue captures."""
     cfg = _helper_cfg(spec, "phraseFall")
-    if cfg.get("enabled") is False:
+    if cfg.get("enabled") is False or spec.get("narratorDryVoiceMaster"):
         return True
     if spec.get("narratorCaptureWordQueue"):
         return True
@@ -1097,14 +1203,210 @@ def apply_auto_dynamics(wav: Path, spec: dict[str, Any]) -> bool:
     return _run_ffmpeg_af(wav, af)
 
 
+def apply_voice_capture_light(wav: Path, spec: dict[str, Any]) -> bool:
+    """Minimal per-cue cleanup — full ladder runs once on the master narration timeline."""
+    for name in ("deClick", "speakerSafe"):
+        fn = HELPER_APPLY.get(name)
+        if fn:
+            fn(wav, spec)
+    return True
+
+
+def apply_segment_volume(wav: Path, spec: dict[str, Any]) -> bool:
+    """Gentle whole-clip level ride — compressor only (dynaudnorm causes womp/pump on speech)."""
+    cfg = _helper_cfg(spec, "segmentVolume")
+    if cfg.get("enabled") is False:
+        return True
+    strength = float(cfg.get("strength", 0.62))
+    ratio = 1.04 + 0.08 * strength
+    af = ",".join(
+        [
+            f"acompressor=threshold=-26dB:ratio={ratio:.2f}:attack=280:release=1800:makeup=1.0",
+            "alimiter=limit=0.97:attack=120:release=400",
+        ]
+    )
+    ok = _run_ffmpeg_af(wav, af)
+    if ok:
+        print(f"  segmentVolume: timeline level stabilizer (strength {strength:.0%})", flush=True)
+    return ok
+
+
+def apply_gap_dehiss(wav: Path, spec: dict[str, Any]) -> bool:
+    """Pull hiss down only in gaps between speech — voice formants stay intact."""
+    cfg = _helper_cfg(spec, "gapDehiss")
+    if cfg.get("enabled") is False:
+        return True
+    top_db = float(cfg.get("splitTopDb", 36))
+    gap_gain = float(cfg.get("gapGain", 0.2))
+    pad_ms = float(cfg.get("speechPadMs", 42))
+    sr = 48000
+    try:
+        import librosa
+
+        y, sr = librosa.load(str(wav), sr=sr, mono=True)
+        intervals = librosa.effects.split(y, top_db=top_db)
+        if len(intervals) < 1:
+            return True
+        pad = max(0, int(sr * pad_ms / 1000.0))
+        speech = np.zeros(y.shape[0], dtype=bool)
+        for start, end in intervals:
+            s = max(0, start - pad)
+            e = min(y.shape[0], end + pad)
+            speech[s:e] = True
+        out = y.astype(np.float64)
+        out[~speech] *= gap_gain
+        peak = float(np.max(np.abs(out)) or 1e-6)
+        out = (out / peak * min(peak, 0.98)).astype(np.float32)
+        _save_stereo(wav, np.stack([out, out], axis=1), sr)
+        gap_pct = 100.0 * float(np.mean(~speech))
+        print(f"  gapDehiss: gaps ducked to {gap_gain:.0%} ({gap_pct:.0f}% of clip)", flush=True)
+        return True
+    except Exception as exc:
+        print(f"gapDehiss: {exc}", file=sys.stderr)
+        return False
+
+
+def apply_static_clean(wav: Path, spec: dict[str, Any]) -> bool:
+    """
+    Treble tame + declick on full voice — no broadband denoise (that eats speech).
+    Pair with gapDehiss for silence-only hiss control.
+    """
+    cfg = _helper_cfg(spec, "staticClean")
+    if cfg.get("enabled") is False:
+        return True
+    hiss = float(cfg.get("hissShelfDb", -1.4))
+    mid = float(cfg.get("midHissDb", -0.9))
+    n = _run_ffmpeg_af_steps(
+        wav,
+        [
+            "highpass=f=88",
+            f"equalizer=f=5600:width_type=o:width=2.2:g={mid}",
+            f"equalizer=f=7800:width_type=o:width=1.8:g={hiss * 0.7}",
+            f"highshelf=f=10000:width_type=o:width=2:g={hiss}",
+            "adeclick=w=40:o=2",
+        ],
+    )
+    if n > 0:
+        print(f"  staticClean: treble tame ({n} steps)", flush=True)
+    return n > 0
+
+
+def apply_hiss_gate(wav: Path, spec: dict[str, Any]) -> bool:
+    """Gate synth hiss in gaps — off by default (pumps speech into womp on Personal Voice)."""
+    cfg = _helper_cfg(spec, "hissGate")
+    if cfg.get("enabled") is not True:
+        return True
+    threshold = float(cfg.get("threshold", 0.014))
+    ratio = float(cfg.get("ratio", 2.2))
+    attack = int(cfg.get("attackMs", 8))
+    release = int(cfg.get("releaseMs", 220))
+    makeup = float(cfg.get("makeup", 1.02))
+    ok = _run_ffmpeg_af(
+        wav,
+        f"agate=threshold={threshold}:ratio={ratio}:attack={attack}:release={release}:makeup={makeup}",
+    )
+    if ok:
+        print(f"  hissGate: threshold {threshold:.3f}", flush=True)
+    return ok
+
+
+def apply_grain_pull(wav: Path, spec: dict[str, Any]) -> bool:
+    """Optional second afftdn — off by default (stacked denoise destroys intelligibility)."""
+    cfg = _helper_cfg(spec, "grainPull")
+    if cfg.get("enabled") is not True:
+        return True
+    nf = float(cfg.get("afftdnNf", -26))
+    n = _run_ffmpeg_af_steps(wav, [f"afftdn=nf={nf}:nt=w", "highpass=f=88"])
+    if n > 0:
+        print(f"  grainPull: spectral pull ({n} steps, afftdn {nf} dB)", flush=True)
+    return n > 0
+
+
+def apply_synth_hiss_cut(wav: Path, spec: dict[str, Any]) -> bool:
+    """Mild notch on TTS hiss — off by default."""
+    cfg = _helper_cfg(spec, "synthHissCut")
+    if cfg.get("enabled") is not True:
+        return True
+    bands = cfg.get("bands") or [
+        {"f": 6200, "g": -0.9, "w": 2.0},
+        {"f": 9000, "g": -1.1, "w": 2.0},
+    ]
+    filters = [
+        f"equalizer=f={int(b['f'])}:width_type=o:width={float(b.get('w', 2))}:g={float(b['g'])}"
+        for b in bands
+        if isinstance(b, dict)
+    ]
+    n = _run_ffmpeg_af_steps(wav, filters)
+    if n > 0:
+        print(f"  synthHissCut: {n} notch bands", flush=True)
+    return n > 0
+
+
+def apply_noise_floor(wav: Path, spec: dict[str, Any]) -> bool:
+    """Band-limit only — off by default (extra afftdn/compress causes pump)."""
+    cfg = _helper_cfg(spec, "noiseFloor")
+    if cfg.get("enabled") is not True:
+        return True
+    hp = int(cfg.get("highpassHz", 90))
+    lp = int(cfg.get("lowpassHz", 14000))
+    n = _run_ffmpeg_af_steps(wav, [f"highpass=f={hp}", f"lowpass=f={lp}"])
+    if n > 0:
+        print(f"  noiseFloor: bed tame ({n} steps)", flush=True)
+    return n > 0
+
+
+def apply_static_seal(wav: Path, spec: dict[str, Any]) -> bool:
+    """Light declick before loudnorm — off by default."""
+    cfg = _helper_cfg(spec, "staticSeal")
+    if cfg.get("enabled") is not True:
+        return True
+    deess = float(cfg.get("deEssDb", -0.8))
+    hiss = float(cfg.get("hissShelfDb", -0.6))
+    n = _run_ffmpeg_af_steps(
+        wav,
+        [
+            "adeclick=w=52:o=2",
+            f"equalizer=f=6400:width_type=o:width=2:g={deess}",
+            f"equalizer=f=8600:width_type=o:width=1.8:g={deess * 0.85}",
+            f"highshelf=f=10000:width_type=o:width=2:g={hiss}",
+            "alimiter=limit=0.96:attack=35:release=200",
+        ],
+    )
+    if n > 0:
+        print(f"  staticSeal: seal pass ({n} steps)", flush=True)
+    return n > 0
+
+
+def apply_static_clean_post(wav: Path, spec: dict[str, Any]) -> bool:
+    """Very light treble tame after loudnorm — optional."""
+    cfg = _helper_cfg(spec, "staticClean")
+    if cfg.get("enabled") is False or cfg.get("postFinalize", False) is not True:
+        return True
+    hiss = float(cfg.get("postHissShelfDb", -0.6))
+    mid_hiss = float(cfg.get("postMidHissDb", -0.35))
+    af = ",".join(
+        [
+            f"equalizer=f=5600:width_type=o:width=2.2:g={mid_hiss}",
+            f"highshelf=f=9400:width_type=o:width=2:g={hiss}",
+            "adeclick=w=36:o=1",
+            "alimiter=limit=0.97:attack=28:release=160",
+        ]
+    )
+    ok = _run_ffmpeg_af(wav, af)
+    if ok:
+        print("  staticClean: post-loudnorm hiss tame", flush=True)
+    return ok
+
+
 def apply_steady_voice(wav: Path, spec: dict[str, Any]) -> bool:
     """
-    Slight steady / word-even delivery — levels out phrase-to-phrase swings without robotic snap.
+    Word-even delivery — for word-queue captures only, not full sentence cues.
     """
     cfg = _helper_cfg(spec, "steadyVoice")
     if cfg.get("enabled") is False:
         return True
-    if spec.get("narratorCaptureMode") == "word" and cfg.get("skipOnWordQueue", True):
+    mode = str(spec.get("narratorCaptureMode") or "").lower()
+    if mode != "word" and cfg.get("skipOnSentenceCues", True):
         return True
 
     strength = float(cfg.get("strength", 0.42))
@@ -1204,27 +1506,35 @@ def apply_auto_eq_20(wav: Path, spec: dict[str, Any]) -> bool:
 
 
 def apply_mid_treble(wav: Path, spec: dict[str, Any]) -> bool:
-    """Explicit mid + treble polish — mids up, treble restrained."""
+    """Mids forward, light bass body, treble pulled back — documentary warmth without harshness."""
     cfg = _helper_cfg(spec, "midTreble")
     if cfg.get("enabled") is False:
         return True
-    mid = float(cfg.get("midDb", 1.05))
-    treble = min(float(cfg.get("trebleDb", 0.48)), float(cfg.get("trebleMaxDb", 0.72)))
-    air = float(cfg.get("airShelfDb", 0.28))
+    mid = float(cfg.get("midDb", 1.45))
+    bass = float(cfg.get("bassDb", 0.65))
+    treble = float(cfg.get("trebleDb", -0.85))
+    treble = max(treble, -float(cfg.get("trebleCutMaxDb", 1.4)))
+    treble = min(treble, float(cfg.get("trebleMaxDb", 0.25)))
+    air = float(cfg.get("airShelfDb", -0.55))
     af = ",".join(
         [
-            "highpass=f=90",
-            f"equalizer=f=880:width_type=o:width=1.2:g={mid * 0.55}",
+            "highpass=f=75",
+            f"equalizer=f=140:width_type=o:width=1.1:g={bass * 0.85}",
+            f"equalizer=f=320:width_type=o:width=1.2:g={bass}",
+            f"equalizer=f=880:width_type=o:width=1.2:g={mid * 0.6}",
             f"equalizer=f=1550:width_type=o:width=1.4:g={mid}",
-            f"equalizer=f=2550:width_type=o:width=1.5:g={mid * 0.75}",
+            f"equalizer=f=2550:width_type=o:width=1.5:g={mid * 0.8}",
             f"equalizer=f=4200:width_type=o:width=2:g={treble}",
             f"highshelf=f=7800:width_type=o:width=2:g={air}",
-            f"highshelf=f=11500:width_type=o:width=2:g={-0.35}",
+            f"highshelf=f=11500:width_type=o:width=2:g={-0.65}",
         ]
     )
     ok = _run_ffmpeg_af(wav, af)
     if ok:
-        print(f"  midTreble: mids +{mid:.1f} dB, treble +{treble:.1f} dB (capped)", flush=True)
+        print(
+            f"  midTreble: mids +{mid:.1f} dB, bass +{bass:.1f} dB, treble {treble:+.1f} dB",
+            flush=True,
+        )
     return ok
 
 
@@ -1251,6 +1561,8 @@ def apply_voice_flair(wav: Path, spec: dict[str, Any]) -> bool:
 
 def apply_spatial_3d(wav: Path, spec: dict[str, Any]) -> bool:
     """Spatial playback — `style: soundcore` = hi-fi harmony; else legacy Haas width."""
+    if spec.get("narratorDryVoiceMaster"):
+        return True
     cfg = _helper_cfg(spec, "spatialHarmony") or _helper_cfg(spec, "spatial3d")
     if cfg.get("enabled") is False:
         return True
@@ -1457,8 +1769,11 @@ def stretch_word_tail_np(mono: np.ndarray, sr: int, stretch_ms: float) -> np.nda
 
 
 def apply_finalizer(wav: Path, spec: dict[str, Any]) -> bool:
-    """Hi-fi final — gentle lows, spatial-safe peak, broadcast level."""
+    """Hi-fi final — optional touch-up staticClean, then loudnorm + post hiss tame."""
     cfg = _helper_cfg(spec, "finalizer")
+    sc_cfg = _helper_cfg(spec, "staticClean")
+    if sc_cfg.get("enabled", True) and cfg.get("staticCleanBeforeFinalize", False):
+        apply_static_clean(wav, spec)
     target_i = float(cfg.get("loudnormI", -16))
     tp = float(cfg.get("truePeak", -1.5))
     lra = float(cfg.get("lra", 8))
@@ -1475,6 +1790,8 @@ def apply_finalizer(wav: Path, spec: dict[str, Any]) -> bool:
     ok = _run_ffmpeg_af(wav, af)
     if ok:
         print(f"  finalizer: hi-fi loudnorm I={target_i} TP={tp}", flush=True)
+        if sc_cfg.get("enabled", True) and cfg.get("staticCleanPostFinalize", True):
+            apply_static_clean_post(wav, spec)
     return ok
 
 
@@ -1482,6 +1799,8 @@ HELPER_APPLY: dict[str, Callable[[Path, dict[str, Any]], bool]] = {
     "humanSmooth": apply_human_smooth,
     "antiStutter": apply_anti_stutter,
     "character": apply_character,
+    "mythicalVoice": apply_mythical_voice,
+    "twangVoice": apply_twang_voice,
     "pitchAutotune": apply_pitch_autotune,
     "deEss": apply_de_ess,
     "warmth": apply_warmth,
@@ -1505,6 +1824,14 @@ HELPER_APPLY: dict[str, Callable[[Path, dict[str, Any]], bool]] = {
     "spatialHarmony": apply_spatial_3d,
     "tailFinish": apply_tail_finish,
     "steadyVoice": apply_steady_voice,
+    "segmentVolume": apply_segment_volume,
+    "staticClean": apply_static_clean,
+    "gapDehiss": apply_gap_dehiss,
+    "hissGate": apply_hiss_gate,
+    "grainPull": apply_grain_pull,
+    "synthHissCut": apply_synth_hiss_cut,
+    "noiseFloor": apply_noise_floor,
+    "staticSeal": apply_static_seal,
     "naturalPitch": apply_natural_pitch,
     "phraseFall": apply_phrase_fall,
     "phraseDynamics": apply_phrase_dynamics,

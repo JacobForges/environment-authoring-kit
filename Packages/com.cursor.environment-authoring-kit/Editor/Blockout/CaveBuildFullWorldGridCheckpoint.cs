@@ -23,7 +23,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         /// <summary>Match memory-guard unload cadence — scene + assets saved on the same rhythm.</summary>
         const int SceneSaveEveryTerraformSteps = 6;
+        const int SceneSaveEveryTerraformSteps16Gb = 48;
+        const int SceneSaveEveryPlaceAllSteps = 48;
+        const int SceneSaveEveryPlaceAllSteps16Gb = 96;
         const double MinSceneSaveIntervalSeconds = 90.0;
+        const double MinSceneSaveIntervalSeconds16Gb = 600.0;
+
+        static int _checkpointJsonTick;
 
         [Serializable]
         sealed class CheckpointDoc
@@ -35,6 +41,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public string sceneSaveDetail;
             public string mainTerrainName;
             public int seed;
+            public int conceptIndex = -1;
             public string phase;
             public int index;
             public int tileCount;
@@ -45,6 +52,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static FullWorldGridSession _activeSession;
         static double _lastSceneSaveAt;
+
+        public static bool TryPeekConceptIndex(out int conceptIndex)
+        {
+            conceptIndex = -1;
+            if (!TryLoadCheckpoint(out var doc))
+                return false;
+
+            if (doc.conceptIndex >= 0)
+            {
+                conceptIndex = Mathf.Clamp(doc.conceptIndex, 0, FullWorldConceptLayoutCatalog.ConceptCount - 1);
+                return true;
+            }
+
+            return false;
+        }
 
         public static bool HasResumable
         {
@@ -74,15 +96,119 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void SaveActiveSession(string reason)
         {
+            if (_activeSession?.MainTerrain != null)
+            {
+                Save(_activeSession, reason);
+                return;
+            }
+
+            var main = SurfaceTerrainTileExpansion.FindMainTerrainInScene();
+            if (main == null)
+                return;
+
+            var terrainCount = UnityEngine.Object.FindObjectsByType<Terrain>().Length;
+            if (!CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive &&
+                terrainCount < 9 &&
+                CaveBuildStepCounter.HasSession &&
+                CaveBuildStepCounter.Current > 0)
+                return;
+
+            var session = SurfaceTerrainTileExpansion.CreateMinimalFullWorldGridSession(main);
+            if (session == null)
+                return;
+
+            session.Request = FullWorldConceptLayoutCatalog.CreateHubBoundRequest();
+            session.Phase = FullWorldGridPhase.PlaceAll;
+            session.Index = Mathf.Max(0, UnityEngine.Object.FindObjectsByType<Terrain>().Length - 1);
+            BindActiveSession(session);
+            Save(session, reason);
+        }
+
+        internal static bool IsSceneMilestoneReason(string reason)
+        {
+            var r = reason ?? string.Empty;
+            return r.IndexOf("CC0 import complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   r.IndexOf("post-terrain tiles complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   r.IndexOf("Hollow Titan meat complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   r.IndexOf("Hollow Titan stump complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   r.IndexOf("Hollow Titan stump phase", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   r.IndexOf("Hollow Titan meat phase", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        internal static bool IsFullAssetFlushMilestone(string reason)
+        {
+            if (!IsSceneMilestoneReason(reason))
+                return false;
+
+            var r = reason ?? string.Empty;
+            if (r.IndexOf("meat phase", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("stump phase", StringComparison.OrdinalIgnoreCase) >= 0)
+                return !CaveBuildLateBuildPerformance.ShouldSkipIntermediateTitanMilestoneSave();
+
+            return true;
+        }
+
+        internal static bool ShouldSaveSceneForMilestone(string reason)
+        {
+            if (!IsSceneMilestoneReason(reason))
+                return false;
+
+            var r = reason ?? string.Empty;
+            if (r.IndexOf("meat phase", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("stump phase", StringComparison.OrdinalIgnoreCase) >= 0)
+                return !CaveBuildLateBuildPerformance.ShouldSkipIntermediateTitanMilestoneSave();
+
+            return true;
+        }
+
+        /// <summary>Scene + terrain assets at CC0 / Hollow Titan milestones (not just grid index JSON).</summary>
+        public static void SaveActiveSceneMilestone(string reason)
+        {
             if (_activeSession?.MainTerrain == null)
                 return;
 
             Save(_activeSession, reason);
         }
 
+        internal static bool ShouldWriteProgressCheckpoint(FullWorldGridSession session, string reason)
+        {
+            if (IsSceneMilestoneReason(reason))
+                return true;
+
+            var r = reason ?? string.Empty;
+            if (TryParsePacedStep(r, out var pacedStep))
+                return CaveBuildPacedStepPersistence.ShouldWriteGridCheckpointForPacedStep(pacedStep, force: false);
+
+            if (r.IndexOf("terraform begin", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("ground lay complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("memory pressure", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("pipeline start", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("playtest break", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("resume ", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
+            if (session?.Phase != FullWorldGridPhase.Terraform)
+                return true;
+
+            if (!PreferJsonOnlyCheckpointDuringBuild())
+            {
+                return session.Index <= 0 ||
+                       session.Index % ResolveTerraformSceneSaveInterval() == 0;
+            }
+
+            _checkpointJsonTick++;
+            if (session.Index > 0 && session.Index % SceneSaveEveryTerraformSteps16Gb == 0)
+                return true;
+
+            return _checkpointJsonTick % 16 == 0;
+        }
+
         internal static void Save(FullWorldGridSession session, string reason)
         {
             if (session?.MainTerrain == null)
+                return;
+
+            if (CaveBuildMemoryGuard.IsCc0ImportPhaseActive)
                 return;
 
             var offsets = session.PlaceOffsets ?? session.Offsets;
@@ -92,6 +218,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 scenePath = SceneManager.GetActiveScene().path,
                 mainTerrainName = session.MainTerrain.name,
                 seed = session.Request?.Seed ?? 0,
+                conceptIndex = session.Request?.ConceptLayoutIndex ??
+                               FullWorldGenerationStylePreset.LoadSelectedIndex(),
                 phase = session.Phase.ToString(),
                 index = session.Index,
                 tileCount = offsets?.Length ?? 0,
@@ -105,6 +233,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             File.WriteAllText(abs, JsonUtility.ToJson(doc, true) + "\n");
 
             if (ShouldSaveSceneAtCheckpoint(session, reason) &&
+                ShouldSaveSceneForMilestone(reason) &&
                 TrySaveCheckpointScene(doc, reason, out var saveDetail))
             {
                 doc.sceneSavedUtc = DateTime.UtcNow.ToString("o");
@@ -119,16 +248,52 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 forceUnityConsole: doc.sceneSaved);
         }
 
+        static bool PreferJsonOnlyCheckpointDuringBuild()
+        {
+            if (!CaveBuildEditorResponsiveness.IsLongBuildActive)
+                return false;
+
+            return CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f;
+        }
+
+        static int ResolveTerraformSceneSaveInterval() =>
+            PreferJsonOnlyCheckpointDuringBuild()
+                ? SceneSaveEveryTerraformSteps16Gb
+                : SceneSaveEveryTerraformSteps;
+
         static bool ShouldSaveSceneAtCheckpoint(FullWorldGridSession session, string reason)
         {
+            if (IsSceneMilestoneReason(reason))
+                return true;
+
             var r = reason ?? string.Empty;
+            if (TryParsePacedStep(r, out var pacedStep))
+                return CaveBuildPacedStepPersistence.ShouldSaveSceneForPacedStep(pacedStep, force: false);
+
             if (r.IndexOf("memory pressure", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("pipeline complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 r.IndexOf("pipeline start", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 r.IndexOf("post-lay resume", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 r.IndexOf("ground lay complete", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 r.IndexOf("terraform begin", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                r.IndexOf("playtest break", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 r.IndexOf("resume ", StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
+
+            if (PreferJsonOnlyCheckpointDuringBuild())
+            {
+                if (session?.Phase == FullWorldGridPhase.Terraform && session.Offsets != null)
+                {
+                    var total = session.Offsets.Length;
+                    if (session.Index >= total - 1)
+                        return true;
+
+                    var interval = ResolveTerraformSceneSaveInterval();
+                    return interval > 0 && session.Index > 0 && session.Index % interval == 0;
+                }
+
+                return false;
+            }
 
             if (session == null)
                 return true;
@@ -146,12 +311,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 var total = (session.PlaceOffsets ?? session.Offsets)?.Length ?? 0;
                 if (total > 0 && session.Index >= total - 1)
                     return true;
-                if (session.Index % 24 == 0)
+                var interval = PreferJsonOnlyCheckpointDuringBuild()
+                    ? SceneSaveEveryPlaceAllSteps16Gb
+                    : SceneSaveEveryPlaceAllSteps;
+                if (interval > 0 && session.Index > 0 && session.Index % interval == 0)
                     return true;
             }
 
             var now = EditorApplication.timeSinceStartup;
-            return _lastSceneSaveAt <= 0 || now - _lastSceneSaveAt >= MinSceneSaveIntervalSeconds;
+            var minInterval = PreferJsonOnlyCheckpointDuringBuild()
+                ? MinSceneSaveIntervalSeconds16Gb
+                : MinSceneSaveIntervalSeconds;
+            if (PreferJsonOnlyCheckpointDuringBuild() && session.Phase == FullWorldGridPhase.Terraform)
+                return false;
+
+            return _lastSceneSaveAt <= 0 || now - _lastSceneSaveAt >= minInterval;
         }
 
         static bool TrySaveCheckpointScene(CheckpointDoc doc, string reason, out string detail)
@@ -166,7 +340,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var ok = EnvironmentKitSceneSafeguards.SaveBuildCheckpointSnapshot(
                 $"FullWorld {doc.phase} {doc.index}/{doc.tileCount} — {reason}",
-                out detail);
+                out detail,
+                flushAssets: IsFullAssetFlushMilestone(reason));
             if (ok)
                 _lastSceneSaveAt = EditorApplication.timeSinceStartup;
             return ok;
@@ -202,7 +377,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void ResumeFromCheckpointMenu()
         {
             CaveBuildMemoryGuard.ClearMemoryPause();
-            CaveBuildPauseController.Continue();
+            CaveBuildPauseController.ClearPauseFlagOnly();
 
             if (!TryLoadCheckpoint(out var doc))
             {
@@ -230,10 +405,48 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            ResumeBoundSession(session, doc);
+        }
+
+        internal static bool TryResumeGridCheckpointSilent()
+        {
+            if (!HasResumable || !TryLoadCheckpoint(out var doc))
+                return false;
+
+            CaveBuildMemoryGuard.ClearMemoryPause();
+            if (!TryOpenCheckpointScene(doc))
+                return false;
+
+            if (!TryResumeSession(doc, out var session, out _))
+                return false;
+
+            ResumeBoundSession(session, doc);
+            return true;
+        }
+
+        static void ResumeBoundSession(FullWorldGridSession session, CheckpointDoc doc)
+        {
             _activeSession = session;
             BindActiveSession(session);
             CaveBuildStepCounter.BeginSession();
-            CaveBuildStepCounter.ConfigureForBuild(SurfaceBuildScope.FullWorld, doc.tileCount > 81);
+            if (doc.seed > 0 && session.Request != null)
+                session.Request.Seed = doc.seed;
+
+            if (CaveBuildSessionConfig.HasFinalizedActive)
+            {
+                CaveBuildSessionConfig.ApplyToRequest(session.Request);
+                CaveBuildSessionConfig.ApplyToEditorSettings();
+            }
+            else
+            {
+                var conceptIndex = doc.conceptIndex >= 0
+                    ? doc.conceptIndex
+                    : FullWorldGenerationStylePreset.LoadSelectedIndex();
+                FullWorldConceptLayoutCatalog.ApplySessionBinding(session.Request, conceptIndex);
+
+                if (!CaveBuildConceptSession.ValidateTilePlan(conceptIndex, doc.tileCount, out var tileWarning))
+                    CaveBuildEditorLog.LogSurfaceWarning("[Checkpoint] " + tileWarning);
+            }
 
             CaveBuildEditorLog.LogSurface(
                 $"[Checkpoint] Resuming {doc.phase} at index {doc.index}/{doc.tileCount} — {doc.reason}",
@@ -319,10 +532,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var ground = SceneGroundResolver.ResolveForFullWorld(main.transform);
-            var request = WorldGenerationRequest.LoadOrDefault();
-            if (doc.seed > 0)
-                request.Seed = doc.seed;
-            request.EnsureFullWorldSurfaceContract();
+            var conceptIndex = doc.conceptIndex >= 0
+                ? doc.conceptIndex
+                : (CaveBuildPlaytestSessionSnapshot.TryLoad(out var playtest) && playtest.conceptIndex >= 0
+                    ? playtest.conceptIndex
+                    : FullWorldGenerationStylePreset.LoadSelectedIndex());
+            var request = FullWorldConceptLayoutCatalog.CreateHubBoundRequest(doc.seed, conceptIndex);
 
             if (!Enum.TryParse(doc.phase, out FullWorldGridPhase phase))
             {
@@ -358,6 +573,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Path.Combine(
                 Path.GetDirectoryName(Application.dataPath) ?? string.Empty,
                 RelPath);
+
+        static bool TryParsePacedStep(string reason, out int step)
+        {
+            step = 0;
+            if (string.IsNullOrEmpty(reason))
+                return false;
+
+            var marker = "paced step";
+            var idx = reason.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+                return false;
+
+            var tail = reason.Substring(idx + marker.Length).Trim();
+            var end = tail.IndexOfAny(new[] { ' ', '—', '-', '|', ',' });
+            if (end > 0)
+                tail = tail.Substring(0, end);
+
+            return int.TryParse(tail, out step) && step > 0;
+        }
     }
 }
 #endif

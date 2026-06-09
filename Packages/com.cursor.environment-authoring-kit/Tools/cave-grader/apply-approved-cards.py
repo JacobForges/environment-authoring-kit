@@ -104,7 +104,13 @@ def resolve_signature(run_dir: Path) -> Path | None:
     return None
 
 
-def generate_cards(run_dir: Path, intro_id: str, outro_id: str) -> tuple[Path, Path]:
+def generate_cards(
+    run_dir: Path,
+    intro_id: str,
+    outro_id: str,
+    *,
+    display_scale: float = 1.0,
+) -> tuple[Path, Path]:
     em = _load_emerald()
     frames = sorted((run_dir / "timelapse").glob("tl_*.png"))
     if not frames:
@@ -119,7 +125,9 @@ def generate_cards(run_dir: Path, intro_id: str, outro_id: str) -> tuple[Path, P
 
     intro_path = run_dir / "ApprovedIntro.png"
     outro_path = run_dir / "ApprovedOutro.png"
-    em.build_intro(intro_bg, intro_v, em.EMERALD_STYLE).save(intro_path, quality=95)
+    em.build_intro(
+        intro_bg, intro_v, em.EMERALD_STYLE, display_scale=display_scale
+    ).save(intro_path, quality=95)
     em.build_outro(
         outro_bg,
         portrait,
@@ -127,6 +135,7 @@ def generate_cards(run_dir: Path, intro_id: str, outro_id: str) -> tuple[Path, P
         em.EMERALD_STYLE,
         signature=signature,
         signature_max_h=72,
+        display_scale=display_scale,
     ).save(outro_path, quality=95)
     return intro_path, outro_path
 
@@ -169,7 +178,6 @@ def card_spec_fields(run_dir: Path) -> dict[str, Any]:
         "narratorSpeechPace": 1.0,
         "narratorHumanize": True,
         "narratorPersonalHumanize": True,
-        "narratorNaturalPauses": True,
         "narratorEdgeRate": "+8%",
         "tlMaxFrames": 72,
         "tlMaxSec": 7.0,
@@ -179,7 +187,7 @@ def card_spec_fields(run_dir: Path) -> dict[str, Any]:
         "narratorEngine": "personal",
         "narratorRequirePersonal": True,
         "narratorPolishPersonal": False,
-        "narratorNaturalDelivery": True,
+        "narratorNaturalDelivery": False,
         "narratorNaturalPauses": False,
         "narratorPersonalLoudnorm": False,
     }
@@ -202,8 +210,14 @@ def apply_to_timeline(run_dir: Path, *, regen: bool = False) -> dict[str, Any]:
         intro_id = str(approved_raw.get("introVariant", intro_id))
         outro_id = str(approved_raw.get("outroVariant", outro_id))
 
+    try:
+        card_scale = float(approved_raw.get("captionCardDisplayScale", 1.0) or 1.0)
+    except (TypeError, ValueError):
+        card_scale = 1.0
+    card_scale = max(0.5, min(1.0, card_scale))
+
     if regen:
-        generate_cards(run_dir, intro_id, outro_id)
+        generate_cards(run_dir, intro_id, outro_id, display_scale=card_scale)
     else:
         sync_approved_assets_to_run(run_dir, intro_id=intro_id, outro_id=outro_id)
 

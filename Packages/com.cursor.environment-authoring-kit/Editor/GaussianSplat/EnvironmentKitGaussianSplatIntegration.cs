@@ -87,10 +87,12 @@ namespace EnvironmentAuthoringKit.Editor.GaussianSplat
         {
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.enableGaussianSplatHeroAtCaveMouth = false;
-            settings.SaveToPrefs();
-            RemoveExistingHero();
+            settings.SaveGaussianSplatToPrefs();
+            RemoveHeroFromScene();
             EditorUtility.DisplayDialog("Gaussian splat hero", "Disabled and removed hero slot from scene.", "OK");
         }
+
+        public static void RemoveHeroFromScene() => RemoveExistingHero();
 
         public static bool TryPlaceOrRefreshHeroSlot(out string message, bool force = false)
         {

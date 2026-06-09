@@ -32,18 +32,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool OpenRecapDashboardBeforeCompose
         {
-            get
-            {
-                if (!EditorPrefs.HasKey(PrefOpenBeforeCompose))
-                    return Application.platform == RuntimePlatform.OSXEditor;
-                return EditorPrefs.GetBool(PrefOpenBeforeCompose, true);
-            }
+            get => EditorPrefs.GetBool(PrefOpenBeforeCompose, false);
             set => EditorPrefs.SetBool(PrefOpenBeforeCompose, value);
         }
 
         public static bool SkipRecapReview
         {
-            get => EditorPrefs.GetBool(PrefSkipReview, false);
+            get => EditorPrefs.GetBool(PrefSkipReview, true);
             set => EditorPrefs.SetBool(PrefSkipReview, value);
         }
 
@@ -247,9 +242,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             try
             {
                 var hub = CaveBuildCursorSettings.ResolveHubRoot();
-                var lexar = Path.Combine("/Volumes/Lexar/EnvironmentKit-Hub", PortFileRelative);
+                var dataRoot = EnvironmentKitDataRoot.ResolveRoot();
+                var dataRootPath = Path.Combine(dataRoot, PortFileRelative);
                 var internalPath = Path.Combine(hub, "Library", "EnvironmentKit", PortFileRelative);
-                foreach (var path in new[] { internalPath, lexar })
+                foreach (var path in new[] { internalPath, dataRootPath })
                 {
                     if (!File.Exists(path))
                         continue;

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -14,18 +15,20 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "recapMode": "presentation_pro",
     "sceneFit": "contain",
     "cinematicCamera": False,
-    "holdCinematicMotion": True,
+    "holdCinematicMotion": False,
     "cinematicEffects": True,
+    "javafxEffects": True,
     "videoPlaybackFactor": 1.0,
     "outputFps": 30.0,
     "framesPerSource": 1,
-    "milestoneHoldSec": 11.0,
-    "subbeatHoldSec": 8.0,
+    "milestoneHoldSec": 20.0,
+    "subbeatHoldSec": 20.0,
+    "minMilestoneHoldSec": 20.0,
     "introSec": 9.0,
     "outroSec": 10.0,
     "targetDurationSec": 480.0,
-    "maxCheckpoints": 10,
-    "maxSubbeats": 10,
+    "maxCheckpoints": 8,
+    "maxSubbeats": 8,
     "narrationSyncMode": "speech_first",
     "timelapseSecPerFrame": 0.09,
     "videoEnhance": True,
@@ -33,7 +36,12 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "segmentFadeSec": 0.35,
     "segmentXfadeSec": 0.5,
     "lectureMode": True,
-    "showAnnotations": True,
+    "showAnnotations": False,
+    "forceLocalCaptions": True,
+    "botAvatarOverlay": True,
+    "botAvatarLipSync": True,
+    "presentationPlayModeBroll": True,
+    "playModeBrollSec": 42.0,
     "tlTailMaxFrames": 48,
     "annotationSource": "opencv",
     "aiRegionsOnly": False,
@@ -45,18 +53,23 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "minTimelapseGapFrames": 6,
     "annotationDelaySec": 5.0,
     "annotationFadeSec": 0.65,
-    "captionLine1FadeSec": 1.1,
-    "captionLine2DelaySec": 1.5,
-    "captionLine3DelaySec": 3.0,
-    "captionReadPauseSec": 3.0,
+    "captionLine1FadeSec": 2.5,
+    "captionLine2DelaySec": 3.0,
+    "captionBulletStaggerSec": 1.8,
+    "captionBulletFadeSec": 2.0,
+    "captionLine3DelaySec": 11.0,
+    "captionFutureFadeSec": 2.0,
+    "captionReadPauseSec": 7.0,
+    "staticSceneMotion": True,
+    "disablePanMotion": True,
     "syncHoldToNarration": True,
-    "fullScriptAlignToMilestones": True,
+    "fullScriptAlignToMilestones": False,
     "narrationPlanMode": "estimate",
     "maxMilestoneHoldSec": 20.0,
     "maxSubbeatHoldSec": 12.0,
     "narrationTailPadSec": 1.8,
-    "sceneUpscale": 2.0,
-    "timelapseEncodeFps": 60,
+    "sceneUpscale": 1.25,
+    "timelapseEncodeFps": 30,
     "tlMaxFrames": 72,
     "tlMaxSec": 7.0,
     "tlMinSec": 4.5,
@@ -73,14 +86,13 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "outroNarratorOffsetSec": 1.0,
     "narrateIntro": True,
     "narrateOutro": True,
-    "narratorRate": 185,
-    "narratorPersonalSayRate": 185,
+    "narratorRate": 186,
+    "narratorPersonalSayRate": 186,
     "narratorPersonalHumanize": True,
-    "narratorNaturalPauses": True,
     "narratorPauseSentMs": 320,
     "narratorPauseCommaMs": 140,
     "narratorPolishPersonal": False,
-    "narratorNaturalDelivery": True,
+    "narratorNaturalDelivery": False,
     "narratorNaturalPauses": False,
     "narratorPersonalLoudnorm": False,
     "narratorEdgeRate": "+8%",
@@ -99,12 +111,37 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "encodeCrf": 18,
     "encodePreset": "slow",
     "encodeTune": "film",
+    "encodeCodec": "auto",
+    "encodeVtbQuality": 65,
 }
 
 
-def ffmpeg_encode_args(spec: dict[str, Any] | None = None) -> list[str]:
-    """Shared libx264 quality — crf 18, slow preset, film tune."""
+def resolve_encode_codec(spec: dict[str, Any] | None = None) -> str:
     spec = spec or {}
+    codec = str(spec.get("encodeCodec", PRODUCER_SPEC_DEFAULTS["encodeCodec"])).strip().lower()
+    if codec in ("", "auto"):
+        return "h264_videotoolbox" if platform.system() == "Darwin" else "libx264"
+    return codec
+
+
+def ffmpeg_encode_args(spec: dict[str, Any] | None = None) -> list[str]:
+    """macOS: VideoToolbox (fast). Else libx264 crf 18, slow preset, film tune."""
+    spec = spec or {}
+    codec = resolve_encode_codec(spec)
+    if codec == "h264_videotoolbox":
+        qv = int(spec.get("encodeVtbQuality", PRODUCER_SPEC_DEFAULTS["encodeVtbQuality"]))
+        return [
+            "-c:v",
+            "h264_videotoolbox",
+            "-q:v",
+            str(max(1, min(100, qv))),
+            "-profile:v",
+            "high",
+            "-pix_fmt",
+            "yuv420p",
+            "-allow_sw",
+            "1",
+        ]
     crf = int(spec.get("encodeCrf", PRODUCER_SPEC_DEFAULTS["encodeCrf"]))
     preset = str(spec.get("encodePreset", PRODUCER_SPEC_DEFAULTS["encodePreset"]))
     tune = str(spec.get("encodeTune", PRODUCER_SPEC_DEFAULTS["encodeTune"]))

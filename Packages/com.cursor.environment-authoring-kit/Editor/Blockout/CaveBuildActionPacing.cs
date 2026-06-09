@@ -279,6 +279,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (CaveBuildEditorResponsiveness.IsLongBuildActive)
                     return 1;
 
+                if (CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive)
+                    return 1;
+
                 var configured = CaveBuildCursorSettings.ResolveQueuePacing().batchSize;
                 return CaveBuildPipelineScope.CaveOnlyContinuation
                     ? 1
@@ -403,6 +406,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 rest.Add(Queue.Dequeue());
 
             Queue.Enqueue(item);
+            CaveBuildStepCounter.RegisterScheduledStep(1);
             foreach (var pending in rest)
                 Queue.Enqueue(pending);
 
@@ -483,6 +487,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _lastBatchCompletedAt = EditorApplication.timeSinceStartup;
 
             CaveBuildEditorQueueSafeguard.OnEnqueued(label);
+            CaveBuildStepCounter.RegisterScheduledStep(1);
 
             if (Queue.Count > 1)
             {
@@ -627,6 +632,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     item.Label,
                     $"run [{_batchRunIndex}/{ArmedBatch.Count}] load×{ComputeLoadMultiplier(item.Weight):F2} {item.Weight}");
                 CaveBuildEditorQueueSafeguard.NotifyQueueProgress(item.Label);
+                if (CaveBuildEditorResponsiveness.IsLongBuildActive)
+                    CaveBuildRunStatusPublisher.SetSubOperationFromQueueLabel(item.Label);
             }
 
             _heavyRunning = item.Weight == ActionWeight.Heavy;
@@ -681,9 +688,36 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             CaveBuildDeferredAssetRefresh.Flush();
             CaveBuildEditorResponsiveness.OnQueueStepCompleted();
-            if (!CaveBuildLiveSceneFlushUtility.InSeamPhase)
+            if (ShouldFlushWorldViewAfterBatch())
                 CaveBuildLiveSceneFlushUtility.FlushWorldView();
             EnsurePolling();
+        }
+
+        static bool ShouldFlushWorldViewAfterBatch()
+        {
+            if (CaveBuildDemoAutoRecorder.KeepSceneViewLiveForRecording)
+                return true;
+
+            if (CaveBuildLiveSceneFlushUtility.InSeamPhase ||
+                CaveBuildMemoryGuard.IsCc0ImportPhaseActive ||
+                ShouldSkipLiveFlushForBatch())
+                return false;
+
+            return true;
+        }
+
+        static bool ShouldSkipLiveFlushForBatch()
+        {
+            for (var i = 0; i < ArmedBatch.Count; i++)
+            {
+                var label = ArmedBatch[i].Label;
+                if (string.IsNullOrEmpty(label))
+                    continue;
+                if (label.IndexOf("CC0", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+
+            return false;
         }
 
         static void StopPolling()

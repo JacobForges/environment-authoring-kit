@@ -9,10 +9,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     {
         string _apiKeyEdit = "";
 
+        void OnEnable()
+        {
+            var settings = (CaveBuildCursorSettings)target;
+            settings?.LoadFromPrefs();
+        }
+
         public override void OnInspectorGUI()
         {
             var settings = (CaveBuildCursorSettings)target;
-            settings.LoadFromPrefs();
 
             EditorGUILayout.LabelField("AI provider credentials (never committed)", EditorStyles.boldLabel);
             settings.aiProvider = (EnvironmentKitAiProvider)EditorGUILayout.EnumPopup("Active provider", settings.aiProvider);

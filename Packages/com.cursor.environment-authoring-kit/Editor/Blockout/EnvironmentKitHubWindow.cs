@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using EnvironmentAuthoringKit.GaussianSplat;
+using EnvironmentAuthoringKit.Editor.GaussianSplat;
+using EnvironmentAuthoringKit.Editor.Generation;
 using UnityEditor;
 using UnityEngine;
 
@@ -71,13 +72,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         double _nextPinAt;
         bool _pinDuringBuild = true;
         bool _showCompletionPanel;
+        bool _postBuildPlaythroughPending;
         bool _showGradeDuringBuild;
         string _completionTitle = string.Empty;
         string _completionSummary = string.Empty;
         string _caveLavaFolders;
         string _cavePropFolders;
         bool _caveScanAllAssets;
-        int _generationStyleIndex;
 
         public static bool IsOpen =>
             Resources.FindObjectsOfTypeAll<EnvironmentKitHubWindow>().Length > 0;
@@ -131,10 +132,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 hub._completionTitle = title ?? string.Empty;
                 hub._completionSummary = shortSummary ?? string.Empty;
                 hub._showCompletionPanel = true;
+                hub._postBuildPlaythroughPending = false;
                 hub._tab = Tab.Build;
                 hub.Focus();
                 hub.Repaint();
             }
+        }
+
+        public static void NotifyPostBuildPlaythroughPending()
+        {
+            foreach (var hub in Resources.FindObjectsOfTypeAll<EnvironmentKitHubWindow>())
+            {
+                hub._postBuildPlaythroughPending = true;
+                hub._showCompletionPanel = false;
+                hub._tab = Tab.Build;
+                hub.Focus();
+                hub.Repaint();
+            }
+        }
+
+        public static void ClearPostBuildPlaythroughPending()
+        {
+            foreach (var hub in Resources.FindObjectsOfTypeAll<EnvironmentKitHubWindow>())
+                hub._postBuildPlaythroughPending = false;
         }
 
         [MenuItem(CaveBuildMenuPaths.Root + "Hub/Bring Hub To Front", false, -99)]
@@ -145,19 +165,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         void OnEnable()
         {
-            _settings = CaveBuildCursorSettings.LoadOrCreate();
-            _settings.LoadFromPrefs();
-            _apiKey = _settings.GetApiKey();
-            _googleApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.GoogleGemini);
-            _anthropicApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.AnthropicClaude);
-            _openAiApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenAICompatible);
-            _openRouterApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenRouter);
-            _customApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.CustomEndpoint);
+            EnsureSettingsLoaded();
             _pinDuringBuild = EditorPrefs.GetBool(PrefPinDuringBuild, true);
-            _generationStyleIndex = FullWorldGenerationStylePreset.LoadSelectedIndex();
             LoadPrefabFolderPrefs();
             _selectedArtifact = Mathf.Clamp(_selectedArtifact, 0, Artifacts.Length - 1);
             RefreshArtifactPreview();
+            CaveBuildHubSessionReconcile.ReconcileStaleState(force: true);
             EditorApplication.update += OnEditorUpdate;
         }
 
@@ -195,7 +208,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         void OnGUI()
         {
             DrawHeader();
-            _tab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Build", "Settings", "Data" });
+            var selectedTab = (Tab)GUILayout.Toolbar((int)_tab, new[] { "Build", "Settings", "Data" });
+            if (selectedTab == Tab.Settings && _tab != Tab.Settings)
+                EnsureSettingsLoaded();
+            _tab = selectedTab;
             EditorGUILayout.Space(6f);
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
@@ -228,21 +244,75 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorApplication.delayCall += () => action();
         }
 
+        /// <summary>Hub build buttons — compile/preflight checks + modal feedback when blocked.</summary>
+        static void DeferHubBuildAction(Action buildAction, string label)
+        {
+            DeferGuiAction(() =>
+            {
+                try
+                {
+                    Debug.Log($"[Hub] Build clicked: {label}");
+                    CaveBuildRunStatusPublisher.PulseSubOperation("hub", $"Starting {label}…");
+
+                    if (EditorApplication.isCompiling)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Environment Kit — wait for compile",
+                            "Unity is still compiling scripts. Wait for the Console spinner to stop, then click Build again.",
+                            "OK");
+                        return;
+                    }
+
+                    CaveBuildCompileGate.ExportDiagnostics();
+                    if (CaveBuildCompileGate.HasBlockingErrors())
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Environment Kit — fix compile errors",
+                            "Script compile errors are blocking the build. Open the Console, fix the red CS errors, then try again.\n\n" +
+                            $"Diagnostics: {CaveBuildCompileGate.DiagnosticsPath}",
+                            "OK");
+                        return;
+                    }
+
+                    if (LavaTubeCaveBuilder.IsBuildInProgress ||
+                        CaveBuildStartupCoordinator.IsActive ||
+                        CaveBuildRunStatusPublisher.HasActiveSession)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Environment Kit — build already active",
+                            "A build is already running or stuck from a prior session.\n\n" +
+                            "Use Pause/Continue, or Cave Build → Diagnostics → Emergency: Unfreeze Editor, then try again.",
+                            "OK");
+                        return;
+                    }
+
+                    buildAction?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                    EditorUtility.DisplayDialog(
+                        "Environment Kit — build failed to start",
+                        ex.Message,
+                        "OK");
+                }
+            });
+        }
+
         void DrawHeader()
         {
             EditorGUILayout.LabelField("Environment Kit Hub", EditorStyles.boldLabel);
+            var sessionLabel = CaveBuildSessionConfig.HasFinalizedActive
+                ? CaveBuildSessionConfig.LoadActive()?.label ?? "approved plan"
+                : "no approved plan";
+            var gridLabel = CaveBuildSessionConfig.HasFinalizedActive
+                ? CaveBuildSessionConfig.DescribeActiveTilePlan()
+                : "Finalize a plan in the AI build planner to set layout and scope.";
             EditorGUILayout.HelpBox(
-                "Single place to run FullWorld builds (~289 terrain tiles, 17×17 grid) with paced Step counter, tune settings, and inspect generated data before export/prefab decisions.",
+                $"FullWorld builds — {gridLabel} · session: {sessionLabel}.",
                 MessageType.None);
             EditorGUILayout.BeginHorizontal();
             _pinDuringBuild = EditorGUILayout.ToggleLeft("Pin Hub during active build", _pinDuringBuild);
-            EditorGUI.BeginChangeCheck();
-            var sequential = SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain;
-            sequential = EditorGUILayout.ToggleLeft(
-                "Sequential FullWorld terrain (~289 tiles, one tile fully done before next)",
-                sequential);
-            if (EditorGUI.EndChangeCheck())
-                SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = sequential;
             if (GUILayout.Button("Bring To Front Now", GUILayout.Width(160f)))
                 ForceBringToFront();
             EditorGUILayout.EndHorizontal();
@@ -252,19 +322,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         void DrawBuildTab()
         {
             DrawBuildCompletionBanner();
+            DrawPostBuildPlaythroughPanel();
+            CaveBuildHubSessionReconcile.ReconcileStaleState();
 
-            var inProgress =
-                LavaTubeCaveBuilder.IsBuildInProgress ||
-                CaveBuildStartupCoordinator.IsActive ||
-                CaveBuildRunStatusPublisher.HasActiveSession;
-            var mode = inProgress ? "Running" : "Idle";
-            var stepText = CaveBuildStepCounter.FormatHubStepLine();
+            var buildRunning = CaveBuildHubSessionReconcile.IsCoreBuildRunning();
+            var pacedWorkActive = CaveBuildHubSessionReconcile.IsPacedWorkActive();
+            var mode = pacedWorkActive ? "Running" : "Idle";
 
-            EditorGUILayout.LabelField($"Pipeline: {mode}  |  Step: {stepText}", EditorStyles.boldLabel);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"Pipeline: {mode}  |  Step:", EditorStyles.boldLabel, GUILayout.Width(160f));
+            DrawHubStepTicker();
+            EditorGUILayout.EndHorizontal();
             var phaseLine = CaveBuildStepCounter.FormatHubPhaseLine();
             if (!string.IsNullOrEmpty(phaseLine))
                 EditorGUILayout.LabelField(phaseLine, EditorStyles.miniLabel);
-            if (inProgress)
+            if (pacedWorkActive)
             {
                 EditorGUILayout.BeginHorizontal();
                 CaveBuildHardwareMonitor.DrawMiniGraph(280f, 78f);
@@ -281,9 +353,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
             }
-            if (inProgress)
+            if (pacedWorkActive)
                 DrawBuildLiveActivityPanel();
-            DrawBuildPauseControls(inProgress);
+            DrawBuildPauseControls(pacedWorkActive);
             var aiNote = CaveBuildSessionPreset.HasUsableAiProvider
                 ? $"AI: {CaveBuildCursorSettings.ResolveActiveProvider()} (grading enabled when steps need it)"
                 : CaveBuildSessionPreset.HasLocalResearchCache
@@ -298,7 +370,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     MessageType.Info);
             }
 
-            if (!inProgress)
+            if (!buildRunning)
             {
                 EditorGUILayout.HelpBox(
                     "Start here: Build Complete Cave. Empty scene OK — kit auto-creates Ground (tagged), PortalFive, grid anchors, and EnvironmentRoot.",
@@ -307,113 +379,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             EditorGUILayout.Space(4f);
 
-            EditorGUILayout.LabelField("Concept layout (0–9, applied before build)", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            _generationStyleIndex = EditorGUILayout.Popup(
-                "Layout concept",
-                _generationStyleIndex,
-                FullWorldGenerationStylePreset.DisplayNames);
-            if (EditorGUI.EndChangeCheck())
-                FullWorldGenerationStylePreset.SaveSelectedIndex(_generationStyleIndex);
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Roll random concept"))
-            {
-                var rolled = FullWorldConceptLayoutCatalog.RollRandomIndex();
-                _generationStyleIndex = rolled;
-                FullWorldGenerationStylePreset.SaveSelectedIndex(rolled);
-            }
-            EditorGUI.BeginChangeCheck();
-            var randomOnBuild = FullWorldConceptLayoutCatalog.RandomOnBuildEnabled;
-            randomOnBuild = EditorGUILayout.ToggleLeft("Random on build (from seed)", randomOnBuild);
-            if (EditorGUI.EndChangeCheck())
-                FullWorldConceptLayoutCatalog.SetRandomOnBuild(randomOnBuild);
-            EditorGUILayout.EndHorizontal();
-
-            var styleId = FullWorldGenerationStyleCatalog.GetStyleId(_generationStyleIndex);
-            EditorGUILayout.LabelField($"Concept { _generationStyleIndex}: {styleId}", EditorStyles.miniLabel);
-
-            var conceptRel = FullWorldGenerationStylePreset.ConceptImageRelForIndex(_generationStyleIndex);
-            var hub = CaveBuildCursorSettings.ResolveHubRoot();
-            var conceptPath = System.IO.Path.Combine(hub, conceptRel);
-            EditorGUILayout.HelpBox(
-                randomOnBuild
-                    ? "Random on build: each FullWorld build rolls concept 0–9 from build seed (similar per seed, not identical)."
-                    : "Fixed concept: Hub selection is applied on every build.",
-                MessageType.Info);
-            if (System.IO.File.Exists(conceptPath))
-            {
-                if (GUILayout.Button($"Reveal concept {_generationStyleIndex} guide image"))
-                    EditorUtility.RevealInFinder(conceptPath);
-            }
-            else if (GUILayout.Button($"Generate concept images (0–9)"))
-            {
-                DeferGuiAction(() =>
-                {
-                    FullWorldConceptImageAuthor.GenerateAll();
-                    AssetDatabase.Refresh();
-                });
-            }
-
-            EditorGUILayout.BeginHorizontal();
-            var biomeMasterRel = BiomeLayoutConceptCatalog.MasterConceptImageRel;
-            var biomeMasterPath = System.IO.Path.Combine(hub, biomeMasterRel);
-            var biomePresetRel = BiomeLayoutConceptCatalog.GetPresetConceptImageRel(_generationStyleIndex);
-            var biomePresetPath = System.IO.Path.Combine(hub, biomePresetRel);
-            if (System.IO.File.Exists(biomeMasterPath))
-            {
-                if (GUILayout.Button("Reveal biome master guide"))
-                    EditorUtility.RevealInFinder(biomeMasterPath);
-            }
-            else if (GUILayout.Button("Generate biome layout guides"))
-            {
-                DeferGuiAction(() =>
-                {
-                    BiomeLayoutConceptImageAuthor.GenerateAll();
-                    AssetDatabase.Refresh();
-                });
-            }
-
-            if (System.IO.File.Exists(biomePresetPath))
-            {
-                if (GUILayout.Button($"Reveal biome guide ({_generationStyleIndex})"))
-                    EditorUtility.RevealInFinder(biomePresetPath);
-            }
-
-            if (GUILayout.Button("Export biome prompt manifest"))
-                DeferGuiAction(() => BiomeLayoutConceptCatalog.ExportPhasePromptManifest(out _));
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.HelpBox(
-                "Biome prop guides: master layout + per-preset feather/prop rules. " +
-                "Manifest: Assets/EnvironmentKit/Generated/BiomeLayoutPhasePromptManifest.json",
-                MessageType.None);
-
-            if (FullWorldGenerationStylePreset.IsIdealLayoutIndex(_generationStyleIndex))
-            {
-                EditorGUILayout.HelpBox(
-                    "Concept 0 — Ideal: 9 play + foothill/peak/horizon rings + south labyrinth. " +
-                    "Agents read the active concept guide each phase (similar per seed, not identical).",
-                    MessageType.None);
-            }
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Enrich research entries"))
-                DeferGuiAction(() => CaveBuildResearchSituationGrader.RunEnrichAllEntries());
-            if (GUILayout.Button("Grade research for build"))
-                DeferGuiAction(() => CaveBuildResearchSituationGrader.RunGradeAndRepairForActiveBuild());
-            EditorGUILayout.EndHorizontal();
+            DrawApprovedPlanPanel(buildRunning);
 
             EditorGUILayout.Space(4f);
 
-            using (new EditorGUI.DisabledScope(inProgress))
+            if (buildRunning)
+            {
+                EditorGUILayout.HelpBox(
+                    "Build is running — main buttons are disabled until the pipeline finishes or you run " +
+                    "Cave Build → Diagnostics → Emergency: Unfreeze Editor.",
+                    MessageType.Info);
+            }
+
+            using (new EditorGUI.DisabledScope(buildRunning))
             {
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Build Complete Cave", GUILayout.Height(30f)))
-                    DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveActiveScene);
+                    DeferHubBuildAction(LavaTubeCaveBuilder.BuildCompleteCaveActiveScene, "Build Complete Cave");
                 if (GUILayout.Button("Build Surface Only", GUILayout.Height(30f)))
-                    DeferGuiAction(LavaTubeCaveBuilder.BuildSurfaceWorldOnlyActiveScene);
+                    DeferHubBuildAction(LavaTubeCaveBuilder.BuildSurfaceWorldOnlyActiveScene, "Build Surface Only");
                 if (GUILayout.Button("Build Cave Only", GUILayout.Height(30f)))
-                    DeferGuiAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene);
+                    DeferHubBuildAction(LavaTubeCaveBuilder.BuildCaveOnlyActiveScene, "Build Cave Only");
                 EditorGUILayout.EndHorizontal();
 
                 _showRecoveryBuild = EditorGUILayout.Foldout(
@@ -427,14 +413,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         MessageType.None);
                     EditorGUILayout.BeginHorizontal();
                     if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
-                        DeferGuiAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild);
+                        DeferHubBuildAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild, "Full AAA Rebuild");
                     if (GUILayout.Button("Full AAA Rebuild + Recording", GUILayout.Height(24f)))
                     {
-                        DeferGuiAction(() =>
+                        DeferHubBuildAction(() =>
                         {
                             CaveBuildDemoAutoRecorder.AutoEnabled = true;
                             LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild();
-                        });
+                        }, "Full AAA Rebuild + Recording");
                     }
 
                     EditorGUILayout.EndHorizontal();
@@ -442,10 +428,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             EditorGUILayout.Space(8f);
-            DrawExperienceSection(inProgress);
+            DrawExperienceSection(buildRunning);
 
             EditorGUILayout.Space(8f);
-            if (!inProgress)
+            if (!buildRunning)
             {
                 EditorGUILayout.LabelField("Last build quality", EditorStyles.boldLabel);
                 EnvironmentKitBuildMonitorPanels.DrawGradePanel();
@@ -461,6 +447,73 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (GUILayout.Button("Open Terrain Grader"))
                 TerrainBuildGraderWindow.Open();
             EditorGUILayout.EndHorizontal();
+        }
+
+        void DrawApprovedPlanPanel(bool buildRunning)
+        {
+            EditorGUILayout.LabelField("Approved plan", EditorStyles.boldLabel);
+
+            if (!CaveBuildSessionConfig.HasFinalizedActive)
+            {
+                if (!buildRunning)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Build Complete Cave opens the AI build planner in your browser. Describe your world, answer " +
+                        "questions, approve the concept, then finalize — Unity focuses automatically, reloads session " +
+                        "settings from disk, and starts the build.",
+                        MessageType.Info);
+                }
+
+                EditorGUILayout.LabelField("No plan yet — use Build Complete Cave below.", EditorStyles.miniLabel);
+                return;
+            }
+
+            var session = CaveBuildSessionConfig.LoadActive();
+            if (session == null)
+                return;
+
+            var steps = CaveBuildSessionConfig.EstimatePlannedSteps(session);
+            var tilePlan = CaveBuildSessionConfig.DescribeActiveTilePlan();
+            var awaitingStart = !buildRunning &&
+                CaveBuildSessionConfig.TryReadWizardPhase(out var wizardPhase) &&
+                string.Equals(wizardPhase, "finalized", StringComparison.OrdinalIgnoreCase);
+
+            EditorGUILayout.LabelField($"{session.label} · {tilePlan} · ~{steps:N0} paced steps", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(
+                $"Props={(session.playDiskProps ? "on" : "off")} · " +
+                $"trails={(session.surfaceTrails ? "on" : "off")} · " +
+                $"caves={(session.use3DCaveSystem ? "on" : "off")} · " +
+                $"seed={(session.randomSeedEachBuild ? "random each build" : "fixed")}",
+                EditorStyles.miniLabel);
+
+            if (awaitingStart)
+            {
+                EditorGUILayout.LabelField("Plan approved — waiting to start (or click below).", EditorStyles.miniLabel);
+                if (GUILayout.Button("Start build from approved plan", GUILayout.Height(28f)))
+                    DeferHubBuildAction(CaveBuildWizardGate.StartFinalizedPlanNow, "Start approved plan");
+            }
+            else if (!buildRunning)
+            {
+                EditorGUILayout.LabelField(
+                    "Last approved plan loaded from disk. Build Complete Cave opens the planner for a new session.",
+                    EditorStyles.miniLabel);
+            }
+        }
+
+        void DrawHubStepTicker()
+        {
+            if (CaveBuildStepCounter.HasSession)
+                CaveBuildStepCounter.SyncLiveTotals();
+
+            var current = CaveBuildStepCounter.FormatHubStepCurrent();
+            var total = CaveBuildStepCounter.FormatHubStepPlannedTotal();
+            var lineRect = GUILayoutUtility.GetRect(220f, 20f, GUILayout.ExpandWidth(true));
+            var currentRect = new Rect(lineRect.x, lineRect.y, lineRect.width * 0.42f, lineRect.height);
+            var slashRect = new Rect(currentRect.xMax, lineRect.y, lineRect.width * 0.08f, lineRect.height);
+            var totalRect = new Rect(slashRect.xMax, lineRect.y, lineRect.width * 0.5f, lineRect.height);
+            EditorGUI.LabelField(currentRect, current, EditorStyles.boldLabel);
+            EditorGUI.LabelField(slashRect, "/", EditorStyles.boldLabel);
+            EditorGUI.LabelField(totalRect, total, EditorStyles.boldLabel);
         }
 
         void DrawBuildCompletionBanner()
@@ -487,24 +540,85 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(6f);
         }
 
-        void DrawBuildPauseControls(bool buildInProgress)
+        void DrawPostBuildPlaythroughPanel()
+        {
+            if (!_postBuildPlaythroughPending && !CaveBuildPostBuildFinalizeGate.IsActive)
+                return;
+
+            EditorGUILayout.LabelField("Post-build — record gameplay", EditorStyles.boldLabel);
+            var recording = CaveBuildPostBuildFinalizeGate.IsRecordingPlaythrough;
+            EditorGUILayout.HelpBox(
+                recording
+                    ? "Recording Play Mode (1080p Game view). Exit Play Mode when done — " +
+                      "the kit saves the scene, exports the world prefab, and composes DemoRecapPresentation.mp4."
+                    : "Generation finished. Enter Play Mode to record a gameplay playthrough for the recap video. " +
+                      "Skip if you only want the Scene timelapse recap.",
+                MessageType.Info);
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(recording || EditorApplication.isPlaying))
+            {
+                if (GUILayout.Button("Enter Play Mode & record", GUILayout.Height(28f)))
+                    CaveBuildPostBuildFinalizeGate.UserEnterPlayMode();
+            }
+
+            using (new EditorGUI.DisabledScope(recording))
+            {
+                if (GUILayout.Button("Skip — finalize now", GUILayout.Height(28f)))
+                    CaveBuildPostBuildFinalizeGate.UserSkipPlaythrough();
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(6f);
+        }
+
+        void DrawBuildPauseControls(bool pacedWorkActive)
         {
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Build control", EditorStyles.boldLabel);
             var paused = CaveBuildPauseController.UserPauseActive;
             if (paused)
             {
-                EditorGUILayout.HelpBox(
-                    "Build is PAUSED — queued steps are frozen. Terrain, props, and heightmaps already written are kept. " +
-                    "A recap video is generated from captures so far. Continue starts a new capture segment for the rest of the build.",
-                    MessageType.Warning);
+                if (pacedWorkActive)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Build is PAUSED — queued steps are frozen. Terrain, props, and heightmaps already written are kept. " +
+                        "Continue resumes the paced queue.",
+                        MessageType.Warning);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "Pause flag is on but the pipeline is IDLE (step 0) — the build session ended while paused " +
+                        "(common after Play Mode without a scene save). Continue will offer checkpoint resume if one exists; " +
+                        "otherwise start Build Complete Cave again.",
+                        MessageType.Error);
+                    if (CaveBuildFullWorldGridCheckpoint.HasResumable &&
+                        GUILayout.Button("Resume FullWorld grid from checkpoint", GUILayout.Height(24f)))
+                    {
+                        CaveBuildFullWorldGridCheckpoint.ResumeFromCheckpointMenu();
+                    }
+
+                    if (CaveBuildPacedStepResume.HasResumable &&
+                        GUILayout.Button("Resume build from paced-step checkpoint", GUILayout.Height(24f)))
+                    {
+                        if (CaveBuildPacedStepResume.TryResume(out var resumeMsg))
+                            Debug.Log("[Environment Kit Hub] " + resumeMsg);
+                    }
+                }
             }
 
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!buildInProgress || paused))
+            using (new EditorGUI.DisabledScope(!pacedWorkActive || paused))
             {
                 if (GUILayout.Button("Pause build", GUILayout.Height(26f)))
                     CaveBuildPauseController.Pause();
+            }
+
+            using (new EditorGUI.DisabledScope(!pacedWorkActive || paused))
+            {
+                if (GUILayout.Button("Playtest break", GUILayout.Height(26f)))
+                    CaveBuildPauseController.PlaytestBreak();
             }
 
             using (new EditorGUI.DisabledScope(!paused))
@@ -514,6 +628,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             EditorGUILayout.EndHorizontal();
+            if (!paused && pacedWorkActive)
+            {
+                EditorGUILayout.LabelField(
+                    "Playtest break can be used multiple times per build (each Play → new playtest-NNN.mp4).",
+                    EditorStyles.miniLabel);
+            }
+
+            if (CaveBuildPauseController.PlaytestBreakActive)
+            {
+                EditorGUILayout.HelpBox(
+                    "Playtest break — queue frozen, Scene timelapse still recording. " +
+                    "Terrain is checkpoint-saved before Play. Press Play for Game view MP4 (Unity Recorder), " +
+                    "then Continue build — do not click Build Complete Cave (that starts fresh).",
+                    MessageType.Info);
+            }
         }
 
         void DrawExperienceSection(bool buildInProgress)
@@ -530,6 +659,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _settings.cinematicSceneCamera = EditorGUILayout.Toggle(
                 "Cinematic Scene camera (follow active tile)",
                 _settings.cinematicSceneCamera);
+            EditorGUI.BeginChangeCheck();
             _settings.liveSceneCameraZoomOut = EditorGUILayout.Slider(
                 new GUIContent(
                     "Scene camera zoom-out",
@@ -537,12 +667,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _settings.liveSceneCameraZoomOut,
                 1f,
                 100f);
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorPrefs.SetFloat("CaveBuild_LiveSceneCameraZoomOut", _settings.liveSceneCameraZoomOut);
+                CaveBuildSceneCameraDirector.NotifyLiveZoomChanged(_settings.liveSceneCameraZoomOut);
+            }
+
             _settings.forceLivePreviewWhenRecording = EditorGUILayout.Toggle(
                 "Force live preview while recording",
                 _settings.forceLivePreviewWhenRecording);
             _settings.autoRunPlaytestBotAfterBuild = EditorGUILayout.Toggle(
                 "Auto-run playtest bot when build finishes",
                 _settings.autoRunPlaytestBotAfterBuild);
+            CaveBuildPostBuildFinalizeGate.PromptPlayModeRecordingAfterBuild = EditorGUILayout.Toggle(
+                "Prompt Play Mode recording after build",
+                CaveBuildPostBuildFinalizeGate.PromptPlayModeRecordingAfterBuild);
             if (EditorGUI.EndChangeCheck())
             {
                 _settings.SaveToPrefs();
@@ -559,8 +698,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Demo recording", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Hub builds (Complete Cave, Surface Only, Cave Only, AAA Rebuild) auto-capture Scene timelapse. " +
-                "Recap video composes when the pipeline finishes, you Pause build, or Stop All Builds. " +
+                "Hub builds auto-capture Scene timelapse. After generation finishes, Hub prompts Play Mode recording " +
+                "(1080p Game view), then saves the scene, exports the world prefab, and composes DemoRecapPresentation.mp4. " +
                 "Legacy toggle below also enables recording for menu-item builds outside Hub.",
                 MessageType.None);
             CaveBuildDemoAutoRecorder.AutoEnabled = EditorGUILayout.Toggle(
@@ -585,6 +724,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     "Force Scene updates while recording (background timelapse)",
                     CaveBuildDemoAutoRecorder.ForceBackgroundSceneUpdates);
             }
+
+            CaveBuildPlayModeUnityRecorder.AutoRecordDuringPlaytestBreak = EditorGUILayout.Toggle(
+                "Unity Recorder on playtest break (1080p Game view → playthroughs/)",
+                CaveBuildPlayModeUnityRecorder.AutoRecordDuringPlaytestBreak);
 
             CaveBuildDemoNarrationAi.AiNarrationEnabled = EditorGUILayout.Toggle(
                 "AI polish captions (uses Hub AI provider)",
@@ -652,6 +795,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             EditorGUILayout.EndHorizontal();
+            if (CaveBuildDemoAutoRecorder.IsRecording)
+            {
+                EditorGUILayout.HelpBox(
+                    "Stop recording ends Scene timelapse only and runs full presentation video " +
+                    "(DemoRecapPresentation.mp4 + Personal Voice). The build queue keeps running.",
+                    MessageType.None);
+            }
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Capture demo checkpoint now"))
                 CaveBuildDemoAutoRecorder.CaptureNow();
@@ -745,18 +895,73 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 RevealRelativeFile(CaveBuildRunStatusPublisher.GetLiveStatusReadRel());
         }
 
+        void EnsureSettingsLoaded()
+        {
+            _settings = CaveBuildCursorSettings.LoadOrCreate();
+            _settings.LoadFromPrefs();
+            LoadPrefabFolderPrefs();
+            _apiKey = _settings.GetApiKey();
+            _googleApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.GoogleGemini);
+            _anthropicApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.AnthropicClaude);
+            _openAiApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenAICompatible);
+            _openRouterApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenRouter);
+            _customApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.CustomEndpoint);
+        }
+
+        void PersistHubSettingsFromUi(bool includeApiKeys)
+        {
+            if (_settings == null)
+                return;
+
+            if (includeApiKeys)
+            {
+                _settings.SetApiKey(_apiKey);
+                _settings.SetApiKey(EnvironmentKitAiProvider.GoogleGemini, _googleApiKey);
+                _settings.SetApiKey(EnvironmentKitAiProvider.AnthropicClaude, _anthropicApiKey);
+                _settings.SetApiKey(EnvironmentKitAiProvider.OpenAICompatible, _openAiApiKey);
+                _settings.SetApiKey(EnvironmentKitAiProvider.OpenRouter, _openRouterApiKey);
+                _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
+            }
+
+            _settings.SaveToPrefs();
+            SavePrefabFolderPrefs();
+            EditorUtility.SetDirty(_settings);
+        }
+
         void DrawSettingsTab()
         {
             if (_settings == null)
-                _settings = CaveBuildCursorSettings.LoadOrCreate();
+                EnsureSettingsLoaded();
 
             EditorGUILayout.LabelField("Primary hub settings", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
             _settings.hubProjectRoot = EditorGUILayout.TextField("Hub project root", _settings.hubProjectRoot);
             _settings.aiProvider = (EnvironmentKitAiProvider)EditorGUILayout.EnumPopup("Active provider", _settings.aiProvider);
             _settings.modelId = EditorGUILayout.TextField("Cursor model", _settings.modelId);
             _settings.hardwareBudget = (EnvironmentKitHardwareBudget.Preset)EditorGUILayout.EnumPopup(
                 "Hardware budget",
                 _settings.hardwareBudget);
+
+            if (EditorGUI.EndChangeCheck())
+                PersistHubSettingsFromUi(includeApiKeys: false);
+
+            if (CaveBuildSessionConfig.HasFinalizedActive)
+            {
+                var session = CaveBuildSessionConfig.LoadActive();
+                EditorGUILayout.LabelField(
+                    "Build session",
+                    session != null
+                        ? $"{session.label} · {CaveBuildSessionConfig.DescribeActiveTilePlan()}"
+                        : "approved plan on disk",
+                    EditorStyles.miniLabel);
+            }
+            else
+            {
+                EditorGUILayout.LabelField(
+                    "Build session",
+                    "No approved plan — use Build tab → Build Complete Cave",
+                    EditorStyles.miniLabel);
+            }
 
             EditorGUI.BeginChangeCheck();
             var ramBudgetGb = EditorPrefs.GetFloat(EnvironmentKitHardwareBudget.EditorRamBudgetGbKey, 0f);
@@ -777,6 +982,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 EditorPrefs.SetFloat(EnvironmentKitHardwareBudget.EditorRamBudgetGbKey, 0f);
 
             EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Storage", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(EnvironmentKitExternalStorageMigrate.DescribeProjectHeavyStorage(), EditorStyles.miniLabel);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Move heavy data to external drive", GUILayout.Height(24f)))
+                DeferGuiAction(() => EnvironmentKitExternalStorageMigrate.RunMigration());
+            if (GUILayout.Button("Show data paths", GUILayout.Width(140f), GUILayout.Height(24f)))
+                DeferGuiAction(EnvironmentKitExternalStorageMigrate.LogStorage);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox(
+                "When Lexar (or another drive) is mounted, Generated, ResearchCache, demo captures, recap temp, " +
+                "and Unity Library caches live under /Volumes/*/EnvironmentKit-Hub. Quit Unity after migrating.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Scene safeguards", EditorStyles.boldLabel);
             EnvironmentKitSceneSafeguards.AutoSaveBeforeBuildEnabled = EditorGUILayout.Toggle(
                 "Auto-save scenes before build (no save dialog)",
@@ -784,49 +1003,47 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EnvironmentKitSceneSafeguards.NeverSwitchSceneDuringBuildEnabled = EditorGUILayout.Toggle(
                 "Never switch scenes during build",
                 EnvironmentKitSceneSafeguards.NeverSwitchSceneDuringBuildEnabled);
+            EnvironmentKitSceneSafeguards.PreserveWorldOnPlayEnabled = EditorGUILayout.Toggle(
+                "Preserve editor world on Play (no scene reload)",
+                EnvironmentKitSceneSafeguards.PreserveWorldOnPlayEnabled);
+            CaveBuildPacedStepPersistence.Enabled = EditorGUILayout.Toggle(
+                "Paced-step resume checkpoints",
+                CaveBuildPacedStepPersistence.Enabled);
+            CaveBuildPacedStepPersistence.SceneSaveIntervalSteps = EditorGUILayout.IntSlider(
+                "Save Unity scene every N paced steps (0 = milestones only)",
+                CaveBuildPacedStepPersistence.SceneSaveIntervalSteps,
+                0,
+                500);
+            CaveBuildPacedStepPersistence.JsonSaveIntervalSteps = EditorGUILayout.IntSlider(
+                "Write resume JSON every N paced steps",
+                CaveBuildPacedStepPersistence.JsonSaveIntervalSteps,
+                10,
+                500);
             EditorGUILayout.HelpBox(
-                "When enabled, Build Complete Cave saves MainScene (and other open scenes) before running, " +
-                "and will not switch away mid-build. Use Rebuild Complete Cave (MainScene) menu only when you intend to open MainScene.",
+                "Builds auto-assign Assets/Scenes/MainScene.unity if needed, snapshot before/after Play Mode, " +
+                "and batch resume JSON + scene saves (default every 100 steps). Use 0 scene interval for milestone-only " +
+                "saves on long grid runs. Checkpoints auto-pause if free disk drops below ~512 MB.",
                 MessageType.Info);
 
             EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("3D Gaussian Splat (optional)", EditorStyles.boldLabel);
-            _settings.enableGaussianSplatHeroAtCaveMouth = EditorGUILayout.Toggle(
-                "Hero splat at cave mouth",
-                _settings.enableGaussianSplatHeroAtCaveMouth);
-            using (new EditorGUI.DisabledScope(!_settings.enableGaussianSplatHeroAtCaveMouth))
-            {
-                _settings.gaussianSplatAssetPath = EditorGUILayout.TextField(
-                    "Splat asset path",
-                    _settings.gaussianSplatAssetPath);
-                _settings.gaussianSplatHeroQuality = (GaussianSplatHeroSlot.QualityTier)
-                    EditorGUILayout.EnumPopup("Quality", _settings.gaussianSplatHeroQuality);
-                _settings.gaussianSplatRenderInEditMode = EditorGUILayout.Toggle(
-                    "Render in Edit Mode (GPU heavy)",
-                    _settings.gaussianSplatRenderInEditMode);
-                _settings.gaussianSplatRenderInPlayMode = EditorGUILayout.Toggle(
-                    "Render in Play Mode",
-                    _settings.gaussianSplatRenderInPlayMode);
-            }
-
-            if (_settings.hardwareBudget == EnvironmentKitHardwareBudget.Preset.MacBookAir16Gb)
-            {
-                EditorGUILayout.HelpBox(
-                    "MacBook budget disables Gaussian splats automatically during builds.",
-                    MessageType.Info);
-            }
+            EnvironmentKitHubGaussianSplatSettings.Draw(_settings, DeferGuiAction);
 
             EditorGUILayout.Space(6f);
+            EditorGUI.BeginChangeCheck();
             EditorGUILayout.LabelField("Prefab folders", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Optional: limit scanning to specific folders. When empty, the kit scans all of Assets/ and picks floor/wall/ceiling prefabs by name + mesh shape. " +
                 "Texture-only packs and 2D tile sprites cannot be used as cave modules.\n\n" +
                 "AI: Active provider can be Cursor, Gemini, Claude, OpenAI, OpenRouter, Ollama, or LM Studio — not Cursor-only. " +
-                "No API? Use Build tab → Apply Offline (No API) for procedural-only runs.",
+                "No API? Procedural builds still work — configure provider here or leave AI off for planner-only runs.",
                 MessageType.None);
             _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
             _cavePropFolders = DrawPrefabFolderField("Prefab folders for props", _cavePropFolders);
             EditorGUILayout.LabelField("Asset scan", "All of Assets/ (automatic)", EditorStyles.miniLabel);
+
+            if (EditorGUI.EndChangeCheck())
+                PersistHubSettingsFromUi(includeApiKeys: false);
+
             if (GUILayout.Button("Refresh prefab catalog (re-scan folders)", GUILayout.Height(22f)))
             {
                 DeferGuiAction(() =>
@@ -836,6 +1053,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 });
             }
 
+            EditorGUI.BeginChangeCheck();
             _showApiKey = EditorGUILayout.Toggle("Show API key", _showApiKey);
             DrawProviderSettings();
 
@@ -974,37 +1192,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Queued step timeout (sec)",
                 _settings.queuedStepTimeoutSeconds);
 
+            if (EditorGUI.EndChangeCheck())
+                PersistHubSettingsFromUi(includeApiKeys: true);
+
             EditorGUILayout.Space(8f);
+            EditorGUILayout.HelpBox(
+                "Settings auto-save to EditorPrefs as you edit (same as the Build tab). " +
+                "Use Save to disk below to flush CaveBuildCursorSettings.asset.",
+                MessageType.None);
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save Hub Settings", GUILayout.Height(26f)))
+            if (GUILayout.Button("Save Hub Settings To Disk", GUILayout.Height(26f)))
             {
                 DeferGuiAction(() =>
                 {
-                    _settings.SetApiKey(_apiKey);
-                    _settings.SetApiKey(EnvironmentKitAiProvider.GoogleGemini, _googleApiKey);
-                    _settings.SetApiKey(EnvironmentKitAiProvider.AnthropicClaude, _anthropicApiKey);
-                    _settings.SetApiKey(EnvironmentKitAiProvider.OpenAICompatible, _openAiApiKey);
-                    _settings.SetApiKey(EnvironmentKitAiProvider.OpenRouter, _openRouterApiKey);
-                    _settings.SetApiKey(EnvironmentKitAiProvider.CustomEndpoint, _customApiKey);
-                    _settings.SaveToPrefs();
-                    SavePrefabFolderPrefs();
+                    PersistHubSettingsFromUi(includeApiKeys: true);
                     RefreshModulePrefabCatalogAndMaterials();
-                    EditorUtility.SetDirty(_settings);
                     AssetDatabase.SaveAssets();
                 });
             }
 
             if (GUILayout.Button("Reload From Prefs", GUILayout.Height(26f)))
-            {
-                _settings.LoadFromPrefs();
-                LoadPrefabFolderPrefs();
-                _apiKey = _settings.GetApiKey();
-                _googleApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.GoogleGemini);
-                _anthropicApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.AnthropicClaude);
-                _openAiApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenAICompatible);
-                _openRouterApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.OpenRouter);
-                _customApiKey = _settings.GetApiKey(EnvironmentKitAiProvider.CustomEndpoint);
-            }
+                EnsureSettingsLoaded();
 
             EditorGUILayout.EndHorizontal();
 

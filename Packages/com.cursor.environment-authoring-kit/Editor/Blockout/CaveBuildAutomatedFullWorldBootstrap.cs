@@ -65,7 +65,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 RunEnhancementPhases = true,
                 DemSupersampleTargetDim = CaveBuildCursorSettings.LoadOrCreate().demSupersampleTargetDim,
             };
-            FullWorldGenerationStylePreset.ApplyTo(request);
+            CaveBuildSessionConfig.BindFullWorldRequest(request);
 
             var remediation = CaveBuildFullRunPreflight.ApplyUnattendedFullWorldRemediations(
                 request,
@@ -84,7 +84,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             SurfaceTerrainTileExpansion.ResetFullWorldTerrainPurgeLatch();
 
-            var fullInvalidate = invalidateEntireLadder || ShouldAutoInvalidateEntireLadder(ground);
+            var plannerFresh =
+                CaveBuildSessionConfig.IsSessionRequest(request) &&
+                CaveBuildSessionConfig.HasFinalizedActive;
+            var fullInvalidate = invalidateEntireLadder || ShouldAutoInvalidateEntireLadder(ground) || plannerFresh;
+            if (plannerFresh)
+            {
+                var main = SurfaceTerrainTileExpansion.FindMainTerrainInScene();
+                var audit = main != null ? CaveBuildWorldLayoutAudit.Run(ground, request) : null;
+                if (audit == null || !audit.layoutAcceptable || audit.maxSeamGapMeters > 0.5f)
+                {
+                    SurfaceTerrainTileExpansion.PurgeFullWorldTerrainForRebuild();
+                    CaveBuildEditorLog.LogCave(
+                        "[CaveBuild] Planner fresh build — purged stale/broken terrain grid before surface pass.",
+                        forceUnityConsole: true);
+                    fullInvalidate = true;
+                }
+            }
+
             if (fullInvalidate)
             {
                 CaveBuildPhaseContractRegistry.InvalidateAll();
@@ -130,10 +147,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildRunStatusPublisher.SetPhase(
                 "automated_full_world",
                 "Build Complete Cave — preset + preflight OK — queued pipeline starting");
+            var tilePlan = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
+            var enhancementLabel = request.RunEnhancementPhases
+                ? $"concept {request.ConceptLayoutIndex} ({request.GenerationStyleId}) — ~{tilePlan} tiles, enhancements ON"
+                : $"concept {request.ConceptLayoutIndex} ({request.GenerationStyleId}) — ~{tilePlan} tiles, enhancements OFF";
             CaveBuildEditorLog.LogCave(
                 $"Automated FullWorld ready — seed {layoutSeed}, " +
                 $"{CaveBuildUnifiedFlow.QueuedPipelineStepCount} queued steps, " +
-                $"enhancements ON, DEM×{SessionDemSupersampleDim}, " +
+                $"{enhancementLabel}, DEM×{SessionDemSupersampleDim}, " +
                 $"preflight warns={preflight.warnCount}. " +
                 "Watch Environment Kit Hub (Build tab) until Build 122/122.",
                 forceUnityConsole: true);
@@ -157,11 +178,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             request.SurfaceScope = SurfaceBuildScope.FullWorld;
-            request.RunEnhancementPhases = true;
             if (request.DemSupersampleTargetDim <= 0)
                 request.DemSupersampleTargetDim = SessionDemSupersampleDim;
             SurfaceDemGeoreferenceAuthor.SetSupersampleTargetDim(request.DemSupersampleTargetDim);
-            FullWorldGenerationStylePreset.ApplyTo(request);
         }
 
         public static void ClearSession() => SessionActive = false;

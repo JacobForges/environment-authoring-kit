@@ -321,7 +321,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     PromoteCategory(set, s => s.Trees, s => s.Rocks);
                     break;
                 case 6: // Sparse trails
-                case 9: // Speed minimal
                     TrimToSparse(set);
                     break;
             }

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using EnvironmentAuthoringKit.Cave;
 using EnvironmentAuthoringKit.Editor.Blockout;
 using EnvironmentAuthoringKit.Editor.Generation;
@@ -69,7 +70,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             var tier = request.ContentTier;
             var seed = request.Seed;
 
-            if (tier != WorldBuildContentTier.Aaa)
+            if (tier != WorldBuildContentTier.Aaa && !IsSpeedPlayableDemo(request))
             {
                 SpawnSlot(root.transform, "NPC_PlayGuide", ResolvePosition(mainTerrain, seed, 0f, 14f), seed);
                 Debug.Log($"[Surface] World NPC layout — {tier} (guide only).", root);
@@ -97,8 +98,13 @@ namespace EnvironmentAuthoringKit.Editor.World
                 SpawnSlot(root.transform, p.slot, pos, seed + p.slot.GetHashCode());
             }
 
-            Debug.Log($"[Surface] World NPC layout — AAA full roster, seed {seed}.", root);
+            Debug.Log(
+                $"[Surface] World NPC layout — {(IsSpeedPlayableDemo(request) ? "speed demo" : "AAA")} full roster, seed {seed}.",
+                root);
         }
+
+        static bool IsSpeedPlayableDemo(WorldGenerationRequest request) =>
+            FullWorldConceptLayoutCatalog.IsSpeedMinimal(request);
 
         static void SpawnBiomeEnemies(
             Transform parent,

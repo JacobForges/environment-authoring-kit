@@ -67,6 +67,7 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 | [GAUSSIAN_SPLAT_INTEGRATION.md](GAUSSIAN_SPLAT_INTEGRATION.md) | Optional hero splat at cave mouth + hardware safeguards |
 | [PLAN_PIPELINE_RESPONSIVENESS.md](PLAN_PIPELINE_RESPONSIVENESS.md) | FullWorld stall audit + seam/connectivity pacing plan |
 | [RESEARCH_PIPELINE_RESPONSIVENESS.md](RESEARCH_PIPELINE_RESPONSIVENESS.md) | Editor/terrain pacing research (25 URLs) |
+| [RESEARCH_FULLWORLD_CC0_FINALIZE.md](RESEARCH_FULLWORLD_CC0_FINALIZE.md) | FullWorld grid ~70% CC0 save stall research (20 URLs) |
 
 ---
 

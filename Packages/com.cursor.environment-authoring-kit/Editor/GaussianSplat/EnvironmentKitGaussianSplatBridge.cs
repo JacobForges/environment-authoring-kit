@@ -19,6 +19,9 @@ namespace EnvironmentAuthoringKit.Editor.GaussianSplat
         public static bool IsPackagePresent =>
             FindType("GaussianSplatRenderer") != null;
 
+        public static Type ResolveSplatAssetType() =>
+            FindType("GaussianSplatAsset") ?? typeof(UnityEngine.Object);
+
         public static void OpenInstallInstructions()
         {
             EditorUtility.DisplayDialog(

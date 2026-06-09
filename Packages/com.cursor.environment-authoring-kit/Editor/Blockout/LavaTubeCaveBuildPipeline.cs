@@ -953,6 +953,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildWorkflowCoordinator.EndSession();
             ResetResumeAfterAgentArmed();
             CaveBuildAutomatedFullWorldBootstrap.ClearSession();
+            CaveBuildConceptSession.ClearLock();
             EditorUtility.ClearProgressBar();
             Debug.Log("[CaveBuild] Queued pipeline aborted (emergency stop).");
         }
@@ -1038,6 +1039,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildPipelineCompletion.OnFullPipelineFinished();
             ResetResumeAfterAgentArmed();
             CaveBuildAutomatedFullWorldBootstrap.ClearSession();
+            CaveBuildConceptSession.ClearLock();
             CaveBuildTerrainCursorDeferred.TryInvokeAfterCavePipeline();
             _queued = null;
             if (ctx?.ShowProgress == true)

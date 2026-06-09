@@ -25,9 +25,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             CaveBuildActionPacing.ScheduleNextEditorFrame(() =>
             {
+                CaveBuildRunStatusPublisher.SetSubOperation("FullWorld grid", "layout pre-plan (JSON only)");
                 TryWritePlan(ground, request, center, extent, out var msg);
                 CaveBuildEditorLog.LogSurface("[Surface] Pre-plan — " + msg, forceUnityConsole: true);
-                CaveBuildRunStatusPublisher.PulseSubOperation("terrain sculpt", "layout pre-plan");
                 onComplete?.Invoke();
             });
         }
@@ -130,7 +130,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             sb.AppendLine("}");
 
             File.WriteAllText(path, sb.ToString());
-            AssetDatabase.ImportAsset(path.Replace('\\', '/'));
+            CaveBuildDeferredAssetRefresh.RequestRefresh();
             message = $"Wrote {path} (skipPostDemSculpt={skipPostDemSculpt}, nineTile={nineTile}).";
             return true;
         }

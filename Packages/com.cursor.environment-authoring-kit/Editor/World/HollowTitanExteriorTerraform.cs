@@ -61,17 +61,51 @@ namespace EnvironmentAuthoringKit.Editor.World
         }
 
         /// <summary>One of 32 paced stump-sculpt passes (angular sectors + detail layers).</summary>
-        public static int SculptStumpPhasePass(Terrain mainTerrain, int phaseIndex, bool force = true)
+        public static int SculptStumpPhasePass(Terrain mainTerrain, int phaseIndex, bool force = true) =>
+            SculptStumpPhasePass(mainTerrain, phaseIndex, force, onComplete: null);
+
+        /// <summary>Paced path — waits for row-band queue before <paramref name="onComplete"/>.</summary>
+        public static void QueueSculptStumpPhasePass(
+            Terrain mainTerrain,
+            int phaseIndex,
+            bool force,
+            System.Action onComplete)
+        {
+            if (onComplete == null)
+            {
+                SculptStumpPhasePass(mainTerrain, phaseIndex, force, null);
+                return;
+            }
+
+            if (!CaveBuildEditorResponsiveness.IsLongBuildActive)
+            {
+                SculptStumpPhasePass(mainTerrain, phaseIndex, force, null);
+                onComplete();
+                return;
+            }
+
+            SculptStumpPhasePass(mainTerrain, phaseIndex, force, onComplete);
+        }
+
+        static int SculptStumpPhasePass(
+            Terrain mainTerrain,
+            int phaseIndex,
+            bool force,
+            System.Action onComplete)
         {
             var root = GameObject.Find(HollowTitanLandmarkAuthor.RootName);
             var data = root != null ? root.GetComponent<HollowTitanLandmarkBuildData>() : null;
             if (data == null || mainTerrain == null)
+            {
+                onComplete?.Invoke();
                 return 0;
+            }
 
             phaseIndex = Mathf.Clamp(phaseIndex, 0, StumpSculptPhaseCount - 1);
             if (phaseIndex == 0)
             {
                 ApplyTitanLevelScaleBoost(data);
+                onComplete?.Invoke();
                 return 1;
             }
 
@@ -79,6 +113,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             {
                 HollowTitanLandmarkMeatPhases.ResnapAfterTerrainSculpt(mainTerrain);
                 HollowTitanLandmarkMeatPhases.EnsureLandmarkExteriorVisible();
+                onComplete?.Invoke();
                 return 1;
             }
 
@@ -93,6 +128,37 @@ namespace EnvironmentAuthoringKit.Editor.World
                     data.FloorHeightMeters);
                 entranceYaw = plan.EntranceYawDegrees;
                 data.SetEntranceYaw(entranceYaw);
+            }
+
+            if (onComplete != null && CaveBuildEditorResponsiveness.IsLongBuildActive)
+            {
+                QueueSculptHollowStumpBowl(
+                    mainTerrain,
+                    data.SiteWorldPosition,
+                    data.TrunkRadius,
+                    data.TrunkHeight,
+                    data.BuildSeed + phaseIndex * 997,
+                    entranceYaw,
+                    root.transform,
+                    force,
+                    phaseIndex,
+                    () =>
+                    {
+                        if (phaseIndex is >= 24 and <= 27)
+                        {
+                            var extra = SculptNearTitanFoothillCurve(
+                                mainTerrain,
+                                data.SiteWorldPosition,
+                                data.TrunkRadius,
+                                phaseIndex - 24);
+                            CaveBuildEditorLog.LogSurface(
+                                $"[HollowTitan] Foothill curve pass {phaseIndex - 24} — {extra} cells.",
+                                forceUnityConsole: false);
+                        }
+
+                        onComplete();
+                    });
+                return 0;
             }
 
             var touched = SculptHollowStumpBowl(
@@ -217,9 +283,141 @@ namespace EnvironmentAuthoringKit.Editor.World
             return totalTouched;
         }
 
+        static void QueueSculptHollowStumpBowl(
+            Terrain mainTerrain,
+            Vector3 worldCenter,
+            float trunkRadius,
+            float trunkHeight,
+            int seed,
+            float entranceYawDegrees,
+            Transform landmarkRoot,
+            bool force,
+            int phaseIndex,
+            System.Action onComplete)
+        {
+            if (mainTerrain == null || trunkRadius < 1f)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (CaveBuildSurfaceTerrainLock.TryBlockSurfaceMutation("Hollow Titan stump sculpt"))
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (!force && landmarkRoot != null && HasSculptMarker(landmarkRoot))
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var innerR = trunkRadius * InnerRadiusFraction;
+            var outerR = trunkRadius * OuterRadiusFraction;
+            var bowlDepthM = trunkRadius * BowlDepthRadiusFraction;
+            var rimRiseM = trunkRadius * RimRiseRadiusFraction;
+            var groundNorm = SampleCenterGroundNorm(mainTerrain, worldCenter);
+            var sculptReach = trunkRadius * CrownOuterReachFraction;
+            var tiles = CollectOverlappingTerrains(mainTerrain, worldCenter, sculptReach);
+
+            void SculptTileAt(int tileIndex, System.Action next)
+            {
+                if (tileIndex >= tiles.Count)
+                {
+                    if (landmarkRoot != null)
+                    {
+                        EnsureSculptMarker(landmarkRoot);
+                        SetStumpSilhouetteProxyVisible(landmarkRoot, true);
+                    }
+
+                    onComplete?.Invoke();
+                    return;
+                }
+
+                QueueSculptTile(
+                    tiles[tileIndex],
+                    worldCenter,
+                    innerR,
+                    outerR,
+                    bowlDepthM,
+                    rimRiseM,
+                    groundNorm,
+                    trunkRadius,
+                    entranceYawDegrees,
+                    seed,
+                    phaseIndex,
+                    () => SculptTileAt(tileIndex + 1, next));
+            }
+
+            SculptTileAt(0, onComplete);
+        }
+
+        static void QueueSculptTile(
+            Terrain terrain,
+            Vector3 center,
+            float innerR,
+            float outerR,
+            float bowlDepthM,
+            float rimRiseM,
+            float groundNorm,
+            float trunkRadius,
+            float entranceYawDegrees,
+            int seed,
+            int phaseIndex,
+            System.Action onComplete)
+        {
+            if (terrain?.terrainData == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var data = terrain.terrainData;
+            var res = data.heightmapResolution;
+            var size = data.size;
+            var origin = terrain.transform.position;
+            var scaleY = Mathf.Max(0.01f, terrain.transform.lossyScale.y);
+            var bowlDepthNorm = bowlDepthM / (size.y * scaleY);
+            var rimRiseNorm = rimRiseM / (size.y * scaleY);
+            var crownPeakRiseNorm = (trunkRadius * CrownPeakRiseFraction) / (size.y * scaleY);
+
+            CaveBuildMicroTerrainHeightmap.QueueMutateRowBands(
+                terrain,
+                "Hollow Titan stump sculpt",
+                CaveBuildPipelineDomains.QueueLabel($"Hollow Titan stump sculpt — {terrain.name}"),
+                (heights, rowStart, rowRes, bandOrigin, bandSize) =>
+                {
+                    for (var y = 0; y < heights.GetLength(0); y++)
+                    {
+                        var gz = rowStart + y;
+                        for (var x = 0; x < rowRes; x++)
+                        {
+                            var target = TargetStumpHeight(
+                                bandOrigin.x + x / (float)(rowRes - 1) * bandSize.x,
+                                bandOrigin.z + gz / (float)(rowRes - 1) * bandSize.z,
+                                center,
+                                innerR,
+                                outerR,
+                                bowlDepthNorm,
+                                rimRiseNorm,
+                                groundNorm,
+                                trunkRadius,
+                                crownPeakRiseNorm,
+                                entranceYawDegrees,
+                                seed,
+                                phaseIndex);
+                            if (target.HasValue)
+                                heights[y, x] = target.Value;
+                        }
+                    }
+                },
+                onComplete);
+        }
+
         public static bool ShouldDeferUntilPostTerraform() =>
-            CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive ||
-            SurfaceTerrainTileExpansion.IsLiveFullWorldTerraformPhase;
+            CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive &&
+            !SurfaceTerrainTileExpansion.IsTerrainReadyForHollowTitan;
 
         static bool HasSculptMarker(Transform root) =>
             root != null && root.Find($"Exterior/TrunkShell/{SculptMarkerName}") != null;

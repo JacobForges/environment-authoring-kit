@@ -428,7 +428,7 @@ Annotation rules:
 - Normalized box [x0,y0,x1,y1], scene y≈0.05..0.78.
 
 teachingFocus: snake_case tag.
-narratorScript: one paragraph read aloud (max 320 chars) — natural speech, no markdown, combines line1+line2 smoothly.
+narratorScript: one paragraph for VOICE only (max 320 chars) — top-tier YouTube dev-stream host: punchy, reactive, funny; NEVER read caption bullets aloud; no professor lecture.
 
 Return ONLY JSON:
 {"i":${m.i},"beatKind":"subbeat","line1":"...","line2":"...","line3":"","chapter":"...","teachingFocus":"...","narratorScript":"...","regions":[{"kind":"ellipse","box":[0.3,0.2,0.7,0.55],"label":"Seam pass"}]}
@@ -460,7 +460,7 @@ Annotation rules:
 - kind: "ellipse" or "rect"; label 2–4 words matching visible feature.
 
 teachingFocus: snake_case tag.
-narratorScript: one paragraph for voiceover (max 380 chars) — conversational professor, reads line1+line2+line3 aloud without repeating labels.
+narratorScript: one paragraph for VOICE only (max 380 chars) — top-tier YouTube dev-stream host: hype, jokes, reactions; NEVER read caption bullets; captions stay on-screen for the viewer.
 
 Return ONLY JSON:
 {"i":${m.i},"beatKind":"checkpoint","line1":"...","line2":"...","line3":"","chapter":"...","teachingFocus":"...","narratorScript":"...","regions":[{"kind":"ellipse","box":[0.3,0.2,0.7,0.55],"label":"Play disk"}]}
@@ -551,6 +551,7 @@ async function runGrade(director: { buildMode?: string; milestones: MilestoneOut
 
 type NarrationOutlineIn = {
   buildMode: string;
+  mapCompletionStatus?: "partial" | "complete";
   targetDurationSec?: number;
   sayRateWpm?: number;
   introTitle?: string;
@@ -567,49 +568,95 @@ type NarrationOutlineIn = {
     line2?: string;
     line3?: string;
     onScreenCaption?: string;
+    narratorScript?: string;
   }>;
 };
 
+function inferMapCompletionStatus(body: NarrationOutlineIn): "partial" | "complete" {
+  const explicit = (body.mapCompletionStatus ?? "").toLowerCase();
+  if (explicit === "complete" || explicit === "completed" || explicit === "finished") {
+    return "complete";
+  }
+  if (explicit === "partial" || explicit === "in_progress" || explicit === "wip") {
+    return "partial";
+  }
+  const blob = [
+    body.buildMode ?? "",
+    ...body.milestones.flatMap((m) => [
+      m.chapter ?? "",
+      m.phase ?? "",
+      m.sub ?? "",
+      m.line1 ?? "",
+      m.line2 ?? "",
+      m.line3 ?? "",
+      m.teachingFocus ?? "",
+    ]),
+  ]
+    .join(" ")
+    .toLowerCase();
+  if (/(build complete|finished map|final world|shipped world|playable complete)/.test(blob)) {
+    return "complete";
+  }
+  return "partial";
+}
+
 function buildFullNarrationPrompt(body: NarrationOutlineIn): string {
   const sec = Math.max(120, Number(body.targetDurationSec ?? 480));
-  const wpm = Math.max(140, Number(body.sayRateWpm ?? 183));
-  const targetWords = Math.round((sec / 60) * wpm * 0.92);
+  const wpm = Math.max(140, Number(body.sayRateWpm ?? 186));
+  const density = Math.max(0.75, Number((body as { narrationScriptDensityMultiplier?: number }).narrationScriptDensityMultiplier ?? 1));
+  const targetWords = Math.round((sec / 60) * wpm * 0.92 * density);
+  const mapStatus = inferMapCompletionStatus(body);
+  const mapLine =
+    mapStatus === "complete"
+      ? "COMPLETE MAP — celebrate what is on screen; still suggest (never promise) off-screen ideas."
+      : "PARTIAL BUILD — map still taking shape; hype visible progress, never talk like everything is shipped.";
   const outline = body.milestones
     .map((m) => {
       const kind = m.beatKind === "subbeat" ? "sub-step" : "chapter";
       const topic = (m.chapter || m.phase || "build").trim();
       const cap = (m.onScreenCaption || [m.line1, m.line2, m.line3].filter(Boolean).join(" ")).trim();
-      return `- ${kind} ${m.i} · ${topic}\n  On-screen captions (teach from these — rephrase in your own spoken words):\n  ${cap || "(no caption)"}`;
+      const ns = (m.narratorScript || "").trim();
+      const voiceHint = ns
+        ? `\n  Suggested host voice (expand with jokes/reactions — do NOT read captions aloud):\n  ${ns}`
+        : "";
+      return `- ${kind} ${m.i} · ${topic}\n  On-screen captions (viewer reads these — do NOT lecture or repeat them in voice):\n  ${cap || "(no caption)"}${voiceHint}`;
     })
     .join("\n");
 
   const introLine = body.introTitle
-    ? `Open with a warm, curious welcome (title: ${body.introTitle}${body.introSubtitle ? ` — ${body.introSubtitle}` : ""}). Hook adults, teens, and curious kids — same story, different entry points.`
-    : "Open with a warm, curious welcome. Hook adults, teens, and curious kids watching this build recap.";
+    ? `Open like Attenborough meets Irwin on a kids adventure show (title: ${body.introTitle}${body.introSubtitle ? ` — ${body.introSubtitle}` : ""}). Wide hook, genuine wonder, zero lecture.`
+    : "Open like a world-class TV adventure host. Wide shot first, then wonder — not a teacher.";
 
-  return `You are writing the COMPLETE voiceover script for a Unity world-build documentary video.
+  return `You are writing the COMPLETE voiceover script for a Unity world-build recap video.
 
-The finished video is already cut to ~${Math.round(sec)} seconds. Your script must fill that runtime when read aloud at ~${wpm} wpm (~${targetWords} words). Do not write a short script.
+Persona: Jacob Adkins's Bot — renowned TV adventure host. Attenborough: wide-to-close reveals, quiet awe on details. Irwin: 'have a look', childlike wonder, direct address. Each beat: intro → setup → comedic punchline tied to ON-SCREEN pixels → out. NOT a teacher. NOT a live stream. NEVER mention marketing, monetization, algorithms, or sales tactics.
+
+The silent video is already cut to ~${Math.round(sec)} seconds. Write ~${targetWords} words (~${density}× density); speech-first pipeline extends video to voice. Do not write a short script.
 
 Build mode: ${body.buildMode}
+Map status: ${mapStatus.toUpperCase()} — ${mapLine}
 
 STRUCTURE (required):
-1. ${introLine} Set expectations — you are walking through a real Unity world build and learning how worlds are made.
-2. Body: move beat-by-beat in order. Use each milestone's on-screen captions as your facts — explain what changed, why it matters, and what the viewer should notice. Tie beats to how R&D-style tooling helps people learn and ship faster in the AI era.
-3. Close with a substantive thank-you — invite them to follow for the next build (make them WANT the next drop).
+1. ${introLine} Real Unity footage — match map status; one quick bot hello, then personality.
+2. Body: beat-by-beat in order. Use visible screen content for facts only — react with jokes, asides, and hype. Never read or paraphrase caption bullets. Suggest what COULD come later — never promise unshown bosses, items, systems, or gameplay.
+3. Close with playful energy — invite them back if partial; warm sign-off if complete.
 
-Beat guide (captions are ground truth for content; invent natural spoken phrasing):
+Beat guide (captions = on-screen only; voice = host reactions — never lecture from captions):
 ${outline}
 
 Voice rules:
-- Sound like a real person with curiosity — warm, smooth, and a little playful (never robotic or monotone)
-- Highly educational: explain what changed and why a builder made that choice
-- Frame this as research-and-development in public — tools like this grow the AI era in positive ways
-- Speak to adults learning to ship, young adults picking up real skills, and kids who deserve a fun visual language for creativity (never preachy, never fear-mongering)
-- Use vivid transitions; no dead air, no corporate buzzwords, no shoppy ad-read energy
-- Make viewers excited for the NEXT build — end with genuine energy, not a robot sign-off
+- Greet as Jacob Adkins's Bot; hyper-realistic delivery, not robotic TTS
+- On-screen captions are for the viewer's eyes only — never read, quote, or lecture from caption bullets
+- Scene structure every beat: intro → setup → punchline (comedic button about THIS shot) → out
+- Attenborough: broaden then narrow; put the reveal at the end of the sentence; never tell the viewer how to feel
+- Irwin: 'have a look', 'how neat is that', genuine excitement — plain words, no jargon
+- NEVER use educational tone — no notice, compare, pipeline, heightfield, seam, grid, Unity, spawn, or lesson framing
+- Describe ONLY what is visible — mountains, paths, caves, land, water
+- PARTIAL builds: momentum and visible progress; COMPLETE: celebrate on-screen only
+- Fill the FULL video runtime — outro only at the very end; no repeated filler phrases
+- Natural punctuation for speech — short sentences, em dashes for asides
+- Smooth transitions — no dead filler, no corporate buzzwords
 - One continuous script string (spaces between paragraphs)
-- Smooth transitions between beats — never dead air thinking
 - NO markdown, NO bullet characters in the script
 - NO beat numbers, frame counts, fps, "timelapse", Environment Kit, Cave Grader, editor queue jargon
 - NO "on screen you will see" or "the caption says" meta

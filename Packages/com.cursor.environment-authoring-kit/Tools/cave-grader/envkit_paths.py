@@ -61,3 +61,47 @@ def approved_cards_path() -> Path:
 
 def approved_dir() -> Path:
     return resolve_envkit_root() / "DemoRecapApproved"
+
+
+def recap_temp_dir() -> Path:
+    """Heavy ffmpeg/Pillow temp — always on EnvKit data root (Lexar when mounted)."""
+    path = resolve_envkit_root() / ".recap-tmp"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def preview_mirror_dir() -> Path:
+    """Preview MP4 shortcut folder — on external drive when available."""
+    path = resolve_envkit_root() / "DesktopMirror"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def ensure_recap_process_env() -> Path:
+    """Pin recap work to EnvKit data root (Lexar when mounted) — always override TMPDIR."""
+    root = resolve_envkit_root()
+    tmp = recap_temp_dir()
+    os.environ[ENV_VAR] = str(root)
+    # Never inherit Cursor/macOS /var/folders — that fills the internal SSD.
+    os.environ["TMPDIR"] = str(tmp)
+    os.environ["TEMP"] = str(tmp)
+    os.environ["TMP"] = str(tmp)
+    return root
+
+
+def unity_recap_scratch_dir() -> Path:
+    """Unity batchmode logs/scratch — on external EnvKit root, not Hub project disk."""
+    path = resolve_envkit_root() / ".recap-unity"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def mac_data_volume_free_gb() -> float | None:
+    """Free space on macOS Data volume (GB), or None if unknown."""
+    try:
+        import shutil
+
+        usage = shutil.disk_usage("/System/Volumes/Data")
+        return usage.free / (1024**3)
+    except OSError:
+        return None

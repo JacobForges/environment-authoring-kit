@@ -37,7 +37,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             "Ensure terrain extends from main land",
             "Florida LiDAR carve/rise sculpt + research brief",
             "Terrain dressing materials",
-            "Trails/roads/water (Florida DEM authoritative)",
+            "Terrain dressing + layout pre-plan (before grid terraform)",
             "Trails only",
             "Roads only",
             "Water only (non-walkable)",
@@ -269,6 +269,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 () =>
                 {
                     EditorUtility.ClearProgressBar();
+                    var tileCount = SurfaceOpenWorldGridExpansion.BuildAaaExtendedPlaceOrder().Length;
+                    if (session.Request.SurfaceScope == SurfaceBuildScope.FullWorld)
+                    {
+                        CaveBuildLiveSceneFeedback.NotifySurfacePhase(
+                            $"FullWorld grid terraform next (~{tileCount} tiles — banner updates per tile; this phase is slow on 16GB Macs)");
+                        CaveBuildRunStatusPublisher.SetSubOperation(
+                            "FullWorld grid",
+                            $"handoff — weld + terraform (~{tileCount} tiles)");
+                    }
+
                     QueueFinishSurfaceBuild(session, SurfaceFinishStep.NeighborTiles);
                 });
         }
@@ -284,7 +294,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var request = session.Request ??= new WorldGenerationRequest();
-            request.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             SurfaceTerrainGridRegistry.ResetSession();
             if (request.SurfaceScope == SurfaceBuildScope.FullWorld)
             {

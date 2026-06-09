@@ -309,7 +309,10 @@ def caption_readable_end_sec(spec: dict[str, Any], milestone: dict[str, Any] | N
 
 
 def hold_narrator_offset_sec(spec: dict[str, Any], milestone: dict[str, Any] | None = None) -> float:
-    """Start voice after captions are readable (never talk over unrevealed lines)."""
+    """Start voice after captions are readable — or immediately when captions are ignored."""
+    spec = flatten_narrator_personal_settings(spec or {})
+    if spec.get("narratorIgnoreCaptions") or uses_full_script_narration(spec):
+        return float(spec.get("narratorStartOffsetSec", 0.35))
     readable = caption_readable_end_sec(spec, milestone)
     return max(float(spec.get("narratorStartOffsetSec", 5.5)), readable)
 
@@ -363,31 +366,67 @@ def plan_wav_path(plan_dir: Path, text: str, spec: dict[str, Any] | None, engine
     return plan_dir / f"plan_{key}.wav"
 
 
+def hybrid_clip_sec_cap(
+    spec: dict[str, Any],
+    milestone: dict[str, Any] | None = None,
+    *,
+    clip_label: str = "",
+) -> float:
+    """Per-segment ceiling for hybrid portfolio length (8–9 min target, 12 min max)."""
+    if spec.get("recapMode") != "hybrid_screencast":
+        return 0.0
+    lbl = (clip_label or "").lower()
+    kind = str((milestone or {}).get("beatKind") or (milestone or {}).get("kind") or "").lower()
+    if "intro" in lbl or kind == "intro":
+        return float(spec.get("hybridMaxIntroSec", 0) or 0)
+    if "outro" in lbl or kind == "outro":
+        return float(spec.get("hybridMaxOutroSec", 0) or 0)
+    if "screen" in lbl or kind == "screencast":
+        return float(spec.get("hybridMaxScreenClipSec", 0) or 0)
+    if "hold" in lbl or kind in ("hold", "checkpoint"):
+        return float(spec.get("hybridMaxHoldClipSec", 0) or 0)
+    return 0.0
+
+
 def clip_sec_for_narration(
     speech_sec: float,
     spec: dict[str, Any],
     *,
     start_offset_sec: float,
     milestone: dict[str, Any] | None = None,
+    clip_label: str = "",
 ) -> float:
     """Video hold length = captions readable, then full speech, then tail."""
     tail = float(spec.get("narrationTailPadSec", 0.5))
     pad = float(spec.get("narrationPlanPaddingSec", 0.35))
-    caption_end = caption_readable_end_sec(spec, milestone) if milestone else 0.0
-    base = float(
-        (milestone or {}).get("holdSec")
-        or (
-            spec.get("subbeatHoldSec", 8.0)
-            if milestone and milestone.get("beatKind") == "subbeat"
-            else spec.get("milestoneHoldSec", 12.0)
-        )
-    )
-    need = max(
-        base,
-        caption_end + speech_sec + tail + pad,
-        start_offset_sec + speech_sec + tail + pad,
-    )
+    if spec.get("narratorIgnoreCaptions") or uses_full_script_narration(spec):
+        caption_end = 0.0
+    else:
+        caption_end = caption_readable_end_sec(spec, milestone) if milestone else 0.0
     sync_mode = str(spec.get("narrationSyncMode", "")).lower()
+    tight = sync_mode == "speech_first" and (
+        spec.get("narratorIgnoreCaptions") or uses_full_script_narration(spec)
+    )
+    if tight:
+        safety = float(spec.get("narrationSpeechSafetyPadSec", 0.0))
+        need = start_offset_sec + speech_sec + tail + pad + safety
+    else:
+        base = float(
+            (milestone or {}).get("holdSec")
+            or (
+                spec.get("subbeatHoldSec", 8.0)
+                if milestone and milestone.get("beatKind") == "subbeat"
+                else spec.get("milestoneHoldSec", 12.0)
+            )
+        )
+        need = max(
+            base,
+            caption_end + speech_sec + tail + pad,
+            start_offset_sec + speech_sec + tail + pad,
+        )
+    min_hold = float(spec.get("minMilestoneHoldSec", 0) or 0)
+    if min_hold > 0:
+        need = max(need, min_hold)
     if sync_mode != "speech_first":
         cap = float(spec.get("maxMilestoneHoldSec", 0) or 0)
         if cap > 0 and (not milestone or milestone.get("beatKind") != "subbeat"):
@@ -395,6 +434,9 @@ def clip_sec_for_narration(
         sub_cap = float(spec.get("maxSubbeatHoldSec", 0) or 0)
         if sub_cap > 0 and milestone and milestone.get("beatKind") == "subbeat":
             need = min(need, sub_cap)
+    hybrid_cap = hybrid_clip_sec_cap(spec, milestone, clip_label=clip_label)
+    if hybrid_cap > 0:
+        need = min(need, hybrid_cap)
     return need
 
 
@@ -594,6 +636,88 @@ def flatten_narrator_personal_settings(data: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def sync_personal_say_rate_keys(spec: dict[str, Any]) -> dict[str, Any]:
+    """Keep narratorRate and voiceHelpers.sayRate aligned (ApprovedCards source of truth)."""
+    out = dict(spec)
+    vh = out.get("voiceHelpers")
+    if not isinstance(vh, dict):
+        vh = {}
+    nested = out.get("narratorPersonalSettings")
+    rate: float | None = None
+    if vh.get("sayRate") is not None:
+        rate = float(vh["sayRate"])
+    elif isinstance(nested, dict) and nested.get("sayRate") is not None:
+        rate = float(nested["sayRate"])
+    elif out.get("narratorPersonalSayRate") is not None:
+        rate = float(out["narratorPersonalSayRate"])
+    elif out.get("narratorRate") is not None:
+        rate = float(out["narratorRate"])
+    else:
+        rate = 186.0
+    rate_i = int(round(rate))
+    out["narratorPersonalSayRate"] = rate_i
+    out["narratorRate"] = rate_i
+    vh["sayRate"] = rate_i
+    out["voiceHelpers"] = vh
+    return out
+
+
+def apply_recap_narrator_defaults(
+    spec: dict[str, Any],
+    *,
+    run_dir: Path | None = None,
+    approved_path: Path | None = None,
+) -> dict[str, Any]:
+    """Single source of truth for recap Personal Voice + ladder defaults."""
+    out = flatten_narrator_personal_settings(dict(spec))
+    out.setdefault("narrationMode", "fullScript")
+    out.setdefault("narratorIgnoreCaptions", True)
+    out.setdefault("cursorFullNarration", True)
+    out.setdefault("narrationSyncMode", "speech_first")
+    out.setdefault("fullScriptAlignToMilestones", False)
+    out.setdefault("narratorWordQueue", False)
+    out.setdefault("narratorSeamlessTimeline", True)
+    out.setdefault("narratorEnabled", True)
+    out["narratorEngine"] = "personal"
+    out["narratorRequirePersonal"] = True
+    out.setdefault("voiceHelpers", {"preset": "ladderDocumentary", "sayRate": 186})
+    out.setdefault("voiceLadder", {"enabled": True})
+    out.setdefault("narratorPersonalDelivery", "ladderDocumentary")
+    out.setdefault("narratorPersonalHumanize", True)
+    out.setdefault("narratorRawPersonalVoice", False)
+    out.setdefault("narratorNaturalDelivery", False)
+    out.setdefault("narratorPolishPersonal", False)
+    out.setdefault("narratorNaturalPauses", False)
+    out.setdefault("narratorPersonalLoudnorm", False)
+    out.setdefault("narratorBotIntroOnce", True)
+    out.setdefault("narratorMasterLadderOnly", True)
+    out.setdefault("narratorPreserveCapture", True)
+    out.setdefault("narratorNoTimeStretch", True)
+    out.setdefault("narratorFullScriptMinAtempo", 1.0)
+    out.setdefault("forceLocalCaptions", True)
+    if approved_path and approved_path.is_file():
+        out = flatten_narrator_personal_settings(
+            {**out, **json.loads(approved_path.read_text(encoding="utf-8"))}
+        )
+    if run_dir is not None:
+        pname = resolve_personal_voice_name(out, run_dir)
+        if pname:
+            out["narratorPersonalVoice"] = pname
+    style = str(out.get("narrationDeliveryStyle", "") or "").lower().replace("_", "-")
+    if style in ("tvhost", "tv-host", "tv-show", "adventure-host"):
+        out["lectureMode"] = False
+        out["narratorRawPersonalVoice"] = True
+        out["narratorMasterLadderOnly"] = False
+        out["fullScriptAlignToMilestones"] = False
+        out["narratorNoTimeStretch"] = True
+        out["narratorFullScriptMinAtempo"] = 1.0
+        out["narratorMinFitAtempo"] = 1.0
+        out["narratorMaxFitAtempo"] = 1.0
+        out["narratorPersonalDelivery"] = "raw"
+        out.setdefault("voiceLadder", {"enabled": False})
+    return sync_personal_say_rate_keys(out)
+
+
 def personal_delivery_preset(spec: dict[str, Any] | None) -> str:
     """raw | fluent | autotune | light | natural — post-capture delivery."""
     spec = flatten_narrator_personal_settings(spec or {})
@@ -735,7 +859,7 @@ def word_queue_enabled(spec: dict[str, Any] | None) -> bool:
     wq = vh.get("wordQueue") if isinstance(vh.get("wordQueue"), dict) else {}
     if wq.get("enabled") is False:
         return False
-    return bool(spec.get("narratorWordQueue", wq.get("enabled", True)))
+    return bool(spec.get("narratorWordQueue", wq.get("enabled", False)))
 
 
 def portfolio_word_queue_first(spec: dict[str, Any] | None) -> bool:
@@ -1616,17 +1740,25 @@ def finish_narration_tail(
     if cfg.get("enabled") is False:
         return
 
-    helpers_path = _TOOLS_DIR / "personal-voice-helpers.py"
-    if helpers_path.is_file():
-        import importlib.util
+    # Sentence-queue merges already shape phrase tails; tailFinish edge-pad on every cue
+    # causes end-of-word buzz/stutter — only run on single-pass (non-queue) captures.
+    skip_tail = bool(
+        spec.get("narratorCaptureWordQueue")
+        or spec.get("narratorUsedSegmentQueue")
+        or cfg.get("skipOnSegmentQueue", True)
+    )
+    if not skip_tail:
+        helpers_path = _TOOLS_DIR / "personal-voice-helpers.py"
+        if helpers_path.is_file():
+            import importlib.util
 
-        sp = importlib.util.spec_from_file_location("pvh_tail", helpers_path)
-        pvh = importlib.util.module_from_spec(sp)
-        assert sp.loader
-        sp.loader.exec_module(pvh)
-        if not spec.get("narratorBreathCueInserted") and pvh.breath_cue_enabled(spec):
-            pvh.insert_breath_performance_cue(wav, text, spec)
-        pvh.apply_tail_finish(wav, spec)
+            sp = importlib.util.spec_from_file_location("pvh_tail", helpers_path)
+            pvh = importlib.util.module_from_spec(sp)
+            assert sp.loader
+            sp.loader.exec_module(pvh)
+            if not spec.get("narratorBreathCueInserted") and pvh.breath_cue_enabled(spec):
+                pvh.insert_breath_performance_cue(wav, text, spec)
+            pvh.apply_tail_finish(wav, spec)
 
     if not cfg.get("forceLastWordQueue", True):
         return
@@ -2125,9 +2257,27 @@ def autotune_personal_voice_wav(wav: Path, spec: dict[str, Any] | None = None) -
         )
 
 
+def apply_master_voice_ladder(wav: Path, spec: dict[str, Any] | None = None) -> list[str]:
+    """One ladder pass on the full narration timeline — consistent tone across segments."""
+    spec = flatten_narrator_personal_settings(spec or {})
+    master = {
+        **spec,
+        "narratorCueCaptureOnly": False,
+        "narratorDryVoiceMaster": True,
+        "narratorCaptureMode": "",
+        "narratorUsedWordQueue": False,
+    }
+    return apply_personal_voice_helpers(wav, master)
+
+
 def deliver_personal_voice_wav(wav: Path, spec: dict[str, Any] | None = None) -> None:
     """Post-process Personal Voice via voiceHelpers chain or legacy presets."""
     spec = flatten_narrator_personal_settings(spec or {})
+    if spec.get("narratorCueCaptureOnly"):
+        mod = _load_voice_helpers()
+        if mod:
+            mod.apply_voice_capture_light(wav, spec)
+        return
     capture_text = str(spec.get("narratorCaptureText", "") or "").strip()
     source_text = str(
         spec.get("narratorSourceText") or spec.get("narratorTestPhrase") or capture_text
@@ -2270,17 +2420,75 @@ def _variant_id(spec: dict[str, Any], key: str, default: str) -> str:
     return vid or default
 
 
+def infer_map_completion_status(
+    milestones: list[dict[str, Any]] | None,
+    spec: dict[str, Any] | None = None,
+) -> str:
+    """partial = build still in progress; complete = finished map on screen."""
+    spec = spec or {}
+    explicit = str(
+        spec.get("mapCompletionStatus") or spec.get("recapMapStatus") or ""
+    ).strip().lower()
+    if explicit in ("complete", "completed", "finished", "shipped"):
+        return "complete"
+    if explicit in ("partial", "in_progress", "in-progress", "wip", "mid-build"):
+        return "partial"
+
+    blob = " ".join(
+        str(x)
+        for m in (milestones or [])
+        for x in (
+            m.get("chapter"),
+            m.get("phase"),
+            m.get("sub"),
+            m.get("line1"),
+            m.get("line2"),
+            m.get("line3"),
+            m.get("teachingFocus"),
+        )
+        if x
+    ).lower()
+    build_mode = str(spec.get("buildMode") or spec.get("recapBuildMode") or "").lower()
+    blob = f"{blob} {build_mode}"
+
+    complete_hints = (
+        "build complete",
+        "finished map",
+        "final world",
+        "shipped world",
+        "playable complete",
+        "recap complete",
+    )
+    if any(h in blob for h in complete_hints):
+        return "complete"
+    partial_hints = (
+        "session start",
+        "queued",
+        "terraform",
+        "grid phase",
+        "opening",
+        "mid-build",
+        "in progress",
+        "milestone still",
+        "screencast",
+    )
+    if any(h in blob for h in partial_hints):
+        return "partial"
+    return "partial"
+
+
 def narration_voice_guide_lines() -> list[str]:
-    """Shared voice direction for Cursor prompts, local scripts, and proofread exports."""
+    """Shared voice direction — renowned TV host craft (Attenborough + Irwin + scene punchlines)."""
     return [
-        "Sound like a real person with curiosity — warm, smooth, and a little playful.",
-        "Highly educational: explain what changed in the world and why a builder made that choice.",
-        "Frame this as research-and-development in public — tools like this grow the AI era in positive ways.",
-        "Speak to adults learning to ship, young adults picking up real skills, and kids who deserve "
-        "a fun visual language for creativity (never preachy, never fear-mongering).",
-        "Use vivid transitions; no dead air, no monotone card-reading, no corporate buzzwords.",
-        "Make viewers excited for the NEXT build — end with genuine energy, not a robot sign-off.",
-        "Never mention signature, autograph, fps, timelapse, Environment Kit, Cave Grader, or editor queue jargon.",
+        "Attenborough craft: open wide, narrow to one detail, put the reveal at the end of the sentence — never tell the viewer how to feel.",
+        "Irwin craft: direct address ('have a look'), genuine childlike wonder, fast warmth — excitement not lecture.",
+        "Scene craft (TV comedy editing): every beat is intro → setup → punchline → out — one comedic button tied to what is ON SCREEN.",
+        "Short sentences. Contractions. Questions to the viewer. Write for the ear, not a textbook.",
+        "Plain words only — mountains, paths, land, caves, water — never pipeline, tile, seam, heightfield, spawn, or Unity.",
+        "Captions carry facts; your voice sells wonder and jokes about the pixels — never read or paraphrase bullets.",
+        "Punchlines must reference THIS shot (puzzle ground, flat center, secret corner) — no generic 'so back' or 'front row' spam.",
+        "Fill the full video runtime — smooth transitions, no dead gaps, outro ONLY at the end.",
+        "Never mention signature, autograph, fps, timelapse, Environment Kit, Cave Grader, or live-stream chat.",
     ]
 
 
@@ -2289,7 +2497,8 @@ def narration_target_word_count(spec: dict[str, Any], target_sec: float) -> int:
     spec = flatten_narrator_personal_settings(spec or {})
     wpm = personal_say_rate(spec)
     sec = max(120.0, float(target_sec or 480))
-    return max(200, int((sec / 60.0) * wpm * 0.92))
+    fill = float(spec.get("narrationScriptFillFactor", 0.97))
+    return max(200, int((sec / 60.0) * wpm * fill))
 
 
 def build_full_narration_prompt_text(
@@ -2300,11 +2509,27 @@ def build_full_narration_prompt_text(
     intro_title: str,
     intro_subtitle: str,
     milestones: list[dict[str, Any]],
+    map_completion_status: str | None = None,
+    spec: dict[str, Any] | None = None,
 ) -> str:
     """Mirror demo-recap-pipeline.ts buildFullNarrationPrompt — for proofread exports."""
     sec = max(120, int(target_sec))
     wpm = max(140, int(say_rate_wpm))
-    target_words = max(200, int((sec / 60.0) * wpm * 0.92))
+    density = max(
+        0.75,
+        float(
+            (spec or {}).get("narrationScriptDensityMultiplier")
+            or (spec or {}).get("narrationDensityMultiplier")
+            or 1.0
+        ),
+    )
+    target_words = max(200, int((sec / 60.0) * wpm * 0.92 * density))
+    map_status = map_completion_status or infer_map_completion_status(milestones, spec)
+    map_line = (
+        "COMPLETE MAP — the video shows a finished world; celebrate what is on screen, still suggest (don't promise) off-screen ideas."
+        if map_status == "complete"
+        else "PARTIAL BUILD — the map is still taking shape in this video; hype momentum and visible progress, never talk like everything is already shipped."
+    )
     outline_rows: list[str] = []
     for i, m in enumerate(milestones):
         kind = "sub-step" if m.get("beatKind") == "subbeat" else "chapter"
@@ -2314,38 +2539,49 @@ def build_full_narration_prompt_text(
             for x in (m.get("line1"), m.get("line2"), m.get("line3"))
             if x
         ).strip()
+        ns = str(m.get("narratorScript") or "").strip()
+        voice_hint = (
+            f"  Suggested host voice (expand with jokes/reactions — do NOT read captions aloud):\n  {ns}"
+            if ns
+            else ""
+        )
         outline_rows.append(
             f"- {kind} {i + 1} · {topic}\n"
-            f"  On-screen captions (teach from these — rephrase in your own spoken words):\n"
+            f"  On-screen captions (viewer reads these — do NOT lecture or repeat them in voice):\n"
             f"  {cap or '(no caption)'}"
+            + (f"\n{voice_hint}" if voice_hint else "")
         )
     outline = "\n".join(outline_rows)
     intro_line = (
-        f"Open with a warm, curious welcome (title: {intro_title}"
+        f"Open like Attenborough meets Irwin on a kids adventure show (title: {intro_title}"
         + (f" — {intro_subtitle}" if intro_subtitle else "")
-        + "). Hook adults, teens, and curious kids — same story, different entry points."
+        + "). Wide hook, then wonder — zero lecture."
     )
     voice_rules = "\n".join(f"- {line}" for line in narration_voice_guide_lines())
-    return f"""You are writing the COMPLETE voiceover script for a Unity world-build documentary video.
+    return f"""You are writing the COMPLETE voiceover script for a Unity world-build recap video.
 
-The finished video is already cut to ~{sec} seconds. Your script must fill that runtime when read aloud at ~{wpm} wpm (~{target_words} words). Do not write a short script.
+Persona: Jacob Adkins's Bot — world-class TV adventure host. Attenborough pacing and reveals, Irwin wonder and direct address, one comedic punchline per scene tied to what is on screen. NOT a teacher. NOT a live stream.
+
+The finished video is already cut to ~{sec} seconds. Your script must fill that runtime when read aloud at ~{wpm} wpm (~{target_words} words, ~{density:.1f}× density). Speech-first: pipeline extends video to voice — do not write short.
 
 Build mode: {build_mode}
+Map status: {map_status.upper()} — {map_line}
 
 STRUCTURE (required):
-1. {intro_line} Set expectations — you are walking through a real Unity world build and learning how worlds are made.
-2. Body: move beat-by-beat in order. Use each milestone's on-screen captions as your facts — explain what changed, why it matters, and what the viewer should notice. Tie beats to how R&D-style tooling helps people learn and ship faster in the AI era.
-3. Close with a substantive thank-you — invite them to follow for the next build (make them WANT the next drop).
+1. {intro_line} Real Unity footage — match map status; one quick bot hello, then personality.
+2. Body: beat-by-beat in order. Use visible screen content for facts only — react with jokes, asides, and hype. Never read or paraphrase caption bullets. Suggest what COULD come later — never promise unshown features.
+3. Close with playful energy — invite them back if partial; warm sign-off if complete.
 
-Beat guide (captions are ground truth for content; invent natural spoken phrasing):
+Beat guide (captions = on-screen only; voice = host reactions — never lecture from captions):
 {outline}
 
 Voice rules:
 {voice_rules}
+- Greet as Jacob Adkins's Bot; hyper-realistic delivery, not robotic TTS
 - One continuous script string (spaces between paragraphs)
-- Smooth transitions between beats — never dead air thinking
+- Smooth transitions between beats
 - NO markdown, NO bullet characters in the script
-- NO beat numbers, frame counts, or meta like "on screen you will see"
+- NO beat numbers, frame counts, or meta like "the caption says"
 
 Return ONLY JSON:
 {{"script":"...single string..."}}"""
@@ -2370,6 +2606,8 @@ def write_narration_voice_guide(
         intro_title=str(spec.get("introTitle") or "World Build Recap"),
         intro_subtitle=str(spec.get("introSubtitle") or ""),
         milestones=milestones,
+        map_completion_status=infer_map_completion_status(milestones, spec),
+        spec=spec,
     )
     words = len((script_preview or "").split())
     target_words = narration_target_word_count(spec, dur)
@@ -2424,22 +2662,19 @@ def intro_narration_script(spec: dict[str, Any]) -> str:
     title = _clean_for_speech(str(spec.get("introTitle", "World Build Recap")))
     scripts = {
         "a": (
-            f"Hey — welcome to {title}. "
-            "We're walking a real Unity world build together, and I want you to see how research-style "
-            "tooling makes creativity approachable whether you're shipping games or just learning how worlds work."
+            f"Tonight on {title} — a world builds itself while we watch. "
+            "Have a look. Something big is about to happen."
         ),
         "b": (
-            f"{title} — glad you're here. "
-            "What you see is the actual Scene view, and we'll pause on the beats that teach something "
-            "useful for builders of every age."
+            f"{title}. Buckle up — empty land is about to become a kingdom. "
+            "I will call every awesome moment. You bring the popcorn."
         ),
         "c": (
-            f"{title}. "
-            "Settle in — this is a creative build recap, not a dry demo. "
-            "We'll move at a steady pace and I'll call out what's changing and why it matters."
+            f"{title}! "
+            "Adventure mode on — the land is waking up and we have the best seats in the house."
         ),
     }
-    return humanize_speech_text(sanitize_narration_text(scripts.get(intro_id, scripts["c"])), spec)[:260]
+    return humanize_speech_text(sanitize_narration_text(scripts.get(intro_id, scripts["c"])), spec)[:320]
 
 
 def outro_narration_script(spec: dict[str, Any]) -> str:
@@ -2448,19 +2683,16 @@ def outro_narration_script(spec: dict[str, Any]) -> str:
     outro_id = _variant_id(spec, "outroVariant", "b")
     scripts = {
         "a": (
-            "Thanks for riding this build with me — from first terrain to the final polish. "
-            "If this sparked ideas for your own worlds, stick around. The next episode goes deeper, "
-            "and I'd love to have you back."
+            "And that is a wrap for this episode — the world looks totally different from where we started. "
+            "Stick around because the next pass is gonna go even harder."
         ),
         "b": (
-            "That's the run — terrain, layout, caves, and polish in one arc. "
-            "Projects like this are how we learn in public: adults ship faster, young builders pick up "
-            "real skills, and kids get a fun lens on creativity in the AI era. "
-            "Follow for the next build — you won't want to miss it."
+            "And that is our episode — mountains, wild land, secret corners, the whole adventure. "
+            "The map is not done cooking. Same time next week?"
         ),
         "c": (
-            "Thank you for watching all the way through. "
-            "Subscribe or follow if you want the next drop — we're just getting started."
+            "You made it to the end — legend status. "
+            "The world keeps growing and the next episode is gonna be wild."
         ),
     }
     body = scripts.get(outro_id, scripts["b"])
@@ -2521,13 +2753,22 @@ def clip_narrator_offset_sec(
     if ci == n_clips - 1:
         return float(spec.get("outroNarratorOffsetSec", 0.6))
     if milestone is not None:
+        beat = str(milestone.get("beatKind") or "").lower()
+        if beat in ("screencast", "screen", "intro", "outro"):
+            if ci == 0:
+                return float(spec.get("introNarratorOffsetSec", 0.2))
+            if ci == n_clips - 1:
+                return float(spec.get("outroNarratorOffsetSec", 0.2))
+            return float(spec.get("timelapseNarratorOffsetSec", 0.12))
         return float(
             milestone.get("_plannedNarratorOffsetSec") or hold_narrator_offset_sec(spec, milestone)
         )
     label = (clip_label or "").lower()
+    if label.startswith("screen"):
+        return float(spec.get("timelapseNarratorOffsetSec", 0.12))
     if label.startswith("hold"):
         return hold_narrator_offset_sec(spec, None)
-    return float(spec.get("timelapseNarratorOffsetSec", 0.25))
+    return float(spec.get("timelapseNarratorOffsetSec", 0.12))
 
 
 def split_full_script_to_hold_texts(
@@ -2553,6 +2794,35 @@ def split_full_script_to_hold_texts(
         else:
             out.append("")
     return out
+
+
+def build_segment_aligned_cues(
+    clips: list[Path],
+    segment_texts: list[str],
+    spec: dict[str, Any],
+    clip_labels: list[str] | None = None,
+) -> tuple[dict[int, tuple[str, float]], dict[int, str]]:
+    """One script chunk per video clip, in order — aligned to what's on screen."""
+    spec = flatten_narrator_personal_settings(spec)
+    labels = clip_labels or [f"clip_{i}" for i in range(len(clips))]
+    narration_cues: dict[int, tuple[str, float]] = {}
+    cue_labels: dict[int, str] = {}
+    n = min(len(clips), len(segment_texts))
+    for ci in range(n):
+        text = humanize_speech_text(
+            sanitize_narration_text((segment_texts[ci] or "").strip()), spec
+        )
+        if not text:
+            continue
+        label = labels[ci] if ci < len(labels) else f"clip_{ci}"
+        off = clip_narrator_offset_sec(ci, len(clips), spec, clip_label=label)
+        narration_cues[ci] = (text, off)
+        cue_labels[ci] = label
+    print(
+        f"Segment-aligned cues: {len(narration_cues)}/{len(clips)} clips",
+        flush=True,
+    )
+    return narration_cues, cue_labels
 
 
 def build_full_script_narration_cues(
@@ -2671,50 +2941,124 @@ def full_narration_json_path(run_dir: Path | None) -> Path | None:
     return p if p.is_file() else None
 
 
+def _runtime_narrator_module() -> Any:
+    """Return this file's module object (works when loaded as `narrator` via importlib)."""
+    import importlib.util
+
+    here = Path(__file__).resolve()
+    for mod in sys.modules.values():
+        mf = getattr(mod, "__file__", None)
+        if mf and Path(mf).resolve() == here:
+            return mod
+    spec = importlib.util.spec_from_file_location("demo_recap_narrator_rt", here)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_narration_script_ladder():
+    import importlib.util
+
+    path = Path(__file__).resolve().parent / "demo-recap-narration-script-ladder.py"
+    spec = importlib.util.spec_from_file_location("narr_script_ladder", path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def expand_local_narration_script(
     script: str,
     milestones: list[dict[str, Any]],
     spec: dict[str, Any],
     target_sec: float,
 ) -> str:
-    """Pad local milestone script until it can fill the graded video runtime."""
-    spec = flatten_narrator_personal_settings(spec or {})
-    target_words = narration_target_word_count(spec, target_sec)
-    words = script.split()
-    if len(words) >= int(target_words * 0.88):
-        return script
+    """Expand via milestone meat-loop (deprecated direct path — prefer finalize_narration_script)."""
+    ladder = _load_narration_script_ladder()
+    out = ladder.expand_narration_from_milestones(
+        script,
+        milestones,
+        flatten_narrator_personal_settings(spec),
+        target_sec,
+        narr_mod=_runtime_narrator_module(),
+    )
+    return humanize_speech_text(sanitize_narration_text(out), spec)
 
-    extras: list[str] = [
-        "What you are watching is research and development in public — not a slideshow. "
-        "Tools like this help grown-ups ship faster, help young adults learn real production skills, "
-        "and give kids a playful visual language for creativity in the AI era.",
-    ]
-    for m in milestones:
-        if m.get("_skipNarration"):
-            continue
-        cap = milestone_narration_cue_text(m, spec)
-        if not cap:
-            continue
-        chapter = str(m.get("chapter") or m.get("phase") or "").strip()
-        lead = f"At this beat — {chapter} — " if chapter else "Right here — "
-        extras.append(
-            f"{lead}{cap} "
-            "Notice how each decision stacks: layout, readability, and room for gameplay later."
-        )
-    extras.extend(
-        [
-            "That stacking is exactly how professional worlds get made — one honest iteration at a time.",
-            "If this helped you see procedural worlds differently, stick around. "
-            "The next build goes deeper, and I would love to have you back for it.",
-        ]
+
+def finalize_narration_script(
+    script: str,
+    milestones: list[dict[str, Any]],
+    spec: dict[str, Any],
+    target_sec: float,
+    *,
+    run_dir: Path | None = None,
+    source: str = "unknown",
+) -> tuple[str, dict[str, Any]]:
+    """Grade → meat-loop → dedupe before Personal Voice capture."""
+    ladder = _load_narration_script_ladder()
+    return ladder.finalize_narration_script(
+        script,
+        milestones,
+        flatten_narrator_personal_settings(spec),
+        target_sec,
+        narr_mod=_runtime_narrator_module(),
+        run_dir=run_dir,
+        source=source,
     )
 
-    out = script
-    ei = 0
-    while len(out.split()) < target_words and ei < len(extras) * 4:
-        out = f"{out} {extras[ei % len(extras)]}"
-        ei += 1
-    return humanize_speech_text(sanitize_narration_text(out), spec)
+
+def narration_script_needs_finalize(
+    payload: dict[str, Any],
+    spec: dict[str, Any],
+    target_sec: float,
+) -> bool:
+    ladder = _load_narration_script_ladder()
+    return ladder.narration_script_needs_finalize(
+        payload,
+        flatten_narrator_personal_settings(spec),
+        target_sec,
+        narr_mod=_runtime_narrator_module(),
+    )
+
+
+def strip_bot_reintroduction(text: str, spec: dict[str, Any] | None = None) -> str:
+    """Remove repeated bot identity lines — bot greets only once at recap open."""
+    spec = flatten_narrator_personal_settings(spec or {})
+    bot = str(spec.get("narratorBotLabel") or "Jacob Adkins's Bot").strip()
+    if not text or not bot:
+        return text
+    import re
+
+    out = text.strip()
+    patterns = [
+        rf"^(hey[ —,\-]*)?{re.escape(bot)}\s+here[.!]?\s*",
+        rf"^{re.escape(bot)}\s+here[ —,\-]*",
+        rf"^{re.escape(bot)}\s+on deck[.!]?\s*",
+        rf"^{re.escape(bot)}\s+signs off[^.]*[.!]?\s*",
+        rf"^{re.escape(bot)}\s+out until[^.]*[.!]?\s*",
+        rf"^okay[ —,\-]*{re.escape(bot)}\s+here[.!]?\s*",
+    ]
+    for pat in patterns:
+        out = re.sub(pat, "", out, count=1, flags=re.IGNORECASE)
+    return out.strip()
+
+
+def bot_intro_narration_line(spec: dict[str, Any] | None = None) -> str:
+    spec = flatten_narrator_personal_settings(spec or {})
+    bot = str(spec.get("narratorBotLabel") or "Jacob Adkins's Bot").strip()
+    intro_title = str(spec.get("introTitle") or "World Build Recap").strip()
+    intro_sub = str(spec.get("introSubtitle") or "").strip()
+    line = f"YO — {bot} here, we are LIVE."
+    if intro_title:
+        line += f" {intro_title}."
+    if intro_sub:
+        line += f" {intro_sub}."
+    line += (
+        " Real Unity Scene view, Florida karst world-build — "
+        "I react, you watch; on-screen bullets are for your eyes, not my mouth."
+    )
+    return line
 
 
 def write_local_full_narration_script(
@@ -2729,53 +3073,34 @@ def write_local_full_narration_script(
     Used for --narration-only / Terminal Personal Voice so say+mysay starts immediately.
     """
     spec = flatten_narrator_personal_settings(spec or {})
-    intro_title = str(spec.get("introTitle") or "World Build Recap").strip()
-    intro_sub = str(spec.get("introSubtitle") or "").strip()
-    parts: list[str] = [
-        f"Hey — welcome to {intro_title}."
-        + (f" {intro_sub}." if intro_sub else "")
-        + " This is a real Unity world build, and we are going to learn from every beat — "
-        "whether you ship games, study design, or you are young and curious about how worlds are made."
-    ]
-    for m in milestones:
-        if m.get("_skipNarration"):
-            continue
-        ns = (m.get("narratorScript") or "").strip()
-        if ns:
-            parts.append(sanitize_narration_text(ns))
-            continue
-        cap = " ".join(
-            str(x).strip()
-            for x in (m.get("line1"), m.get("line2"), m.get("line3"))
-            if x
-        ).strip()
-        if cap:
-            parts.append(sanitize_narration_text(cap))
-    parts.append(outro_narration_script(spec))
     say_r = personal_say_rate(spec)
     dur = float(target_sec or spec.get("fullNarrationTargetSec") or spec.get("targetDurationSec") or 480)
-    script = expand_local_narration_script(
-        humanize_speech_text(sanitize_narration_text(" ".join(parts)), spec),
+    outro = outro_narration_script(spec)
+    ladder = _load_narration_script_ladder()
+    draft = ladder.compose_tv_host_script(
         milestones,
         spec,
         dur,
+        narr_mod=_runtime_narrator_module(),
+        intro=intro_narration_script(spec),
+        outro=outro,
+    )
+    script, grade = finalize_narration_script(
+        draft,
+        milestones,
+        {**spec, "_tvHostOutro": outro},
+        dur,
+        run_dir=run_dir,
+        source="local_milestones",
     )
     write_narration_voice_guide(run_dir, spec, milestones, target_sec=dur, script_preview=script)
-    payload = {
-        "script": script,
-        "wordCount": len(script.split()),
-        "targetDurationSec": dur,
-        "targetWordCount": narration_target_word_count(spec, dur),
-        "sayRateWpm": say_r,
-        "source": "local_milestones",
-    }
-    payload.update(narration_voice_metadata(spec, run_dir))
-    path = run_dir / "DemoRecapFullNarration.json"
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    (run_dir / "DemoRecapFullNarration.txt").write_text(script + "\n", encoding="utf-8")
+    ladder = _load_narration_script_ladder()
+    ladder.save_finalized_narration_script(
+        run_dir, script, grade, spec, narr_mod=_runtime_narrator_module(), source="local_milestones"
+    )
     print(
-        f"Full narration script (local, no Cursor): {payload['wordCount']} words "
-        f"(target ~{payload['targetWordCount']}) → {path.name}",
+        f"Full narration script (local, no Cursor): {len(script.split())} words "
+        f"(target ~{grade.get('targetWordCount')}, grade {grade.get('score')}) → DemoRecapFullNarration.json",
         flush=True,
     )
     return script
@@ -2842,11 +3167,11 @@ def beat_narration_script(m: dict[str, Any], spec: dict[str, Any] | None = None)
         return ""
     if spec.get("narratorIgnoreCaptions"):
         if m.get("narratorScript"):
-            raw = sanitize_narration_text(str(m["narratorScript"]))
+            raw = strip_bot_reintroduction(sanitize_narration_text(str(m["narratorScript"])), spec)
             return humanize_speech_text(raw, spec)[:480]
         return ""
     if m.get("narratorScript"):
-        raw = sanitize_narration_text(str(m["narratorScript"]))
+        raw = strip_bot_reintroduction(sanitize_narration_text(str(m["narratorScript"])), spec)
         return humanize_speech_text(raw, spec)[:480]
     lines = _narration_lines_from_milestone(m)
     if m.get("beatKind") == "subbeat":
@@ -3461,8 +3786,12 @@ def speech_to_wav(
                 except OSError:
                     pass
                 return False
+            cue_only = bool(spec.get("narratorCueCaptureOnly")) or (
+                spec.get("narratorMasterLadderOnly", True) and not word_queue_capture
+            )
             ladder_spec = {
                 **spec,
+                "narratorCueCaptureOnly": cue_only and not word_queue_capture,
                 "narratorCaptureWordQueue": word_queue_capture,
                 "narratorUsedWordQueue": word_queue_capture or spec.get("narratorUsedWordQueue"),
                 "narratorCaptureMode": capture_queue_mode(spec) if word_queue_capture else "",
@@ -3795,6 +4124,7 @@ def build_narration_for_full_video(
     engine: str = "auto",
     spec: dict[str, Any] | None = None,
     run_dir: Path | None = None,
+    milestones: list[dict[str, Any]] | None = None,
 ) -> bool:
     """
     Synthesize the full Cursor script once and fit to entire video duration.
@@ -3807,36 +4137,74 @@ def build_narration_for_full_video(
     spec = flatten_narrator_personal_settings(spec or {})
     ffprobe = find_ffprobe()
     video_dur = probe_duration(video, ffprobe=ffprobe)
+    ms = milestones if milestones is not None else []
+    if run_dir and ms:
+        tv_spec = {**spec, "_tvHostOutro": outro_narration_script(spec)}
+        script, _grade = finalize_narration_script(
+            script,
+            ms,
+            tv_spec,
+            video_dur,
+            run_dir=run_dir,
+            source="pre_capture",
+        )
+        ladder = _load_narration_script_ladder()
+        ladder.save_finalized_narration_script(
+            run_dir, script, _grade, spec, narr_mod=_runtime_narrator_module(), source="pre_capture"
+        )
     lead = float(spec.get("fullNarrationLeadSec", 0.6))
     slot = max(1.0, video_dur - lead)
 
     raw = out_wav.parent / "_full_narr_raw.wav"
     raw.parent.mkdir(parents=True, exist_ok=True)
     used_engine = pick_speech_engine(spec, run_dir)
+    force_regen = bool(spec.get("forceRegenNarration") or spec.get("regenNarration"))
 
     print(
         f"Full-script narration: {len(script.split())} words → {video_dur:.1f}s video "
         f"(ignoring caption cards)…",
         flush=True,
     )
-    if strict_personal_narration(spec):
-        ready, reason = personal_voice_capture_ready(spec, run_dir)
-        if not ready:
-            print(f"Full-script narration skipped: {reason}", file=sys.stderr)
-            return False
-
     capture_method = ""
-    if not speech_to_wav(
-        script,
-        raw,
-        voice=voice,
-        rate=rate,
-        engine=used_engine,
-        spec=spec,
-        run_dir=run_dir,
+    run_grade_ok = narration_script_is_acceptable(run_dir, spec)
+    if (
+        should_preserve_personal_capture(spec)
+        and raw.is_file()
+        and wav_is_audible(raw, min_mean_db=-58.0)
+        and not force_regen
+        and run_grade_ok
     ):
-        return False
-    capture_method = str(spec.get("_lastCaptureMethod") or "personal")
+        fill = personal_capture_fill_ratio(raw, video_dur, ffprobe=ffprobe, spec=spec)
+        min_fill = float(spec.get("narratorMinVideoFillRatio", 0.88))
+        if fill >= min_fill:
+            print(f"Preserving existing Personal Voice capture → {raw.name}", flush=True)
+            capture_method = "preserved"
+        else:
+            print(
+                f"Discarding short Personal Voice capture ({fill:.0%} fill) — fresh TV-host read…",
+                flush=True,
+            )
+    if not capture_method:
+        if strict_personal_narration(spec):
+            ready, reason = personal_voice_capture_ready(spec, run_dir)
+            if not ready:
+                print(f"Full-script narration skipped: {reason}", file=sys.stderr)
+                return False
+        if not speech_to_wav(
+            script,
+            raw,
+            voice=voice,
+            rate=rate,
+            engine=used_engine,
+            spec={
+                **spec,
+                "narratorCueCaptureOnly": True,
+                "narratorRawPersonalVoice": bool(spec.get("narratorRawPersonalVoice", False)),
+            },
+            run_dir=run_dir,
+        ):
+            return False
+        capture_method = str(spec.get("_lastCaptureMethod") or "personal")
 
     speech_dur = probe_duration(raw, ffprobe=ffprobe)
     personal = is_personal_narration(spec)
@@ -3873,9 +4241,77 @@ def build_narration_for_full_video(
             raw = fitted
             speech_dur = probe_duration(raw, ffprobe=ffprobe)
     elif personal and speech_dur > slot + 0.15:
+        max_up = float(spec.get("narratorFullScriptMaxAtempo", 1.08))
+        ratio = min(max_up, speech_dur / slot)
+        if ratio > 1.01:
+            print(
+                f"Full script {speech_dur:.1f}s > video {slot:.1f}s — "
+                f"gentle speedup {ratio:.3f} to fit runtime",
+                flush=True,
+            )
+            fitted = raw.with_suffix(".speedup.wav")
+            subprocess.run(
+                [
+                    find_ffmpeg(),
+                    "-y",
+                    "-i",
+                    str(raw),
+                    "-af",
+                    _atempo_chain(ratio),
+                    "-ar",
+                    "48000",
+                    "-ac",
+                    "2",
+                    str(fitted),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            raw = fitted
+            speech_dur = probe_duration(raw, ffprobe=ffprobe)
+        else:
+            print(
+                f"Full script {speech_dur:.1f}s > video {slot:.1f}s — "
+                f"trimming tail to match video",
+                flush=True,
+            )
+    elif (
+        personal
+        and speech_dur < slot * float(spec.get("narratorMinVideoFillRatio", 0.93))
+        and not spec.get("narratorNoTimeStretch", True)
+    ):
+        min_ratio = float(spec.get("narratorFullScriptMinAtempo", 1.0))
+        ratio = max(min_ratio, speech_dur / slot)
+        if ratio < 0.985:
+            print(
+                f"Full script {speech_dur:.1f}s < video {slot:.1f}s — "
+                f"gentle stretch {ratio:.3f} to fill runtime",
+                flush=True,
+            )
+            fitted = raw.with_suffix(".stretch.wav")
+            subprocess.run(
+                [
+                    find_ffmpeg(),
+                    "-y",
+                    "-i",
+                    str(raw),
+                    "-af",
+                    _atempo_chain(ratio),
+                    "-ar",
+                    "48000",
+                    "-ac",
+                    "2",
+                    str(fitted),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            raw = fitted
+            speech_dur = probe_duration(raw, ffprobe=ffprobe)
+    elif personal and speech_dur < slot * float(spec.get("narratorMinVideoFillRatio", 0.93)):
         print(
-            f"Full script {speech_dur:.1f}s > video {slot:.1f}s — "
-            f"keeping Personal Voice at natural pace (pad/trim video only)",
+            f"Full script {speech_dur:.1f}s < video {slot:.1f}s — "
+            f"natural pace (silence pad, no time-stretch)",
             flush=True,
         )
 
@@ -3900,6 +4336,117 @@ def build_narration_for_full_video(
             run_dir, spec, capture_method=capture_method or "personal"
         )
     return True
+
+
+def _trim_narration_edge_silence(wav: Path, spec: dict[str, Any], *, ffprobe: str) -> Path:
+    """Trim only leading/trailing dead air — keep natural punctuation pauses inside speech."""
+    ffmpeg = find_ffmpeg()
+    lead = float(spec.get("narrationTrimLeadSec", 0.02))
+    tail = float(spec.get("narrationTrimTailSec", 0.04))
+    if lead <= 0 and tail <= 0:
+        return wav
+    dur = probe_duration(wav, ffprobe=ffprobe)
+    if dur < lead + tail + 0.25:
+        return wav
+    trimmed = wav.with_suffix(".trim.wav")
+    af = (
+        f"silenceremove=start_periods=1:start_duration={lead:.3f}:"
+        f"start_threshold=-40dB:detection=peak,"
+        f"areverse,silenceremove=start_periods=1:start_duration={tail:.3f}:"
+        f"start_threshold=-40dB:detection=peak,areverse"
+    )
+    try:
+        subprocess.run(
+            [ffmpeg, "-y", "-i", str(wav), "-af", af, "-ar", "48000", "-ac", "2", str(trimmed)],
+            check=True,
+            capture_output=True,
+        )
+        if trimmed.is_file() and trimmed.stat().st_size > 256:
+            shutil.copy2(trimmed, wav)
+    except subprocess.CalledProcessError:
+        pass
+    return wav
+
+
+def _assemble_seamless_narration_timeline(
+    clips: list[Path],
+    tmp: Path,
+    raw_dir: Path,
+    cues: dict[int, str | tuple[str, float]],
+    cue_labels: dict[int, str],
+    out_wav: Path,
+    spec: dict[str, Any],
+    *,
+    voice: str,
+    rate: int,
+    engine: str,
+    run_dir: Path | None,
+    ffprobe: str,
+) -> bool:
+    """Chain speech back-to-back — only punctuation pauses inside each cue remain."""
+    ffmpeg = find_ffmpeg()
+    total_dur = sum(probe_duration(c, ffprobe=ffprobe) for c in clips)
+    if total_dur < 0.1:
+        return False
+
+    inter_gap = float(spec.get("narrationInterCueGapSec", 0.0))
+    placed: list[tuple[float, Path]] = []
+    speech_cursor = 0.0
+    for ci, clip in enumerate(clips):
+        raw = raw_dir / f"raw_{ci:03d}.wav"
+        if ci in cues and raw.is_file() and raw.stat().st_size > 512:
+            _trim_narration_edge_silence(raw, spec, ffprobe=ffprobe)
+            speech_dur = probe_duration(raw, ffprobe=ffprobe)
+            _, offset = _parse_cue(cues[ci], 0.02)
+            if ci == 0:
+                start = min(offset, 0.02)
+            else:
+                start = speech_cursor + inter_gap
+            placed.append((start, raw))
+            speech_cursor = start + speech_dur
+
+    if not placed:
+        return False
+
+    cmd: list[str] = [
+        ffmpeg, "-y",
+        "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:d={total_dur:.3f}",
+    ]
+    for _, raw in placed:
+        cmd.extend(["-i", str(raw)])
+
+    parts = ["[0:a]asetpts=PTS-STARTPTS[base]"]
+    mix_inputs = ["[base]"]
+    for i, (start, _) in enumerate(placed):
+        ms = int(max(0.0, start) * 1000)
+        inp = i + 1
+        parts.append(f"[{inp}:a]adelay={ms}|{ms},asetpts=PTS-STARTPTS[s{i}]")
+        mix_inputs.append(f"[s{i}]")
+
+    n_in = len(mix_inputs)
+    parts.append(
+        f"{''.join(mix_inputs)}amix=inputs={n_in}:duration=longest:dropout_transition=2[out]"
+    )
+    cmd.extend([
+        "-filter_complex", ";".join(parts),
+        "-map", "[out]",
+        "-ar", "48000", "-ac", "2",
+        str(out_wav),
+    ])
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as exc:
+        err = (exc.stderr or exc.stdout or str(exc))[:800]
+        print(f"Seamless timeline mux failed: {err}", file=sys.stderr)
+        return False
+
+    match_audio_duration(out_wav, total_dur, ffprobe=ffprobe)
+    print(
+        f"Seamless narration: {len(placed)} cues placed on {total_dur:.1f}s timeline "
+        f"(no inter-cue dead air)",
+        flush=True,
+    )
+    return out_wav.is_file() and wav_is_audible(out_wav, min_mean_db=-58.0)
 
 
 def build_narration_for_clips(
@@ -3989,15 +4536,37 @@ def build_narration_for_clips(
             silence_wav(part, dur)
         parts.append(part)
 
-    lst = tmp / "list.txt"
-    lst.write_text("".join(f"file '{p.resolve()}'\n" for p in parts), encoding="utf-8")
-    if not concat_narration_parts(tmp, out_wav, spec):
-        print("ERROR: failed to concat narration parts", file=sys.stderr)
-        return False
+    if spec.get("narratorSeamlessTimeline", True) and narrated_ok > 0:
+        if not _assemble_seamless_narration_timeline(
+            clips, tmp, raw_dir, cues, cue_labels, out_wav, spec,
+            voice=voice, rate=rate, engine=used_engine, run_dir=run_dir,
+            ffprobe=ffprobe,
+        ):
+            print("ERROR: seamless narration timeline failed", file=sys.stderr)
+            return False
+    else:
+        lst = tmp / "list.txt"
+        lst.write_text("".join(f"file '{p.resolve()}'\n" for p in parts), encoding="utf-8")
+        if not concat_narration_parts(tmp, out_wav, spec):
+            print("ERROR: failed to concat narration parts", file=sys.stderr)
+            return False
     if narrated_ok == 0 and cues:
         print("ERROR: No narration audio was generated — video would be silent.", file=sys.stderr)
         return False
     print(f"Narration: {narrated_ok}/{len(cues)} cues with voice audio")
+    skip_ladder = bool(spec.get("_preservedPersonalVoice"))
+    if (
+        narrated_ok > 0
+        and is_personal_narration(spec)
+        and spec.get("narratorMasterLadderOnly", True)
+        and not skip_ladder
+    ):
+        print(
+            "Master voice ladder: one pass on full timeline "
+            "(voice-safe staticClean + finalizer)…",
+            flush=True,
+        )
+        apply_master_voice_ladder(out_wav, spec)
     if narrated_ok > 0 and run_dir and is_personal_narration(spec):
         method = str(spec.get("_lastCaptureMethod") or "say+mysay")
         write_narration_capture_record(
@@ -4046,21 +4615,140 @@ def concat_narration_parts(parts_dir: Path, out_wav: Path, spec: dict[str, Any] 
     return out_wav.is_file() and wav_is_audible(out_wav, min_mean_db=-58.0)
 
 
+def should_preserve_personal_capture(spec: dict[str, Any] | None) -> bool:
+    spec = flatten_narrator_personal_settings(spec or {})
+    return is_personal_narration(spec) and bool(spec.get("narratorPreserveCapture", True))
+
+
+def read_narration_script_grade(run_dir: Path | None) -> dict[str, Any]:
+    if not run_dir:
+        return {}
+    for base in (run_dir, run_dir.parent):
+        p = base / "DemoRecapNarrationScriptGrade.json"
+        if p.is_file():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return {}
+    return {}
+
+
+def narration_script_is_acceptable(run_dir: Path | None, spec: dict[str, Any] | None = None) -> bool:
+    grade = read_narration_script_grade(run_dir)
+    if grade:
+        fill = float(grade.get("fillRatio") or 0)
+        min_fill = float((spec or {}).get("narratorMinScriptFillRatio", 0.83))
+        if fill >= min_fill and int(grade.get("score") or 0) >= int((spec or {}).get("narrationScriptMinScore", 85)):
+            return True
+        return bool(grade.get("acceptable"))
+    jp = full_narration_json_path(run_dir) if run_dir else None
+    if jp and jp.is_file():
+        try:
+            data = json.loads(jp.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and "scriptGradeAcceptable" in data:
+                return bool(data.get("scriptGradeAcceptable"))
+        except json.JSONDecodeError:
+            pass
+    return True
+
+
+def personal_capture_fill_ratio(
+    src: Path,
+    video_dur: float,
+    *,
+    ffprobe: str | None = None,
+    spec: dict[str, Any] | None = None,
+) -> float:
+    spec = flatten_narrator_personal_settings(spec or {})
+    lead = float(spec.get("fullNarrationLeadSec", 0.6))
+    slot = max(0.1, video_dur - lead)
+    speech_dur = probe_duration(src, ffprobe=ffprobe or find_ffprobe())
+    return speech_dur / slot if slot > 0 else 0.0
+
+
 def resolve_natural_personal_narration_wav(
     work_dir: Path,
     spec: dict[str, Any] | None = None,
 ) -> Path | None:
-    """Prefer uncropped Personal Voice capture; never return time-stretched .fit intermediates."""
+    """Prefer uncropped Personal Voice capture; never return time-stretched intermediates."""
     spec = flatten_narrator_personal_settings(spec or {})
     if not is_personal_narration(spec):
         return None
+    parts_dir = work_dir / "_narr_parts"
+    seamless = bool(spec.get("narratorSeamlessTimeline", True))
+    full_script = str(spec.get("narrationMode", "fullScript")).lower() in (
+        "fullscript",
+        "full_script",
+        "full",
+    )
+    if full_script and seamless and not spec.get("fullScriptAlignToMilestones", False):
+        if parts_dir.is_dir() and sorted(parts_dir.glob("p_*.wav")):
+            return None
     raw = work_dir / "_full_narr_raw.wav"
     if raw.is_file() and wav_is_audible(raw, min_mean_db=-58.0):
         return raw
+    stretch = work_dir / "_full_narr_raw.stretch.wav"
+    if stretch.is_file() and wav_is_audible(stretch, min_mean_db=-58.0):
+        return None
     narr = work_dir / "narration.wav"
     if narr.is_file() and wav_is_audible(narr, min_mean_db=-58.0):
         return narr
     return None
+
+
+def try_apply_preserved_personal_voice(
+    video: Path,
+    out_wav: Path,
+    work_dir: Path,
+    spec: dict[str, Any] | None = None,
+) -> bool:
+    """Reuse natural Personal Voice WAV — pad to video, no regen, stretch, or master ladder."""
+    spec = flatten_narrator_personal_settings(spec or {})
+    if not should_preserve_personal_capture(spec):
+        return False
+    if spec.get("forceRegenNarration") or spec.get("regenNarration"):
+        return False
+    src = resolve_natural_personal_narration_wav(work_dir, spec)
+    if src is None or not video.is_file():
+        return False
+    run_dir = work_dir.parent
+    if not narration_script_is_acceptable(run_dir, spec):
+        print(
+            "Preserved Personal Voice skipped: narration script grade not acceptable — regen script + voice",
+            flush=True,
+        )
+        return False
+    ffprobe = find_ffprobe()
+    video_dur = probe_duration(video, ffprobe=ffprobe)
+    min_fill = float(spec.get("narratorMinVideoFillRatio", 0.88))
+    fill = personal_capture_fill_ratio(src, video_dur, ffprobe=ffprobe, spec=spec)
+    if fill < min_fill:
+        print(
+            f"Preserved Personal Voice skipped: capture fill {fill:.0%} < {min_fill:.0%} "
+            f"(short/chopped take — regen one continuous TV-host read)",
+            flush=True,
+        )
+        return False
+    lead = float(spec.get("fullNarrationLeadSec", 0.6))
+    fit_speech_into_slot(
+        src,
+        out_wav,
+        video_dur,
+        start_offset_sec=lead,
+        ffprobe=ffprobe,
+        spec=spec,
+    )
+    match_audio_duration(out_wav, video_dur, ffprobe=ffprobe)
+    if not wav_is_audible(out_wav):
+        return False
+    speech_dur = probe_duration(src, ffprobe=ffprobe)
+    spec["_preservedPersonalVoice"] = True
+    print(
+        f"Preserved Personal Voice: {src.name} ({speech_dur:.1f}s natural → "
+        f"{video_dur:.1f}s video; no regen, no time-stretch, no master ladder)",
+        flush=True,
+    )
+    return True
 
 
 def remux_preview_with_narration(
@@ -4076,13 +4764,21 @@ def remux_preview_with_narration(
     final = video if video is not None else work_dir / "_final_video.mp4"
     narr_wav = work_dir / "narration.wav"
     parts_dir = work_dir / "_narr_parts"
+    full_script = str(spec.get("narrationMode", "fullScript")).lower() in (
+        "fullscript",
+        "full_script",
+        "full",
+    )
     if parts_dir.is_dir() and sorted(parts_dir.glob("p_*.wav")):
-        newest = max(p.stat().st_mtime for p in parts_dir.glob("p_*.wav"))
-        if not narr_wav.is_file() or narr_wav.stat().st_mtime < newest - 1:
-            print("Rebuilding narration.wav from _narr_parts…", flush=True)
-            if not concat_narration_parts(parts_dir, narr_wav, spec):
-                print("ERROR: narration parts did not concat to audible wav", file=sys.stderr)
-                return False
+        if full_script and not spec.get("fullScriptAlignToMilestones", False):
+            pass
+        else:
+            newest = max(p.stat().st_mtime for p in parts_dir.glob("p_*.wav"))
+            if not narr_wav.is_file() or narr_wav.stat().st_mtime < newest - 1:
+                print("Rebuilding narration.wav from _narr_parts…", flush=True)
+                if not concat_narration_parts(parts_dir, narr_wav, spec):
+                    print("ERROR: narration parts did not concat to audible wav", file=sys.stderr)
+                    return False
     if not final.is_file():
         print(f"ERROR: missing graded video {final}", file=sys.stderr)
         return False
@@ -4111,7 +4807,7 @@ def remux_preview_with_narration(
         print(f"ERROR: missing or silent narration {narr_wav}", file=sys.stderr)
         return False
 
-    vol = volume if volume is not None else float(spec.get("narratorVolume", 1.25))
+    vol = volume if volume is not None else narrator_mux_volume(spec)
     output_mp4.parent.mkdir(parents=True, exist_ok=True)
     mux_narration_video_only(
         final, narr_wav, output_mp4, volume=vol, spec=spec
@@ -4125,12 +4821,31 @@ def remux_preview_with_narration(
 def narration_mux_loudnorm(spec: dict[str, Any] | None) -> bool:
     """loudnorm on mux can flatten Personal Voice — off by default for personal engine."""
     spec = flatten_narrator_personal_settings(spec or {})
+    if spec.get("narratorMuxLoudnorm") is not None:
+        return bool(spec["narratorMuxLoudnorm"])
+    if spec.get("narratorPortfolioMode") is True:
+        return True
     if spec.get("narratorPersonalLoudnorm") is not None:
         return bool(spec["narratorPersonalLoudnorm"])
     eng = str(spec.get("narratorEngine", "")).lower()
     if eng in ("personal", "personal-voice") or spec.get("narratorRequirePersonal"):
         return False
     return bool(spec.get("loudnorm", True))
+
+
+def narrator_mux_volume(spec: dict[str, Any] | None, *, default: float = 1.25) -> float:
+    spec = flatten_narrator_personal_settings(spec or {})
+    vol_max = float(spec.get("narratorVolumeMax", 4.0))
+    vol = float(spec.get("narratorVolume", default))
+    return max(0.2, min(vol_max, vol))
+
+
+def narrator_mux_loudnorm_target(spec: dict[str, Any] | None) -> tuple[float, float, float]:
+    spec = flatten_narrator_personal_settings(spec or {})
+    i = float(spec.get("narratorMuxLoudnormI", spec.get("voiceLadder", {}).get("finalizer", {}).get("loudnormI", -14.0)))
+    tp = float(spec.get("narratorMuxLoudnormTP", spec.get("voiceLadder", {}).get("finalizer", {}).get("truePeak", -1.2)))
+    lra = float(spec.get("narratorMuxLoudnormLRA", spec.get("voiceLadder", {}).get("finalizer", {}).get("lra", 9.0)))
+    return i, tp, lra
 
 
 def mp4_has_audio_stream(path: Path) -> bool:
@@ -4183,10 +4898,14 @@ def mux_narration_video_only(
     video_dur = probe_duration(video, ffprobe=ffprobe)
     match_audio_duration(narration, video_dur, ffprobe=ffprobe)
 
-    vol = max(0.2, min(2.0, volume))
+    if spec is not None:
+        vol = narrator_mux_volume(spec, default=volume)
+    else:
+        vol = max(0.2, min(4.0, volume))
     audio_fx = f"[1:a]aresample=48000,aformat=channel_layouts=stereo,volume={vol}"
     if loudnorm:
-        audio_fx += ",loudnorm=I=-16:TP=-1.5:LRA=11"
+        i, tp, lra = narrator_mux_loudnorm_target(spec)
+        audio_fx += f",loudnorm=I={i}:TP={tp}:LRA={lra}"
     audio_fx += "[n]"
     subprocess.run(
         [

@@ -641,17 +641,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "CaveBuild_DemSupersampleDim", demSupersampleTargetDim);
             requirePreflightBeforeFullWorldBuild = EditorPrefs.GetBool(
                 "CaveBuild_RequirePreflight", requirePreflightBeforeFullWorldBuild);
-            enableGaussianSplatHeroAtCaveMouth = EditorPrefs.GetBool(
-                "CaveBuild_EnableGaussianSplatHero", enableGaussianSplatHeroAtCaveMouth);
-            gaussianSplatAssetPath = EditorPrefs.GetString(
-                "CaveBuild_GaussianSplatAssetPath", gaussianSplatAssetPath ?? string.Empty);
-            gaussianSplatHeroQuality = (GaussianSplatHeroSlot.QualityTier)EditorPrefs.GetInt(
-                "CaveBuild_GaussianSplatQuality",
-                (int)gaussianSplatHeroQuality);
-            gaussianSplatRenderInEditMode = EditorPrefs.GetBool(
-                "CaveBuild_GaussianSplatEditMode", gaussianSplatRenderInEditMode);
-            gaussianSplatRenderInPlayMode = EditorPrefs.GetBool(
-                "CaveBuild_GaussianSplatPlayMode", gaussianSplatRenderInPlayMode);
+            LoadGaussianSplatFromPrefs();
 
             if (stabilizationMode)
             {
@@ -743,6 +733,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorPrefs.SetBool("CaveBuild_EnableEnhancementPhases", enableEnhancementPhases);
             EditorPrefs.SetInt("CaveBuild_DemSupersampleDim", demSupersampleTargetDim);
             EditorPrefs.SetBool("CaveBuild_RequirePreflight", requirePreflightBeforeFullWorldBuild);
+            SaveGaussianSplatToPrefs();
+        }
+
+        public void LoadGaussianSplatFromPrefs()
+        {
+            enableGaussianSplatHeroAtCaveMouth = EditorPrefs.GetBool(
+                "CaveBuild_EnableGaussianSplatHero", enableGaussianSplatHeroAtCaveMouth);
+            gaussianSplatAssetPath = EditorPrefs.GetString(
+                "CaveBuild_GaussianSplatAssetPath", gaussianSplatAssetPath ?? string.Empty);
+            gaussianSplatHeroQuality = (GaussianSplatHeroSlot.QualityTier)EditorPrefs.GetInt(
+                "CaveBuild_GaussianSplatQuality",
+                (int)gaussianSplatHeroQuality);
+            gaussianSplatRenderInEditMode = EditorPrefs.GetBool(
+                "CaveBuild_GaussianSplatEditMode", gaussianSplatRenderInEditMode);
+            gaussianSplatRenderInPlayMode = EditorPrefs.GetBool(
+                "CaveBuild_GaussianSplatPlayMode", gaussianSplatRenderInPlayMode);
+        }
+
+        public void SaveGaussianSplatToPrefs()
+        {
             EditorPrefs.SetBool("CaveBuild_EnableGaussianSplatHero", enableGaussianSplatHeroAtCaveMouth);
             EditorPrefs.SetString("CaveBuild_GaussianSplatAssetPath", gaussianSplatAssetPath ?? string.Empty);
             EditorPrefs.SetInt("CaveBuild_GaussianSplatQuality", (int)gaussianSplatHeroQuality);

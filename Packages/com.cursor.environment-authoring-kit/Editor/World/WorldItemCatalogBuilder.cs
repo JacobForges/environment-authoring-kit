@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using EnvironmentAuthoringKit.Editor.Blockout;
 using EnvironmentAuthoringKit.World;
 using UnityEditor;
 using UnityEngine;
@@ -64,6 +65,125 @@ namespace EnvironmentAuthoringKit.Editor.World
             AssetDatabase.SaveAssets();
             WorldItemCatalog.ReloadForEditor(catalog);
             Debug.Log($"[WorldItemCatalog] Built {catalog.entries.Count} definitions → {CatalogAssetPath}.");
+        }
+
+        const int CatalogSliceBatchSize = 12;
+
+        public static int CatalogSliceBatchSizePublic => CatalogSliceBatchSize;
+
+        public static bool TryGetManifestItemCount(out int count, out string error)
+        {
+            count = 0;
+            error = string.Empty;
+            if (!TryLoadManifest(out var manifest, out error))
+                return false;
+
+            count = manifest.items?.Length ?? 0;
+            return count > 0;
+        }
+
+        /// <summary>Paced rebuild — call slice 0 with startIndex 0 to clear entries first.</summary>
+        public static void RebuildCatalogSlice(int startIndex, int count)
+        {
+            if (count <= 0)
+                return;
+
+            if (!TryLoadManifest(out var manifest, out var error))
+            {
+                Debug.LogError("[WorldItemCatalog] " + error);
+                return;
+            }
+
+            var items = manifest.items;
+            if (items == null || items.Length == 0)
+                return;
+
+            var catalog = LoadOrCreateCatalog();
+            if (startIndex <= 0)
+                catalog.entries.Clear();
+
+            var end = Mathf.Min(startIndex + count, items.Length);
+            for (var i = startIndex; i < end; i++)
+            {
+                var item = items[i];
+                if (item == null || string.IsNullOrWhiteSpace(item.id))
+                    continue;
+                catalog.entries.Add(BuildEntry(item));
+            }
+
+            EditorUtility.SetDirty(catalog);
+        }
+
+        public static void CommitCatalogRebuildWithoutSave()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<WorldItemCatalogAsset>(CatalogAssetPath);
+            if (catalog == null)
+                return;
+
+            WorldItemCatalog.ReloadForEditor(catalog);
+        }
+
+        public static void SaveCatalogAsset()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<WorldItemCatalogAsset>(CatalogAssetPath);
+            if (catalog != null && EditorUtility.IsDirty(catalog))
+                AssetDatabase.SaveAssetIfDirty(catalog);
+        }
+
+        public static bool IsCatalogDirty()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<WorldItemCatalogAsset>(CatalogAssetPath);
+            return catalog != null && EditorUtility.IsDirty(catalog);
+        }
+
+        /// <summary>
+        /// Full AAA pattern — defer large Resources catalog write until grid pipeline completes
+        /// (avoids main-thread stall at grid ~70% CC0 finalize).
+        /// </summary>
+        public static void QueuePacedSaveIfDirty(System.Action onComplete = null)
+        {
+            if (!IsCatalogDirty())
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            CaveBuildActionPacing.ScheduleHeavyChain(
+                () =>
+                {
+                    CaveBuildEditorResponsiveness.BeginSlice();
+                    SaveCatalogAsset();
+                    EnvironmentKitScopedAssetRefresh.ImportAssetPathsNow(CatalogAssetPath);
+                    CaveBuildEditorLog.LogSurface(
+                        "[WorldItemCatalog] Persisted deferred catalog save after FullWorld grid.",
+                        forceUnityConsole: false);
+                    if (onComplete != null)
+                        EditorApplication.delayCall += () => onComplete();
+                },
+                CaveBuildPipelineDomains.SurfaceQueueLabel("persist WorldItemCatalog"));
+        }
+
+        static bool TryLoadManifest(out ManifestFile manifest, out string error)
+        {
+            manifest = null;
+            error = string.Empty;
+            var manifestPath = Path.GetFullPath(
+                Path.Combine(Application.dataPath, "..", ManifestRelative));
+            if (!File.Exists(manifestPath))
+            {
+                error = $"Manifest not found: {manifestPath}";
+                return false;
+            }
+
+            var json = File.ReadAllText(manifestPath);
+            manifest = JsonUtility.FromJson<ManifestFile>(WrapItemsArray(json));
+            if (manifest?.items == null || manifest.items.Length == 0)
+            {
+                error = "No items parsed from manifest.";
+                return false;
+            }
+
+            return true;
         }
 
         static string WrapItemsArray(string json)

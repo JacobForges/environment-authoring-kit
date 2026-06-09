@@ -60,7 +60,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             int seed,
             Action onComplete)
         {
-            request?.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
 
             if (mainTerrain == null || request == null || !request.SurfaceIncludeMountains ||
                 !request.UseOuterRingMountains ||

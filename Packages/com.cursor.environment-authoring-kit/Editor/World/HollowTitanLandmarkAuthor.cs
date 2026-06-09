@@ -16,12 +16,25 @@ namespace EnvironmentAuthoringKit.Editor.World
         public static void Place(Terrain mainTerrain, WorldGenerationRequest request) =>
             PlaceMassiveRandomOnSurface(mainTerrain, request);
 
-        /// <summary>Alias — massive seed-random surface landmark before terraform/sculpt.</summary>
+        /// <summary>Alias — legacy entry; prefer <see cref="PlaceAaaAfterTerrainComplete"/>.</summary>
         public static void PlaceAaaBeforeTerraform(
             Terrain mainTerrain,
             WorldGenerationRequest request,
             System.Action onComplete = null) =>
-            PlaceMassiveRandomOnSurface(mainTerrain, request, forceSyncFullBuild: true, onComplete: onComplete);
+            PlaceAaaAfterTerrainComplete(mainTerrain, request, onComplete);
+
+        /// <summary>
+        /// Hollow Titan after all ground terrain tiles + foothill sculpt — paced on long builds, before surface props.
+        /// </summary>
+        public static void PlaceAaaAfterTerrainComplete(
+            Terrain mainTerrain,
+            WorldGenerationRequest request,
+            System.Action onComplete = null) =>
+            PlaceMassiveRandomOnSurface(
+                mainTerrain,
+                request,
+                forceSyncFullBuild: !CaveBuildEditorResponsiveness.IsLongBuildActive,
+                onComplete: onComplete);
 
         /// <summary>
         /// One huge hollow dead tree per build — random XZ on a surface terrain tile every generation (never cave placement).
@@ -128,7 +141,7 @@ namespace EnvironmentAuthoringKit.Editor.World
                 SurfaceIncludeMountains = true,
                 UseOuterRingMountains = true,
             };
-            request.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             SurfaceOuterRingMountainsAuthor.QueueApplyFoothillRing(main, request, () =>
             {
                 ResnapToTerrain(main);

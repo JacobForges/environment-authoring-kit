@@ -23,6 +23,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            if (CaveBuildSessionConfig.SkipTerrainHelperScripts(state.Request))
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[TerrainMeat] Planner fast demo — skipping geo/props meat loops (no agent scripts).",
+                    forceUnityConsole: true);
+                SurfaceTerrainAiPhases.ContinueAfterTerrainMeatLoop(state);
+                return;
+            }
+
             if (IsRunning)
             {
                 CaveBuildEditorLog.LogSurface(

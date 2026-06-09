@@ -293,8 +293,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static void RunLayoutRoll()
         {
             SetProgress(0.2f, "[Startup] Layout roll & recipe…");
-            if (EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true))
+            var randomizeSeed = _pending.SurfaceScope == SurfaceBuildScope.FullWorld
+                ? FullWorldConceptLayoutCatalog.RandomOnBuildEnabled
+                : EditorPrefs.GetBool("CaveBuild_RandomizeEachTime", true);
+            if (_pending.SurfaceScope == SurfaceBuildScope.FullWorld)
+            {
+                if (!CaveBuildSessionConfig.HasFinalizedActive)
+                    CaveBuildFreshBuildSession.PrepareForNewBuild(
+                        randomizeSeed,
+                        CaveBuildSpeedDemoPolicy.IsActiveHubSelection());
+                else
+                    CaveBuildSessionConfig.ApplyToEditorSettings();
+            }
+            else if (randomizeSeed)
+            {
                 CaveBuildSeedDefaults.ForceNewSeedBeforeLayoutRoll();
+            }
+
             _roll = LavaTubeCaveBuilder.StartupCreateLayoutRoll();
             CaveBuildLayoutRollSession.Record(_roll);
             LavaTubeCaveBuilder.StartupLogLayoutRoll(_roll);
@@ -328,19 +343,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             else if (_request.SurfaceScope == SurfaceBuildScope.SurfaceOnly)
                 _request.ContentTier = WorldBuildContentTier.Light;
 
-            if (_request.SurfaceScope == SurfaceBuildScope.FullWorld)
+            if (_request.SurfaceScope == SurfaceBuildScope.FullWorld &&
+                _request.DemSupersampleTargetDim <= 0)
             {
-                _request.RunEnhancementPhases = true;
-                if (_request.DemSupersampleTargetDim <= 0)
-                    _request.DemSupersampleTargetDim =
-                        CaveBuildCursorSettings.LoadOrCreate().demSupersampleTargetDim;
+                _request.DemSupersampleTargetDim =
+                    CaveBuildCursorSettings.LoadOrCreate().demSupersampleTargetDim;
             }
 
-            _request.EnsureFullWorldSurfaceContract();
+            if (_request.SurfaceScope == SurfaceBuildScope.FullWorld)
+                CaveBuildSessionConfig.BindFullWorldRequest(_request);
+            else
+                _request.EnsureFullWorldSurfaceContract();
             CaveBuildAaaSessionPolicy.BindActiveRequest(_request);
-            CaveBuildStepCounter.ConfigureForBuild(
-                _request.SurfaceScope,
-                CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid);
+            CaveBuildStepCounter.ConfigureForRequest(_request);
+            if (!CaveBuildSessionConfig.IsSessionRequest(_request))
+                CaveBuildConceptSession.LockForBuild(_request.ConceptLayoutIndex, _request.Seed, syncHubDropdown: false);
+            CaveBuildPipelinePhaseTracker.RefreshProvisionalExtended(_request);
             CaveBuildEnhancementRunner.BeginSession(_request);
             CaveBuildEnhancementRunner.RunHook(CaveBuildEnhancementCatalog.Hook.OnRequestPrepared);
             SurfaceDemGeoreferenceAuthor.SetSupersampleTargetDim(_request.DemSupersampleTargetDim);
@@ -408,6 +426,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (CaveBuildSurfacePipeline.ShouldSkipCaveGeometry(_request))
             {
                 var doneMsg = surfaceReport?.Message ?? "Surface build completed.";
+                var sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                var quality = CaveBuildQualitySystem.LastGradedReport ??
+                              CaveBuildRungPromptExporter.TryLoadQualityReport();
+                var stubReport = new LavaTubeCaveBuildReport { Message = doneMsg, QualityAcceptable = surfaceReport?.Success ?? true };
+                if (CaveBuildPostBuildFinalizeGate.TryOfferPlayModeRecording(
+                        sceneName,
+                        stubReport,
+                        _roll,
+                        quality,
+                        skipDialogs: EnvironmentKitHubWindow.IsOpen))
+                {
+                    Complete(false);
+                    return;
+                }
+
                 if (EnvironmentKitHubWindow.IsOpen)
                     EnvironmentKitHubWindow.NotifyBuildCompleted("Surface World — Finished", doneMsg);
                 else
@@ -680,15 +713,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (CaveBuildAaaProductionBootstrap.IsFullProductionBuild(_pending.SurfaceScope, _pending.LayoutPrototype))
                 CaveBuildAaaProductionBootstrap.OnPreBuildGatePassed(_roll.Seed);
 
-            if (_request.SurfaceScope == SurfaceBuildScope.FullWorld)
+            if (_request.SurfaceScope == SurfaceBuildScope.FullWorld &&
+                !CaveBuildSessionConfig.SkipTerrainHelperScripts(_request))
             {
                 var layoutAudit = CaveBuildWorldLayoutAudit.Run(_ground, _request);
-                if ((layoutAudit.blocksCaveQueue || layoutAudit.blocksSurfaceContinue) &&
+                var blocksStartup = layoutAudit.blocksSurfaceContinue ||
+                                    (layoutAudit.blocksCaveQueue && _request.UseTrue3DCaveSystem);
+                if (blocksStartup &&
                     System.Environment.GetEnvironmentVariable("CAVE_LAYOUT_PLAN_FORCE") != "1")
                 {
-                    var blockReason = layoutAudit.blocksCaveQueue
-                        ? "cave queue"
-                        : "surface continue (play-disk seams)";
+                    var blockReason = layoutAudit.blocksSurfaceContinue
+                        ? "surface continue (play-disk seams)"
+                        : "cave queue";
                     CaveBuildCompletionSummary.ShowBlocked(
                         $"World layout audit blocks {blockReason} — fix seams/props/overlap or run Surface Only first. " +
                         $"Suggested fix: {layoutAudit.suggestedFix}. See {CaveBuildWorldLayoutAudit.ReportRel}. " +
@@ -776,6 +812,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!deferRelease)
             {
                 EnvironmentKitHardwareBudget.EndEditorSession();
+                if (!LavaTubeCaveBuildPipeline.IsPhasedBuildActive &&
+                    !LavaTubeCaveBuilder.IsBuildInProgress)
+                    CaveBuildRunStatusPublisher.EndSession();
             }
         }
 
@@ -786,6 +825,127 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildPipelinePhaseTracker.OnStartupDetail(detail);
             CaveBuildRunStatusPublisher.PulseSubOperation("startup", detail);
             CaveBuildPipelineLog.Info(detail, "Startup");
+        }
+
+        public static void QueueResumeAtResearch(
+            SceneGroundInfo ground,
+            CaveLayoutRoll roll,
+            int researchSubStep,
+            System.Action<bool> onDeferRelease)
+        {
+            if (_active)
+                return;
+
+            ArmResumeSession(ground, roll, onDeferRelease);
+            _step = StartupStep.SurfacePipeline;
+            CaveBuildRunStatusPublisher.BeginSession(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                roll.Seed,
+                additiveSurface: true);
+            CaveBuildRunStatusPublisher.SetPhase("startup", "Resuming pre-placement research after playtest");
+
+            CaveBuildPrePlacementResearch.QueueResumeFromSubStep(
+                ground,
+                _request,
+                additiveSurface: true,
+                researchSubStep,
+                (ok, researchMsg) =>
+                {
+                    if (!ok)
+                    {
+                        CaveBuildEditorLog.LogSurfaceWarning("[Startup] Research resume failed: " + researchMsg);
+                        Complete(false);
+                        return;
+                    }
+
+                    if (!string.IsNullOrEmpty(researchMsg))
+                        Debug.Log("[CaveBuild] " + researchMsg);
+
+                    CaveBuildSurfacePipeline.ResumeSurfaceBuildAfterResearch(
+                        ground,
+                        _request,
+                        FinishStartupAfterSurface);
+                });
+        }
+
+        public static void QueueResumeAtSurfacePipeline(
+            SceneGroundInfo ground,
+            CaveLayoutRoll roll,
+            System.Action<bool> onDeferRelease)
+        {
+            if (_active)
+                return;
+
+            if (CaveBuildPrePlacementResearch.IsGatePassedForSeed(roll.Seed))
+            {
+                ArmResumeSession(ground, roll, onDeferRelease);
+                _step = StartupStep.SurfacePipeline;
+                CaveBuildRunStatusPublisher.BeginSession(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    roll.Seed,
+                    additiveSurface: true);
+                CaveBuildRunStatusPublisher.SetPhase("startup", "Resuming surface pipeline after playtest");
+                CaveBuildSurfacePipeline.ResumeSurfaceBuildAfterResearch(
+                    ground,
+                    _request,
+                    FinishStartupAfterSurface);
+                return;
+            }
+
+            var subStep = CaveBuildPrePlacementResearch.LastActiveSubStep;
+            if (subStep < 0)
+                subStep = 0;
+            QueueResumeAtResearch(ground, roll, subStep, onDeferRelease);
+        }
+
+        static void ArmResumeSession(
+            SceneGroundInfo ground,
+            CaveLayoutRoll roll,
+            System.Action<bool> onDeferRelease)
+        {
+            _pending = new PendingBuild
+            {
+                OpenMainSceneFirst = false,
+                HideLegacyBlockout = true,
+                SkipDialogs = true,
+                LayoutPrototype = false,
+                SkipPreBuildGate = false,
+                SurfaceScope = SurfaceBuildScope.FullWorld,
+                OnDeferRelease = onDeferRelease,
+            };
+            _ground = ground;
+            _roll = roll;
+            _active = true;
+            _surfaceReport = null;
+            _sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+            _request = new WorldGenerationRequest
+            {
+                Biome = BiomeId.Cave,
+                CaveMode = CaveGenerationMode.FullSystem,
+                UseLayoutPrototype = false,
+                UseSplineMesh = true,
+                UseTrue3DCaveSystem = true,
+                UseBlockTunnel = true,
+                UseTerrainCarve = true,
+                AllowCreateTerrain = false,
+                IncludeCaveWater = false,
+                SurfaceScope = SurfaceBuildScope.FullWorld,
+                SurfaceTerrainBuildPasses = SurfaceTerrainCenteredAuthor.DefaultPassCount,
+            };
+
+            var productionRecipe = CaveBuildAaaProductionBootstrap.PrepareFullProductionBuild(
+                roll,
+                SurfaceBuildScope.FullWorld,
+                layoutPrototype: false);
+            CaveBuildAaaProductionBootstrap.MergeRecipeIntoRequest(productionRecipe, _request, roll);
+            CaveBuildAutomatedFullWorldBootstrap.ApplyToRequest(_request);
+            CaveBuildSessionConfig.BindFullWorldRequest(_request);
+            if (!CaveBuildSessionConfig.IsSessionRequest(_request))
+                CaveBuildConceptSession.ApplyAndBind(_request, syncHubDropdown: false);
+            CaveBuildEnhancementRunner.BeginSession(_request);
+            SurfaceDemGeoreferenceAuthor.SetSupersampleTargetDim(_request.DemSupersampleTargetDim);
+            CaveBuildPipelinePhaseTracker.OnBuildSessionStart(SurfaceBuildScope.FullWorld, _request);
         }
     }
 }

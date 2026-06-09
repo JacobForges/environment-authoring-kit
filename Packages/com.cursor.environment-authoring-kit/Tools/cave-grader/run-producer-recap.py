@@ -6,6 +6,8 @@ Producer-grade recap: emerald cards + Cursor director (vision) + Personal Voice 
   python3 run-producer-recap.py --capture <capture_folder>    # same (optional flag)
   python3 run-producer-recap.py <capture_folder> --preview    # 120fps slowed director sample on Desktop
   python3 run-producer-recap.py <capture_folder> --preview --narration-only
+  python3 run-producer-recap.py <capture_folder> --preview --avatar-only   # cyborg overlay only; keeps natural voice
+  python3 run-producer-recap.py <capture_folder> --preview --force-regen-narration  # discard preserved voice
   python3 run-producer-recap.py <capture_folder> --preview --no-narrator   # silent video only (not shared preview)
   python3 run-producer-recap.py <capture_folder> --no-cursor    # OpenCV boxes only (no API)
   python3 run-producer-recap.py <capture_folder> --opencv-only
@@ -20,9 +22,67 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+
+def avatar_only_preview(run: Path) -> int:
+    """Re-layer Unity cyborg avatar + remux. Keeps graded video + narration.wav untouched."""
+    envkit = load("envkit_paths", "envkit_paths.py")
+    envkit.ensure_recap_process_env()
+    narr = load("narrator", "demo-recap-narrator.py")
+    compose = load("compose_pres", "compose-presentation-recap.py")
+    approved_path = envkit.approved_cards_path()
+    spec: dict = {}
+    if approved_path.is_file():
+        spec = narr.flatten_narrator_personal_settings(
+            json.loads(approved_path.read_text(encoding="utf-8"))
+        )
+    spec = {
+        **spec,
+        "botAvatarRequireUnity": True,
+        "botAvatarAllowProceduralFallback": False,
+        "_avatarSwapOnly": True,
+    }
+    work = run / "_presentation_compose_preview120"
+    final_silent = work / "_final_video.mp4"
+    out = run / "DirectorPreview.mp4"
+    if not final_silent.is_file():
+        print(f"ERROR: missing graded video {final_silent}", file=sys.stderr)
+        return 1
+    narr_wav = work / "narration.wav"
+    if not narr_wav.is_file() or not narr.wav_is_audible(narr_wav):
+        print(f"ERROR: need audible {narr_wav} (avatar swap does not regen voice)", file=sys.stderr)
+        return 1
+    ffmpeg = compose.find_ffmpeg()
+    lipsync_work = work / "_bot_lipsync"
+    shutil.rmtree(lipsync_work, ignore_errors=True)
+    (work / "_final_video_bot.mp4").unlink(missing_ok=True)
+    print("Avatar-only: Unity cyborg swap (narration + video locked)…", flush=True)
+    video_for_mux = compose._apply_bot_avatar_overlay(
+        ffmpeg, final_silent, narr_wav, work, run, spec
+    )
+    if video_for_mux == final_silent:
+        print("ERROR: Unity cyborg overlay failed — DirectorPreview not updated.", file=sys.stderr)
+        return 1
+    vol = max(narr.narrator_mux_volume(spec), 1.25)
+    mux_wav = work / "_narration_mux.wav"
+    shutil.copy2(narr_wav, mux_wav)
+    narr.mux_narration_video_only(video_for_mux, mux_wav, out, volume=vol, spec=spec)
+    if not out.is_file() or out.stat().st_size < 1024:
+        print(f"ERROR: avatar-only mux failed → {out}", file=sys.stderr)
+        return 1
+    mirror = envkit.preview_mirror_dir() / "DirectorPreview.mp4"
+    try:
+        shutil.copy2(out, mirror)
+        print(f"Preview mirror (Lexar): {mirror}", flush=True)
+    except OSError as exc:
+        print(f"Lexar mirror skipped ({exc})", flush=True)
+    compose.open_recap_video(out)
+    print(out)
+    return 0
 
 
 def load(name: str, file: str):
@@ -109,10 +169,25 @@ def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__)
         return 1
+    envkit = load("envkit_paths", "envkit_paths.py")
+    data_root = envkit.ensure_recap_process_env()
+    if str(data_root).startswith("/Volumes/"):
+        print(f"Storage: external {data_root}", flush=True)
+    else:
+        free = envkit.mac_data_volume_free_gb()
+        if free is not None and free < 2.0:
+            print(
+                f"WARNING: Mac disk low ({free:.1f} GiB free) — mount Lexar or set "
+                f"{envkit.ENV_VAR}=/Volumes/Lexar/EnvironmentKit-Hub",
+                file=sys.stderr,
+                flush=True,
+            )
     run, _extra = resolve_capture_run(sys.argv)
     flags = set(sys.argv[1:])
     preview = "--preview" in flags
     narration_only = "--narration-only" in flags
+    avatar_only = "--avatar-only" in flags
+    force_regen_narration = "--force-regen-narration" in flags
     remux_only = "--remux-only" in flags
     opencv_only = "--opencv-only" in flags
 
@@ -124,9 +199,34 @@ def main() -> int:
         )
         return 1
 
+    tl_path = run / "DemoRecapTimeline.json"
+    hybrid_existing: dict = {}
+    if tl_path.is_file():
+        try:
+            hybrid_existing = json.loads(tl_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            hybrid_existing = {}
+
+    if (
+        not preview
+        and narration_only
+        and hybrid_existing.get("recapMode") == "hybrid_screencast"
+        and (run / "_hybrid_compose").is_dir()
+        and (run / "HybridRecapPresentation-SILENT.mp4").is_file()
+    ):
+        print("Hybrid screencast: routing to mux-hybrid-recap-narration.py (not producer preview)", flush=True)
+        hybrid_mux = load("hybrid_mux", "mux-hybrid-recap-narration.py")
+        return hybrid_mux.mux_hybrid_narration(run)
+
     envkit = load("envkit_paths", "envkit_paths.py")
     approved_path = envkit.approved_cards_path()
     compose = load("compose_pres", "compose-presentation-recap.py")
+
+    if avatar_only:
+        if not preview:
+            print("ERROR: --avatar-only requires --preview", file=sys.stderr)
+            return 1
+        return avatar_only_preview(run)
 
     if remux_only:
         narr_mod = load("narrator", "demo-recap-narrator.py")
@@ -237,8 +337,14 @@ def main() -> int:
     if n_labels:
         print(f"Annotations: synced {n_labels} region label(s) to timeline phase/sub")
 
+    force_local = (
+        "--local-captions" in sys.argv
+        or card_fields.get("forceLocalCaptions", True)
+        or existing.get("forceLocalCaptions", True)
+    )
     for m in milestones:
-        captions.fill_milestone_captions(m)
+        captions.fill_milestone_captions(m, force=force_local or narration_only)
+        captions.fill_milestone_narrator_script(m, force=True)
         producer.producer_chapter_line(m)
     producer.dedupe_captions(milestones)
     if existing.get("sceneDiffHints", producer.PRODUCER_SPEC_DEFAULTS.get("sceneDiffHints", True)):
@@ -246,28 +352,12 @@ def main() -> int:
 
     spec = producer.build_producer_spec(run, milestones, card_fields=card_fields, existing=existing)
     narr_mod = load("narrator", "demo-recap-narrator.py")
-    spec = narr_mod.flatten_narrator_personal_settings(spec)
-    spec.setdefault("narrationMode", "fullScript")
-    spec.setdefault("narratorIgnoreCaptions", True)
-    spec.setdefault("cursorFullNarration", True)
-    pname = narr_mod.resolve_personal_voice_name(spec, run)
-    spec["narratorEngine"] = "personal"
-    spec["narratorRequirePersonal"] = True
-    spec.setdefault("voiceHelpers", {"preset": "ladderDocumentary", "sayRate": 186.24})
-    spec.setdefault("voiceLadder", {"enabled": True})
-    spec.setdefault("narratorPersonalDelivery", "ladderDocumentary")
-    spec.setdefault("narratorPersonalHumanize", True)
-    spec.setdefault("narratorRawPersonalVoice", False)
-    spec.setdefault("narratorNaturalDelivery", False)
-    spec.setdefault("narratorPolishPersonal", False)
-    spec.setdefault("narratorNaturalPauses", False)
-    spec.setdefault("narratorPersonalLoudnorm", False)
-    if pname:
-        spec["narratorPersonalVoice"] = pname
-    if approved_path.is_file():
-        spec = narr_mod.flatten_narrator_personal_settings(
-            {**spec, **json.loads(approved_path.read_text(encoding="utf-8"))}
-        )
+    spec = narr_mod.apply_recap_narrator_defaults(
+        spec, run_dir=run, approved_path=approved_path if approved_path.is_file() else None
+    )
+    if force_regen_narration:
+        spec["forceRegenNarration"] = True
+        spec["narratorPreserveCapture"] = False
 
     if narr_mod.uses_full_script_narration(spec):
         est = float(spec.get("targetDurationSec") or existing.get("targetDurationSec") or 480)
@@ -278,10 +368,8 @@ def main() -> int:
             + float(spec.get("outroSec", 10))
             + n_m * float(spec.get("milestoneHoldSec", 12)),
         )
+        # Full-script narration uses every milestone beat (video runtime is graded whole timeline).
         script_milestones = milestones
-        if preview:
-            picks = timeline.preview_milestone_indices(milestones)
-            script_milestones = [milestones[i] for i in picks if 0 <= i < len(milestones)]
         if narration_only:
             work_vid = Path(
                 str(
@@ -302,9 +390,14 @@ def main() -> int:
         spec["fullNarrationTargetSec"] = est
         full_json = run / "DemoRecapFullNarration.json"
         regen_script = "--regen-narration-script" in flags
+        if regen_script:
+            spec["regenNarrationScript"] = True
+            if full_json.is_file():
+                full_json.unlink()
+                print("Regenerating DemoRecapFullNarration.json from narrator beats…", flush=True)
         script_after_video = bool(spec.get("narrationScriptAfterVideo", True))
         need_script = regen_script or not full_json.is_file()
-        if narration_only and need_script and not regen_script:
+        if narration_only and need_script:
             print(
                 "Narration-only: building local voice script (Personal Voice next — not waiting on Cursor Agent)",
                 flush=True,
@@ -314,7 +407,7 @@ def main() -> int:
             )
             if local:
                 spec["fullNarrationScript"] = local
-            spec["fullScriptAlignToMilestones"] = True
+            spec.setdefault("fullScriptAlignToMilestones", False)
         elif director.has_cursor_api_key() and need_script and not script_after_video:
             script = director.apply_cursor_full_narration_script(
                 hub,
@@ -337,52 +430,82 @@ def main() -> int:
     if preview:
         spec.update(
             {
-                "outputFps": 60,
-                "timelapseEncodeFps": 60,
+                "recapMode": "presentation_pro",
+                "outputFps": 30,
+                "timelapseEncodeFps": 30,
                 "videoPlaybackFactor": 1.0,
                 "videoEnhance": True,
-                "sceneUpscale": 2.0,
+                "sceneUpscale": 1.25,
+                "framesPerSource": 1,
+                "showAnnotations": False,
                 "narrationSyncMode": "speech_first",
                 "narrationMode": "fullScript",
                 "narratorIgnoreCaptions": True,
                 "narrationPlanMode": "estimate",
                 "timelapseSecPerFrame": 0.09,
-                "maxMilestoneHoldSec": 18.0,
-                "maxSubbeatHoldSec": 11.0,
+                "maxMilestoneHoldSec": 28.0,
+                "maxSubbeatHoldSec": 28.0,
+                "minMilestoneHoldSec": 20.0,
                 "composeWorkDir": str(run / "_presentation_compose_preview120"),
-                "milestoneHoldSec": 12.0,
+                "milestoneHoldSec": 20.0,
+                "subbeatHoldSec": 20.0,
                 "introSec": 9.0,
                 "outroSec": 10.0,
-                "captionReadPauseSec": 2.5,
+                "captionLine1FadeSec": 2.5,
+                "captionLine2DelaySec": 3.0,
+                "captionBulletStaggerSec": 1.8,
+                "captionBulletFadeSec": 2.0,
+                "captionLine3DelaySec": 11.0,
+                "captionFutureFadeSec": 2.0,
+                "captionReadPauseSec": 7.0,
                 "segmentXfadeSec": 0.5,
-                "cinematicCamera": True,
-                "holdCinematicMotion": True,
+                "cinematicCamera": False,
+                "holdCinematicMotion": False,
+                "staticSceneMotion": True,
+                "disablePanMotion": True,
                 "cinematicEffects": True,
-                "syncHoldToNarration": True,
-                "tlMaxFrames": 56,
+                "javafxEffects": True,
+                "javafxFxStrength": 1.4,
+                "forceLocalCaptions": True,
+                "botAvatarOverlay": True,
+                "botAvatarLipSync": True,
+                "presentationPlayModeBroll": True,
+                "playModeBrollSec": 42.0,
+                "syncHoldToNarration": False,
+                "tlMaxFrames": 48,
+                "encodeCodec": "auto",
             }
         )
         spec = narr_mod.flatten_narrator_personal_settings(spec)
+        codec = producer.resolve_encode_codec(spec)
         print(
-            f"Preview profile: {int(spec['outputFps'])}fps encode, "
-            f"{spec['videoPlaybackFactor']:.0%} playback speed, narration-synced holds"
+            f"Preview profile (style A): {int(spec['outputFps'])}fps, {codec}, "
+            f"{spec['videoPlaybackFactor']:.0%} playback, fewer holds"
         )
     if narration_only:
         spec["narratorEnabled"] = True
         work = Path(str(spec.get("composeWorkDir") or run / "_presentation_compose")).expanduser()
-        for name in ("narration.wav", "_full_narr_raw.wav"):
-            p = work / name
-            if p.is_file():
-                p.unlink()
-        parts = work / "_narr_parts"
-        if parts.is_dir():
-            import shutil
-
-            shutil.rmtree(parts, ignore_errors=True)
-        print("Narration-only: cleared prior narration (clip-sync regen)…", flush=True)
+        if not spec.get("narratorPreserveCapture", True):
+            for name in ("narration.wav", "_full_narr_raw.wav"):
+                p = work / name
+                if p.is_file():
+                    p.unlink()
+            parts = work / "_narr_parts"
+            if parts.is_dir():
+                shutil.rmtree(parts, ignore_errors=True)
+            print("Narration-only: cleared prior narration (forced regen)…", flush=True)
+        else:
+            print(
+                "Narration-only: preserving Personal Voice capture "
+                "(no delete, no time-stretch)…",
+                flush=True,
+            )
     narrator_on = "--no-narrator" not in sys.argv and spec.get("narratorEnabled", True)
     if narrator_on:
         say_r = narr_mod.personal_say_rate(spec)
+        pname = str(
+            spec.get("narratorPersonalVoice") or spec.get("personalVoiceName") or ""
+        ).strip()
         print(
             f"Narrator: Personal Voice ({pname or 'Jacob Adkins'}), sayRate={say_r} wpm "
             f"(from ApprovedCards narratorPersonalSettings.sayRate)"
@@ -412,8 +535,10 @@ def main() -> int:
             if "--no-narrator" in flags
             else "DirectorPreview.mp4"
         )
-        out = Path.home() / "Desktop" / "DemoRecap-Card-Preview" / preview_name
-        out.parent.mkdir(parents=True, exist_ok=True)
+        # Output on capture folder (Lexar). Mirror to EnvKit DesktopMirror, not Mac Desktop.
+        out = run / preview_name
+        desktop_mirror = envkit.preview_mirror_dir() / preview_name
+        mac_mirror = Path.home() / "Desktop" / "DemoRecap-Card-Preview" / preview_name
         picks = timeline.preview_milestone_indices(milestones)
         n_sub = sum(1 for i in picks if milestones[i].get("beatKind") == "subbeat")
         n_cp = len(picks) - n_sub
@@ -430,6 +555,23 @@ def main() -> int:
         ):
             print(f"Preview not opened — finalize narration first: {out}", file=sys.stderr)
             return 1
+        import shutil
+
+        try:
+            shutil.copy2(out, desktop_mirror)
+            print(f"Preview mirror (Lexar): {desktop_mirror}")
+        except OSError as exc:
+            print(f"Lexar mirror skipped ({exc}) — preview at {out}")
+        free = envkit.mac_data_volume_free_gb()
+        if free is not None and free >= 1.0:
+            try:
+                mac_mirror.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(out, mac_mirror)
+                print(f"Mac Desktop mirror: {mac_mirror}")
+            except OSError as exc:
+                print(f"Mac Desktop mirror skipped ({exc})")
+        else:
+            print("Mac Desktop mirror skipped — disk low; open Lexar path above")
         compose.open_recap_video(out)
         print(out)
         return 0

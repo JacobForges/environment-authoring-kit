@@ -70,7 +70,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     ? "SurfaceTerrainFlatHost + SurfaceFullWorldGridAnchor aligned to Ground."
                     : "Grid hosts missing — kit creates them on Build Complete Cave.");
 
-            request?.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             var fullWorld = request == null || request.SurfaceScope == SurfaceBuildScope.FullWorld;
             if (fullWorld && request != null && request.PreserveBlockoutGridLayout)
             {
@@ -252,7 +252,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return string.Empty;
 
             settings.SaveToPrefs();
-            EditorUtility.SetDirty(settings);
+            // EditorPrefs only — SetDirty(settings) mid-build triggers CaveBuildCursorSettings.asset reimport storms.
             var summary = string.Join("; ", fixes);
             Debug.Log("[CaveBuild] Preflight auto-remediation: " + summary);
             return summary;

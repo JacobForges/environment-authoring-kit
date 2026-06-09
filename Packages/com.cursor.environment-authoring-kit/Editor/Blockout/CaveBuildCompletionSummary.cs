@@ -130,17 +130,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildDialogPolicy.EndUnifiedSessionWhenAgentIdle();
         }
 
-        public static void ShowBlocked(string reason, string extraPath = null)
+        public static void ShowBlocked(string reason, string extraPath = null, bool showModal = true)
         {
             CaveBuildDialogPolicy.EndUnifiedSession();
             var msg = reason;
             if (!string.IsNullOrEmpty(extraPath))
                 msg += $"\n\nSee:\n{ToFileUrl(extraPath)}";
             if (EnvironmentKitHubWindow.IsOpen)
-                EnvironmentKitHubWindow.NotifyBuildCompleted("Build Complete — Not Started", msg);
+                EnvironmentKitHubWindow.NotifyBuildCompleted("Build not started", msg);
             else
                 Debug.LogWarning("[CaveBuild] Blocked (non-modal):\n" + msg);
             Debug.LogWarning("[CaveBuild] " + reason);
+            if (showModal)
+            {
+                EditorUtility.DisplayDialog(
+                    "Environment Kit — build not started",
+                    msg,
+                    "OK");
+            }
         }
 
         [MenuItem(CaveBuildMenuPaths.Diagnostics + "Open Last Build Completion Readout")]

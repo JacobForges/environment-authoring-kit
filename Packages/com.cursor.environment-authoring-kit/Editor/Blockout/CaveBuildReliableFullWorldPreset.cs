@@ -37,7 +37,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (savePrefs)
                 settings.SaveToPrefs();
 
-            if (CaveBuildLayoutRollSession.LastRecordedSeed > 0)
+            if (CaveBuildLayoutRollSession.LastRecordedSeed > 0 &&
+                !FullWorldConceptLayoutCatalog.RandomOnBuildEnabled &&
+                !CaveBuildSpeedDemoPolicy.IsActiveHubSelection())
             {
                 EditorPrefs.SetBool("CaveBuild_RandomizeEachTime", false);
                 CaveBuildLayoutRollSession.PinLastSeedForDebugging();

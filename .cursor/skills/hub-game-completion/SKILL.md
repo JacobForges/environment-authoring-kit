@@ -24,17 +24,20 @@ This phase produces a **graded procedural world**. Phase 2 adds the **playable d
 
 1. **Read generated truth**
    - `Assets/EnvironmentKit/Generated/CaveBuildGeneratedJsonManifest.json`
+   - `Assets/EnvironmentKit/Generated/CaveBuildActiveSessionConfig.json` (planner scope)
    - Active rung from `CaveBuildLadderContext.json` or `CaveBuildAgentPrompt.md`
    - `CaveBuildQualityReport.json`
    - [docs/CURSOR_BOT_BACKLOG.md](../../../docs/CURSOR_BOT_BACKLOG.md) Streams A–B
 
-2. **Pick exactly one work stream** (highest priority blocker).
+2. **Honor Hub bot setup v2026-06-09** — planner-first, no stale checkpoint resume, post-build Play Mode gate before recap compose.
 
-3. **Implement smallest fix** — prefer `Packages/com.cursor.environment-authoring-kit/Editor/`.
+3. **Pick exactly one work stream** (highest priority blocker). Match a production playbook under `Tools/cursor-bot/playbooks/` when present.
 
-4. **Do not** start FullWorld rebuild unless human requested.
+4. **Implement smallest fix** — prefer `Packages/com.cursor.environment-authoring-kit/Editor/`.
 
-5. **Verify before done** — After edits, session harness runs compile verification. Session **fails** (exit 4) if `CaveBuildCompileDiagnostics.json` has verified CS errors. Open Unity or set `UNITY_PATH` so diagnostics refresh. Do not claim the rung is fixed until compile is clean and Unity re-grades.
+5. **Do not** start FullWorld rebuild unless human requested.
+
+6. **Verify before done** — After edits, session harness runs compile verification. Session **fails** (exit 4) if `CaveBuildCompileDiagnostics.json` has verified CS errors. Open Unity or set `UNITY_PATH` so diagnostics refresh. Do not claim the rung is fixed until compile is clean and Unity re-grades.
 
 ## Work stream routing
 

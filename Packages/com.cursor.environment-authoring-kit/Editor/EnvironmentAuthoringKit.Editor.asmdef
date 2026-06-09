@@ -7,7 +7,8 @@
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.AI.Navigation",
     "Unity.AI.Navigation.Editor",
-    "Unity.Timeline"
+    "Unity.Timeline",
+    "Unity.Recorder.Editor"
   ],
   "includePlatforms": [
     "Editor"

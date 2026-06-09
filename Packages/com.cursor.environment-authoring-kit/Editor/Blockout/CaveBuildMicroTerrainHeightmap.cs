@@ -20,7 +20,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (CaveBuildEditorResponsiveness.IsLongBuildActive)
             {
                 if (SurfaceTerrainTileExpansion.IsLiveFullWorldTerraformPhase)
+                {
+                    if (CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f)
+                        return res >= 1025 ? 4 : res >= 513 ? 8 : res >= 257 ? 12 : 16;
+
                     return res >= 1025 ? 8 : res >= 513 ? 12 : res >= 257 ? 16 : 24;
+                }
+
+                if (CaveBuildLateBuildPerformance.IsInLateBuildBand &&
+                    CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f)
+                    return res >= 1025 ? 4 : res >= 513 ? 6 : res >= 257 ? 10 : 14;
 
                 if (SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain)
                     return res >= 1025 ? 32 : res >= 513 ? 128 : res >= 257 ? 256 : res;
@@ -32,7 +41,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         /// <summary>One SyncHeightmap after height commits — prevents SetResource ID overflow spam.</summary>
         public static void QueueFinalizeDelayedLod(Terrain terrain, System.Action onComplete) =>
-            QueueFinalizeDelayedLod(terrain, onComplete, flushAllSurfaceTerrains: true);
+            QueueFinalizeDelayedLod(
+                terrain,
+                onComplete,
+                flushAllSurfaceTerrains: !CaveBuildTerrainHeightmapMemory.PreferSingleTileHeightmapFlush);
 
         /// <summary>Paced finalize — during long builds flush only the edited tile to avoid 49× SyncHeightmap hitches.</summary>
         public static void QueueFinalizeDelayedLod(
@@ -160,7 +172,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     if (y < res)
                         WriteNextBand();
                     else
-                        QueueFinalizeDelayedLod(terrain, onComplete);
+                        QueueFinalizeDelayedLod(
+                            terrain,
+                            onComplete,
+                            flushAllSurfaceTerrains: !CaveBuildTerrainHeightmapMemory.PreferSingleTileHeightmapFlush);
                 });
             }
 
@@ -199,7 +214,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             $"{statusVerb} rows {yEnd}/{res}");
                     }
 
-                    CaveBuildTerrainHeightmapMemory.CommitTerrainHeightmap(terrain);
+                    if (CaveBuildTerrainHeightmapMemory.PreferSingleTileHeightmapFlush)
+                        CaveBuildTerrainHeightmapMemory.FlushPendingTileHeightmap(terrain);
+                    else
+                        CaveBuildTerrainHeightmapMemory.CommitTerrainHeightmap(terrain);
                     EnvironmentKitHardwareBudget.OnQueueStepCompletedThrottled();
                     onComplete?.Invoke();
                 },
@@ -255,7 +273,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             return;
                         }
 
-                        terrain.Flush();
+                        CaveBuildTerrainHeightmapMemory.FlushPendingTileHeightmap(terrain);
                         onComplete?.Invoke();
                     },
                     queueLabel);

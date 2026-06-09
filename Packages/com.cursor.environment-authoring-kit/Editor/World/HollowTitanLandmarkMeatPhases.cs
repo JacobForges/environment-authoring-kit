@@ -138,11 +138,9 @@ namespace EnvironmentAuthoringKit.Editor.World
                 ForceSyncFullBuild = forceSyncFullBuild,
             };
 
-            var queueBetweenPhases = !forceSyncFullBuild &&
-                                     settings.hollowTitanPhasedBuild &&
-                                     CaveBuildLiveSceneFeedback.SessionActive;
+            var queueBetweenPhases = ShouldQueueMeatPhases(forceSyncFullBuild);
 
-            if (!settings.hollowTitanPhasedBuild || forceSyncFullBuild)
+            if (!settings.hollowTitanPhasedBuild && !CaveBuildEditorResponsiveness.IsLongBuildActive)
             {
                 RunAllPhasesSync(_active);
                 Finish(_active);
@@ -153,18 +151,30 @@ namespace EnvironmentAuthoringKit.Editor.World
 
             CaveBuildEditorLog.LogSurface(
                 queueBetweenPhases
-                    ? "[HollowTitan] Starting queued phased meat build — 12 steps (live session, paced)."
+                    ? "[HollowTitan] Starting queued phased meat build — 12 steps (paced)."
                     : "[HollowTitan] Starting phased meat build — 12 steps (sync).",
                 forceUnityConsole: true);
 
-            if (!queueBetweenPhases)
+            if (queueBetweenPhases)
             {
-                RunAllPhasesSync(_active);
-                Finish(_active);
+                ScheduleNext(_active);
                 return;
             }
 
-            ScheduleNext(_active);
+            RunAllPhasesSync(_active);
+            Finish(_active);
+        }
+
+        static bool ShouldQueueMeatPhases(bool forceSyncFullBuild)
+        {
+            if (CaveBuildEditorResponsiveness.IsLongBuildActive)
+                return true;
+
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            settings.LoadFromPrefs();
+            return !forceSyncFullBuild &&
+                   settings.hollowTitanPhasedBuild &&
+                   CaveBuildLiveSceneFeedback.SessionActive;
         }
 
         /// <summary>True while phased meat or 32-phase stump sculpt is still running (FullWorld must wait).</summary>
@@ -257,6 +267,12 @@ namespace EnvironmentAuthoringKit.Editor.World
             RunPhase(session, phase);
             NotifyPhase(phase, session.Root);
             GradePhaseRung(session, phase);
+            if (((int)phase + 1) % 4 == 0 &&
+                !CaveBuildLateBuildPerformance.ShouldSkipIntermediateTitanMilestoneSave())
+            {
+                CaveBuildFullWorldGridCheckpoint.SaveActiveSceneMilestone(
+                    $"Hollow Titan meat phase {(int)phase + 1}/12");
+            }
 
             if (phase >= Phase.EnemyPatrolNodes)
             {
@@ -324,6 +340,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             CaveBuildEditorLog.LogSurface(
                 "[HollowTitan] Phased meat build complete.",
                 forceUnityConsole: true);
+            CaveBuildFullWorldGridCheckpoint.SaveActiveSceneMilestone("Hollow Titan meat complete");
             cb?.Invoke();
         }
 

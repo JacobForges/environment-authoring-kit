@@ -98,9 +98,7 @@ namespace EnvironmentAuthoringKit.Editor.World
 
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
-            var queueBetweenPhases = !forceSyncFullBuild &&
-                                     settings.hollowTitanPhasedBuild &&
-                                     CaveBuildLiveSceneFeedback.SessionActive;
+            var queueBetweenPhases = ShouldQueueStumpPhases(forceSyncFullBuild);
 
             _active = new SculptSession
             {
@@ -114,18 +112,31 @@ namespace EnvironmentAuthoringKit.Editor.World
 
             CaveBuildEditorLog.LogSurface(
                 queueBetweenPhases
-                    ? "[HollowTitan] Starting 32-phase stump sculpt (live session, paced, preview)."
+                    ? "[HollowTitan] Starting 32-phase stump sculpt (paced — one phase per queue step)."
                     : "[HollowTitan] Starting 32-phase stump sculpt (sync).",
                 forceUnityConsole: true);
 
-            if (!queueBetweenPhases || forceSyncFullBuild)
+            if (queueBetweenPhases)
             {
-                RunAllSync(_active);
-                Finish(_active);
+                ScheduleNext(_active);
                 return;
             }
 
-            ScheduleNext(_active);
+            RunAllSync(_active);
+            Finish(_active);
+        }
+
+        /// <summary>Full AAA weld passes forceSyncFullBuild — still pace during active FullWorld builds (avoids grid ~70% freeze).</summary>
+        static bool ShouldQueueStumpPhases(bool forceSyncFullBuild)
+        {
+            if (CaveBuildEditorResponsiveness.IsLongBuildActive)
+                return true;
+
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            settings.LoadFromPrefs();
+            return !forceSyncFullBuild &&
+                   settings.hollowTitanPhasedBuild &&
+                   CaveBuildLiveSceneFeedback.SessionActive;
         }
 
         [MenuItem("Window/Environment Kit/World/Build Hollow Titan Stump (32 phases)")]
@@ -133,7 +144,7 @@ namespace EnvironmentAuthoringKit.Editor.World
         {
             var terrain = UnityEngine.Object.FindAnyObjectByType<Terrain>();
             var request = WorldGenerationRequest.LoadOrDefault();
-            request.EnsureFullWorldSurfaceContract();
+            FullWorldConceptLayoutCatalog.EnsureConceptOnRequest(request);
             Begin(terrain, request, forceSyncFullBuild: false);
         }
 
@@ -148,18 +159,38 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return;
 
             var index = session.PhaseIndex;
-            RunPhase(session, index);
             NotifyPhase(index, session.Root);
-            GradePhase(session, index);
+            CaveBuildRunStatusPublisher.PulseSubOperation(
+                "Full AAA",
+                $"Hollow Titan stump {index + 1}/{PhaseCount}");
 
-            if (index >= PhaseCount - 1)
-            {
-                Finish(session);
-                return;
-            }
+            HollowTitanExteriorTerraform.QueueSculptStumpPhasePass(
+                session.MainTerrain,
+                index,
+                force: true,
+                onComplete: () =>
+                {
+                    GradePhase(session, index);
+                    if (index >= PhaseCount - 1)
+                    {
+                        HollowTitanStumpSculptLadder.FinalizeReport(session.LadderReport);
+                        Finish(session);
+                        return;
+                    }
 
-            session.PhaseIndex = index + 1;
-            ScheduleNext(session);
+                    if ((index + 1) % 8 == 0 &&
+                        !CaveBuildLateBuildPerformance.ShouldSkipIntermediateTitanMilestoneSave())
+                    {
+                        CaveBuildFullWorldGridCheckpoint.SaveActiveSceneMilestone(
+                            $"Hollow Titan stump phase {index + 1}/{PhaseCount}");
+                    }
+
+                    CaveBuildEditorLog.LogSurface(
+                        $"[HollowTitan] Stump phase {index + 1}/{PhaseCount} — {PhaseLabels[index]} (paced).",
+                        forceUnityConsole: false);
+                    session.PhaseIndex = index + 1;
+                    ScheduleNext(session);
+                });
         }
 
         static void RunAllSync(SculptSession session)
@@ -237,6 +268,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             CaveBuildEditorLog.LogSurface(
                 "[HollowTitan] 32-phase stump sculpt complete.",
                 forceUnityConsole: true);
+            CaveBuildFullWorldGridCheckpoint.SaveActiveSceneMilestone("Hollow Titan stump complete");
             cb?.Invoke();
         }
     }

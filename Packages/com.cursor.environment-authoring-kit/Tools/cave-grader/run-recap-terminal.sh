@@ -3,7 +3,9 @@
 # Prefer: bash run-recap-headless.sh <capture> --narration-only
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-export ENVIRONMENT_KIT_DATA_ROOT="${ENVIRONMENT_KIT_DATA_ROOT:-$(python3 -c "import sys; sys.path.insert(0, '$DIR'); from envkit_paths import resolve_envkit_root; print(resolve_envkit_root())")}"
+eval "$(python3 -c "import sys; sys.path.insert(0, '$DIR'); from envkit_paths import ensure_recap_process_env; ensure_recap_process_env()")"
+export ENVIRONMENT_KIT_DATA_ROOT
+export TMPDIR TEMP TMP
 CAPTURE="${1:-}"
 if [[ -z "$CAPTURE" ]]; then
   CAPTURE="$(ls -td "$ENVIRONMENT_KIT_DATA_ROOT/DemoCapture"/*/ 2>/dev/null | head -1 || true)"
@@ -35,6 +37,8 @@ if [[ "${TERM_PROGRAM:-}" == "Apple_Terminal" ]] || [[ -z "${CURSOR_AGENT:-}" ]]
   if [[ $status -eq 0 ]]; then
     if [[ " ${RECAP_ARGS[*]} " == *" --preview "* ]]; then
       open_recap_if_ready "$HOME/Desktop/DemoRecap-Card-Preview/DirectorPreview.mp4"
+    elif [[ -f "$CAPTURE/HybridRecapPresentation.mp4" ]]; then
+      open_recap_if_ready "$CAPTURE/HybridRecapPresentation.mp4"
     else
       open_recap_if_ready "$CAPTURE/DemoRecapPresentation.mp4"
     fi
@@ -63,7 +67,8 @@ WRAPPER="$LAUNCH_DIR/recap-terminal-launch.sh"
     echo 'PREVIEW="$HOME/Desktop/DemoRecap-Card-Preview/DirectorPreview.mp4"'
     echo 'if [[ -f "$PREVIEW" ]]; then echo "Opening recap video..."; open "$PREVIEW"; fi'
   else
-    printf 'RECAP=%q\n' "$CAPTURE/DemoRecapPresentation.mp4"
+    printf 'RECAP=%q\n' "$CAPTURE/HybridRecapPresentation.mp4"
+    echo 'if [[ ! -f "$RECAP" ]]; then RECAP='"$(printf '%q' "$CAPTURE/DemoRecapPresentation.mp4")"'; fi'
     echo 'if [[ -f "$RECAP" ]]; then echo "Opening recap video..."; open "$RECAP"; fi'
   fi
   echo 'echo "Done — recap finished (this tab will close)."'

@@ -2,18 +2,19 @@
 """
 Personal Voice Ladder — phased post-capture pipeline.
 
-  algorithm   → antiStutter, lowClean, speakerSafe, steadyVoice
-  character   → character, casualTone, warmth, breathSmooth, vocalSpark
-  tone        → naturalPitch, phraseFall, phraseDynamics, ttsSmooth
-  polish      → deClick, autoEq25, midTreble, autoDynamics, spatialHarmony, deEss
+  algorithm   → antiStutter, lowClean, speakerSafe
+  character   → character, casualTone, warmth
+  tone        → naturalPitch, phraseFall, ttsSmooth (skipped on dry master pass)
+  polish      → deClick, autoEq25, midTreble, deEss, segmentVolume (spatialHarmony skipped on dry master)
   auditor     → measure + auto-fix (levels, tails, clipping)
+  static      → gapDehiss, staticClean, gapDehiss (silence-only hiss tame)
   finalizer   → loudnorm + limiter
 
 Docs: PERSONAL_VOICE_NARRATION.md, VOICE_HELPERS.md
 Configure: ~/Hub/Library/EnvironmentKit/DemoRecapApproved/ApprovedCards.json
 
   "voiceLadder": { "enabled": true, "phases": { ... } },
-  "voiceHelpers": { "preset": "ladderDocumentary", "sayRate": 190, ... }
+  "voiceHelpers": { "preset": "ladderDocumentary", "sayRate": 186, ... }
 """
 from __future__ import annotations
 
@@ -26,11 +27,12 @@ _TOOLS = Path(__file__).resolve().parent
 
 # Phase name → list of helper ids (auditor/finalizer are special)
 DEFAULT_LADDER_PHASES: dict[str, Any] = {
-    "algorithm": ["antiStutter", "lowClean", "speakerSafe", "steadyVoice"],
-    "character": ["character", "casualTone", "warmth", "vocalSpark"],
-    "tone": ["naturalPitch", "phraseFall", "phraseDynamics", "ttsSmooth"],
-    "polish": ["deClick", "autoEq25", "midTreble", "autoDynamics", "spatialHarmony", "deEss"],
+    "algorithm": ["antiStutter", "lowClean", "speakerSafe"],
+    "character": ["character", "casualTone", "warmth"],
+    "tone": ["naturalPitch", "phraseFall", "ttsSmooth"],
+    "polish": ["deClick", "autoEq25", "midTreble", "spatialHarmony", "deEss", "segmentVolume"],
     "auditor": True,
+    "static": ["gapDehiss", "staticClean", "gapDehiss"],
     "finalizer": ["finalizer"],
 }
 
@@ -42,6 +44,25 @@ def _load_helpers():
     assert spec.loader
     spec.loader.exec_module(mod)
     return mod
+
+
+def _normalize_ladder_phases(phases: dict[str, Any]) -> dict[str, Any]:
+    """Ensure static helpers run in dedicated phase before finalizer."""
+    out = dict(phases)
+    polish = out.get("polish")
+    if isinstance(polish, list):
+        out["polish"] = [h for h in polish if h not in ("staticClean", "hissGate", "grainPull", "synthHissCut", "noiseFloor", "staticSeal")]
+    fin = out.get("finalizer")
+    if isinstance(fin, list):
+        static_helpers = {"staticClean", "hissGate", "grainPull", "synthHissCut", "noiseFloor", "staticSeal"}
+        out["finalizer"] = [h for h in fin if h not in static_helpers]
+        if not out["finalizer"]:
+            out["finalizer"] = ["finalizer"]
+    if "static" not in out:
+        out["static"] = list(DEFAULT_LADDER_PHASES["static"])
+    elif isinstance(out.get("static"), list) and "gapDehiss" not in out["static"]:
+        out["static"] = ["gapDehiss", *out["static"], "gapDehiss"]
+    return out
 
 
 def _ladder_cfg(spec: dict[str, Any]) -> dict[str, Any]:
@@ -69,7 +90,7 @@ def resolve_ladder_phases(spec: dict[str, Any]) -> dict[str, Any] | None:
     ):
         phases = ladder.get("phases")
         if isinstance(phases, dict) and phases:
-            return phases
+            return _normalize_ladder_phases(phases)
         return dict(DEFAULT_LADDER_PHASES)
     return None
 
@@ -136,7 +157,7 @@ def apply_voice_ladder(wav: Path, spec: dict[str, Any] | None = None) -> dict[st
 
 
 def ladder_phase_order(phases: dict[str, Any]) -> list[str]:
-    preferred = ("algorithm", "character", "tone", "polish", "auditor", "finalizer")
+    preferred = ("algorithm", "character", "tone", "polish", "auditor", "static", "finalizer")
     out = [k for k in preferred if k in phases]
     for k in phases:
         if k not in out:

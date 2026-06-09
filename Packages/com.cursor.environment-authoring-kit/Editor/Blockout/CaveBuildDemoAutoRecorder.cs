@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
@@ -24,8 +26,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const string PrefForceBackgroundScene = "EnvironmentKit_DemoRecorder_ForceBackgroundScene";
         const string PrefPendingCompose = "EnvironmentKit_DemoRecorder_PendingCompose";
         const double ScenePumpIntervalSeconds = 0.12;
-        const int Width = 1280;
-        const int Height = 720;
+        const int Width = 1920;
+        const int Height = 1080;
         const double MinCaptureIntervalSeconds = 2.0;
         const float DefaultFrameDurationSeconds = 2.8f;
         const double DefaultTimelapseIntervalSeconds = 2.0;
@@ -74,6 +76,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool _pendingComposeQueued;
         static bool _hubBuildRecordingSession;
         static bool _manualRecordingSession;
+        static bool _composeHoldForPostBuildPlaythrough;
+        static bool _timelapsePausedForPostBuild;
+        static bool _urpSceneCaptureBlocked;
+        static double _urpBlockLoggedAt;
+        static double _lastManualRenderAt;
+        /// <summary>User clicked Stop recording — do not auto-start a new capture while this build runs.</summary>
+        static bool _userFinalizedCapture;
 
         static CaveBuildDemoAutoRecorder()
         {
@@ -137,6 +146,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static bool IsRecording => _recording;
 
         public static string LastOutputFolder => EditorPrefs.GetString(PrefLastFolder, string.Empty);
+
+        /// <summary>Active demo capture folder (recording session or last run).</summary>
+        public static string CurrentCaptureFolder =>
+            !string.IsNullOrEmpty(_runFolder) ? _runFolder : LastOutputFolder;
 
         public static bool IsFfmpegAvailable => !string.IsNullOrEmpty(FindFfmpeg());
 
@@ -257,24 +270,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (_recording)
                 return;
 
+            _userFinalizedCapture = false;
             _manualRecordingSession = true;
             BeginRecordingSession();
         }
 
-        /// <summary>Stop capture and run recap compose with frames collected so far.</summary>
+        /// <summary>
+        /// Stop Scene timelapse capture only; run full presentation compose (DemoRecapPresentation.mp4).
+        /// Hub build queue keeps running — this is not Pause or Stop All Builds.
+        /// </summary>
         public static void StopRecordingAndCompose()
         {
             if (!_recording)
                 return;
 
+            _userFinalizedCapture = true;
             _manualRecordingSession = false;
             _hubBuildRecordingSession = false;
+            Debug.Log(
+                "[DemoRecorder] Stop recording — capture ending; full presentation compose will run. " +
+                "Build queue continues (not paused).");
             EndRecordingSession();
         }
 
         /// <summary>Hub build buttons always capture a recap for this session (Build Complete / Surface / Cave / AAA).</summary>
         public static void OnHubBuildStarting(string buildModeLabel = null)
         {
+            _userFinalizedCapture = false;
             _hubBuildRecordingSession = true;
             if (!_recording)
                 BeginRecordingSession();
@@ -300,6 +322,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Compose recap when the queued pipeline finishes or is aborted.</summary>
         public static void TryFinalizeOnBuildSessionEnd()
         {
+            if (_composeHoldForPostBuildPlaythrough)
+                return;
+
             if (!_recording && !_hubBuildRecordingSession)
                 return;
 
@@ -308,6 +333,59 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             EndRecordingSession();
+        }
+
+        public static void HoldComposeForPostBuildPlaythrough()
+        {
+            _composeHoldForPostBuildPlaythrough = true;
+            _timelapsePausedForPostBuild = true;
+            _hubBuildRecordingSession = true;
+        }
+
+        public static void ReleaseComposeHoldAndFinalize()
+        {
+            if (!_composeHoldForPostBuildPlaythrough && !_recording && !_hubBuildRecordingSession)
+                return;
+
+            _composeHoldForPostBuildPlaythrough = false;
+            _timelapsePausedForPostBuild = false;
+            TryFinalizeOnBuildSessionEnd();
+        }
+
+        /// <summary>Hub idle but timelapse folder has frames and no presentation MP4 — finish compose.</summary>
+        public static void TryComposeOrphanedCaptureIfIdle()
+        {
+            if (_recording || CaveBuildHubSessionReconcile.IsPacedWorkActive())
+                return;
+
+            var folder = !string.IsNullOrEmpty(_runFolder) ? _runFolder : LastOutputFolder;
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+                return;
+
+            if (CaveBuildRecapComposeLatch.HasValidPresentationOutput(folder))
+                return;
+
+            if (CaveBuildRecapComposeLatch.IsRecordingEndHandled(folder))
+                return;
+
+            var timelapseDir = Path.Combine(folder, "timelapse");
+            if (!Directory.Exists(timelapseDir))
+                return;
+
+            var frames = Directory.GetFiles(timelapseDir, "tl_*.png");
+            if (frames.Length < 8)
+                return;
+
+            _runFolder = folder;
+            _framesFolder = Path.Combine(folder, "frames");
+            _timelapseFolder = timelapseDir;
+            _segmentsFolder = Path.Combine(folder, "segments");
+            _hubBuildRecordingSession = true;
+            _recording = true;
+            Debug.Log(
+                "[DemoRecorder] Orphaned timelapse detected — composing recap video from " +
+                $"{frames.Length} frame(s): {folder}");
+            TryFinalizeOnBuildSessionEnd();
         }
 
         public static void CaptureNow(string reason = "manual checkpoint")
@@ -353,9 +431,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                          CaveBuildStartupCoordinator.IsActive ||
                          CaveBuildRunStatusPublisher.HasActiveSession;
 
-            if ((AutoEnabled || hubSession) && active && !_recording)
+            if ((AutoEnabled || hubSession) && active && !_recording && !_userFinalizedCapture)
                 BeginRecordingSession();
-            else if (!active && _recording && hubSession && IsPipelineFullyComplete())
+            else if (!active && _recording && hubSession && IsPipelineFullyComplete() &&
+                     !_composeHoldForPostBuildPlaythrough)
                 TryFinalizeOnBuildSessionEnd();
 
             if (!_recording)
@@ -519,7 +598,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
             else
             {
-                Debug.Log("[DemoRecorder] Recording completed — timelapse/frames kept; DemoRecap.mp4 if compose succeeded.");
+                Debug.Log(
+                    "[DemoRecorder] Recording completed — full presentation compose started " +
+                    "(DemoRecapPresentation.mp4 on data volume; Personal Voice in Terminal when enabled).");
             }
         }
 
@@ -631,6 +712,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void TryCaptureTimelapseFrame(bool force = false)
         {
+            if (_timelapsePausedForPostBuild && !force)
+                return;
+
             if (!_recording && !force)
                 return;
 
@@ -819,7 +903,89 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 EditorApplication.QueuePlayerLoopUpdate();
             }
 
+            // URP: manual Camera.Render on Scene View re-initializes Blitter and floods the console.
+            if (IsUniversalRenderPipelineActive() && IsSceneViewCamera(view.camera))
+                return TryCaptureSceneViewWindow(view, out pngBytes);
+
             return TryRenderCameraToPng(view.camera, out pngBytes);
+        }
+
+        static bool IsUniversalRenderPipelineActive()
+        {
+            return GraphicsSettings.currentRenderPipeline != null;
+        }
+
+        static bool IsSceneViewCamera(Camera cam)
+        {
+            if (cam == null)
+                return false;
+
+            foreach (SceneView sv in SceneView.sceneViews)
+            {
+                if (sv != null && sv.camera == cam)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool TryCaptureSceneViewWindow(SceneView view, out byte[] pngBytes)
+        {
+            pngBytes = null;
+            if (view == null)
+                return false;
+
+            try
+            {
+                view.Repaint();
+                var rect = view.position;
+                var w = Mathf.Max(64, (int)rect.width);
+                var h = Mathf.Max(64, (int)rect.height);
+                var pixels = InternalEditorUtility.ReadScreenPixel(new Vector2(rect.x, rect.y), w, h);
+                if (pixels == null || pixels.Length == 0)
+                    return false;
+
+                var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+                tex.SetPixels(pixels);
+                tex.Apply();
+                pngBytes = EncodeTextureToPng(tex, w, h);
+                UnityEngine.Object.DestroyImmediate(tex);
+                return pngBytes != null && pngBytes.Length > 0;
+            }
+            catch (Exception ex)
+            {
+                if (!_urpSceneCaptureBlocked)
+                {
+                    _urpSceneCaptureBlocked = true;
+                    Debug.LogWarning(
+                        "[DemoRecorder] Scene View window readback failed; timelapse capture paused. " +
+                        ex.Message);
+                }
+
+                return false;
+            }
+        }
+
+        static byte[] EncodeTextureToPng(Texture2D tex, int srcW, int srcH)
+        {
+            if (srcW == Width && srcH == Height)
+                return tex.EncodeToPNG();
+
+            var scaled = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+            for (var y = 0; y < Height; y++)
+            {
+                var sy = y * srcH / Height;
+                for (var x = 0; x < Width; x++)
+                {
+                    var sx = x * srcW / Width;
+                    scaled.SetPixel(x, y, tex.GetPixel(sx, sy));
+                }
+            }
+
+            scaled.Apply();
+            var png = scaled.EncodeToPNG();
+            UnityEngine.Object.DestroyImmediate(scaled);
+            return png;
         }
 
         static bool TryCaptureGameplayCamera(out byte[] pngBytes)
@@ -848,7 +1014,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool TryRenderCameraToPng(Camera cam, out byte[] pngBytes)
         {
             pngBytes = null;
-            if (cam == null)
+            if (cam == null || _urpSceneCaptureBlocked)
+                return false;
+
+            if (IsUniversalRenderPipelineActive() && IsSceneViewCamera(cam))
+                return false;
+
+            var now = EditorApplication.timeSinceStartup;
+            if (now - _lastManualRenderAt < 0.35)
                 return false;
 
             var prevRt = cam.targetTexture;
@@ -858,6 +1031,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 cam.targetTexture = rt;
                 cam.Render();
+                _lastManualRenderAt = now;
                 RenderTexture.active = rt;
                 var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
                 tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
@@ -866,8 +1040,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 UnityEngine.Object.DestroyImmediate(tex);
                 return pngBytes != null && pngBytes.Length > 0;
             }
-            catch
+            catch (Exception ex)
             {
+                if (ex.Message.IndexOf("Blitter", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _urpSceneCaptureBlocked = true;
+                    if (now - _urpBlockLoggedAt > 2.0)
+                    {
+                        _urpBlockLoggedAt = now;
+                        Debug.LogWarning(
+                            "[DemoRecorder] URP Scene capture disabled (Blitter already initialized). " +
+                            "Timelapse will use fewer frames until domain reload.");
+                    }
+                }
+
                 return false;
             }
             finally

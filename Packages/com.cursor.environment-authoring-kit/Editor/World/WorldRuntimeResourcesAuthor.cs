@@ -31,12 +31,35 @@ namespace EnvironmentAuthoringKit.Editor.World
 
         public static void EnsureHollowTitanLandmarkPrefabsInResources()
         {
-            EnsureAllEnemyPrefabsInResources();
-            foreach (var itemId in HollowTitanLandmarkSpawnCatalog.LootDefinitionIds)
-                CopyItemIfMissing(itemId);
+            for (var i = 0; i < HollowTitanResourceStepCount; i++)
+                RunHollowTitanResourceStep(i, flushSave: false);
         }
 
-        static void CopyCharacterToResources(string slot)
+        public static int HollowTitanResourceStepCount =>
+            HollowTitanLandmarkSpawnCatalog.LegendaryEnemyCc0Slots.Length +
+            HollowTitanLandmarkSpawnCatalog.LootDefinitionIds.Length;
+
+        public static void RunHollowTitanResourceStep(int stepIndex, bool flushSave = false)
+        {
+            var enemySlots = HollowTitanLandmarkSpawnCatalog.LegendaryEnemyCc0Slots;
+            if (stepIndex >= 0 && stepIndex < enemySlots.Length)
+            {
+                CopyCharacterToResources(enemySlots[stepIndex], flushSave);
+                return;
+            }
+
+            var lootIndex = stepIndex - enemySlots.Length;
+            var lootIds = HollowTitanLandmarkSpawnCatalog.LootDefinitionIds;
+            if (lootIndex >= 0 && lootIndex < lootIds.Length)
+                CopyItemIfMissing(lootIds[lootIndex], flushSave);
+        }
+
+        /// <summary>Legacy hook — prefabs persist via SaveAsPrefabAsset; SO saves are paced in Cc0ContentImportPipeline.</summary>
+        public static void FlushPendingResourceCopies()
+        {
+        }
+
+        static void CopyCharacterToResources(string slot, bool flushSave = true)
         {
             if (string.IsNullOrWhiteSpace(slot))
                 return;
@@ -49,14 +72,22 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return;
             }
 
-            EnsureFolder(CharacterResourceRoot);
-            var depsFolder = $"{CharacterResourceRoot}/{slot}_Deps";
-            EnsureFolder(depsFolder);
-            CopyPrefabDependencies(AssetDatabase.GetAssetPath(source), depsFolder);
-            SaveFullPrefabCopy(source, targetPath, slot);
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                EnsureFolder(CharacterResourceRoot);
+                var depsFolder = $"{CharacterResourceRoot}/{slot}_Deps";
+                EnsureFolder(depsFolder);
+                CopyPrefabDependencies(AssetDatabase.GetAssetPath(source), depsFolder);
+                SaveFullPrefabCopy(source, targetPath, slot, flushSave);
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
         }
 
-        static void CopyItemIfMissing(string itemId)
+        static void CopyItemIfMissing(string itemId, bool flushSave = true)
         {
             var targetPath = $"{ItemResourceRoot}/{itemId}.prefab";
             if (File.Exists(targetPath))
@@ -80,8 +111,16 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return;
             }
 
-            EnsureFolder(ItemResourceRoot);
-            SaveFullPrefabCopy(source, targetPath, itemId);
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                EnsureFolder(ItemResourceRoot);
+                SaveFullPrefabCopy(source, targetPath, itemId, flushSave);
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
         }
 
         static void CopyPrefabDependencies(string prefabPath, string depsFolder)
@@ -112,7 +151,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             }
         }
 
-        static void SaveFullPrefabCopy(GameObject source, string targetPath, string assetName)
+        static void SaveFullPrefabCopy(GameObject source, string targetPath, string assetName, bool flushSave = true)
         {
             var copy = PrefabUtility.InstantiatePrefab(source) as GameObject;
             if (copy == null)
@@ -120,8 +159,19 @@ namespace EnvironmentAuthoringKit.Editor.World
 
             copy.name = assetName;
             PrefabUtility.SaveAsPrefabAsset(copy, targetPath);
-            Object.DestroyImmediate(copy);
-            AssetDatabase.SaveAssets();
+            UnityEngine.Object.DestroyImmediate(copy);
+            if (flushSave)
+                SaveAssetAtPathIfDirty(targetPath);
+        }
+
+        static void SaveAssetAtPathIfDirty(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+
+            var main = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (main != null && EditorUtility.IsDirty(main))
+                AssetDatabase.SaveAssetIfDirty(main);
         }
 
         static void EnsureFolder(string assetPath)

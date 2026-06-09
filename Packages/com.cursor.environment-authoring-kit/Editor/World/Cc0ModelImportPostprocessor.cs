@@ -111,7 +111,13 @@ namespace EnvironmentAuthoringKit.Editor.World
                 return true;
 
             if (assetPath.IndexOf("kenney-animated-characters", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // Recap cyborg avatar needs rigged model + animation clips from this pack.
+                if (assetPath.Contains("/Animations/", StringComparison.Ordinal) ||
+                    assetPath.Contains("/Model/", StringComparison.Ordinal))
+                    return false;
                 return true;
+            }
 
             var ext = Path.GetExtension(assetPath);
             if (ext.Equals(".obj", StringComparison.OrdinalIgnoreCase) ||

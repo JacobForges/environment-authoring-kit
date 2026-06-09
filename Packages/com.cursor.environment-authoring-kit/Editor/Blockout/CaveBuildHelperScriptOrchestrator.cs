@@ -98,6 +98,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            if (CaveBuildSessionConfig.SkipTerrainHelperScripts(ctx.Request) &&
+                moment is Moment.TerrainMeatPassStart or Moment.TerrainLadderRung or Moment.TerrainPhaseStart
+                    or Moment.TerrainPipelineComplete or Moment.SurfacePrePlacement)
+            {
+                onComplete?.Invoke(true, $"[{moment}] skipped — planner session (no agent helper scripts).");
+                return;
+            }
+
             CaveBuildEditorLog.LogCave(
                 $"[Helpers] {moment} — queuing {steps.Count} script(s) with paced cooldowns.",
                 forceUnityConsole: moment.ToString().StartsWith("Terrain", StringComparison.Ordinal) ||

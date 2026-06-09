@@ -1,0 +1,162 @@
+/**
+ * Cursor web research for AI Build Planner — uses Agent.create + web search tools.
+ * Usage: npx tsx planner-research.ts <request.json>
+ */
+import { readFileSync } from "node:fs";
+import { Agent } from "@cursor/sdk";
+
+type ResearchRequest = {
+  hubRoot: string;
+  brief?: {
+    title?: string;
+    summary?: string;
+    userGoals?: string[];
+    researchQueries?: string[];
+  };
+  sessionConfig?: Record<string, unknown>;
+  queries?: string[];
+};
+
+type ResearchItem = {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+  summary: string;
+  sourceType: string;
+  topics: string;
+  year: number;
+  approved: boolean;
+};
+
+const reqPath = process.argv[2];
+if (!reqPath) {
+  console.log(JSON.stringify({ error: "usage: planner-research.ts <request.json>" }));
+  process.exit(1);
+}
+
+const req = JSON.parse(readFileSync(reqPath, "utf8")) as ResearchRequest;
+const apiKey = process.env.CURSOR_API_KEY?.trim();
+if (!apiKey) {
+  console.log(JSON.stringify({ error: "CURSOR_API_KEY missing in cave-grader/.env" }));
+  process.exit(1);
+}
+
+const hubRoot = req.hubRoot?.trim() || process.env.HUB_ROOT?.trim() || process.cwd();
+const modelId = process.env.CAVE_CURSOR_MODEL?.trim() || "composer-2.5";
+const brief = req.brief ?? {};
+const queries = (req.queries?.length ? req.queries : brief.researchQueries) ?? [
+  "procedural terrain game design playable demo",
+  "unity open world tile grid best practices",
+];
+
+const goals = (brief.userGoals ?? []).map((g) => `- ${g}`).join("\n");
+const queryBlock = queries.slice(0, 5).map((q, i) => `${i + 1}. ${q}`).join("\n");
+
+const prompt = `You are the Environment Kit build planner research agent.
+
+**Task:** Use your **web search** tool to research each query below. Find real, reputable sources (docs, tutorials, GDC talks, engine guides, proven game-design articles). Do NOT invent URLs.
+
+## Build context
+Title: ${brief.title ?? "Build session"}
+Summary: ${brief.summary ?? ""}
+${goals ? `Goals:\n${goals}` : ""}
+
+## Research queries (run web search for each)
+${queryBlock}
+
+## Output
+Return **valid JSON only** (no markdown fence) with 8–15 items total across all queries:
+{
+  "items": [
+    {
+      "title": "source title",
+      "url": "https://real-url",
+      "category": "fullworld_generation_style",
+      "summary": "2-3 sentences: actionable insight for this Unity procedural world build",
+      "sourceType": "visual_ref",
+      "topics": "comma-separated tags",
+      "year": 2026
+    }
+  ]
+}
+
+Rules:
+- Every item must come from an actual web search result you found this run.
+- Prefer Unity, procedural generation, level design, combat/inventory demos, social clip pacing.
+- Skip paywalled or broken links.`;
+
+function parseJson(raw: string): { items: ResearchItem[] } {
+  let text = raw.trim();
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  }
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Research agent returned no JSON");
+  const data = JSON.parse(match[0]) as { items?: ResearchItem[] };
+  return { items: data.items ?? [] };
+}
+
+function stampItems(items: ResearchItem[]): ResearchItem[] {
+  const ts = Math.floor(Date.now() / 1000);
+  return items.map((item, i) => ({
+    id: `planner-cursor-${ts}-${i}`,
+    title: String(item.title ?? "").slice(0, 200),
+    url: String(item.url ?? "").slice(0, 500),
+    category: item.category ?? "fullworld_generation_style",
+    summary: String(item.summary ?? "").slice(0, 500),
+    sourceType: item.sourceType ?? "visual_ref",
+    topics: String(item.topics ?? "planner_session,cursor_research").slice(0, 200),
+    year: Number(item.year) || new Date().getFullYear(),
+    approved: false,
+  }));
+}
+
+try {
+  const agent = await Agent.create({
+    apiKey,
+    model: { id: modelId },
+    local: {
+      cwd: hubRoot,
+      // Load Cursor user/project settings so web search + MCP tools match the IDE.
+      settingSources: ["all"],
+    },
+  });
+
+  try {
+    const run = await agent.send(prompt);
+    if (process.env.PLANNER_RESEARCH_STREAM === "1" && run.supports("stream")) {
+      for await (const event of run.stream()) {
+        if (event.type === "tool_call" && event.status === "completed") {
+          process.stderr.write(`[research] tool ${event.name}\n`);
+        }
+      }
+    }
+    const result = await run.wait();
+
+    if (result.status === "error" || result.status === "cancelled") {
+      console.log(JSON.stringify({ error: result.error ?? `Cursor research ${result.status}` }));
+      process.exit(1);
+    }
+
+    const text =
+      typeof result.result === "string"
+        ? result.result
+        : result.messages?.map((m) => ("text" in m ? m.text : "")).join("\n").trim() ?? "";
+
+    const parsed = parseJson(text);
+    const items = stampItems(parsed.items).filter((i) => i.title && i.url.startsWith("http"));
+
+    if (!items.length) {
+      console.log(JSON.stringify({ error: "Cursor research returned no usable sources" }));
+      process.exit(1);
+    }
+
+    console.log(JSON.stringify({ items, queries: queries.slice(0, 5), provider: "cursor" }));
+  } finally {
+    await agent[Symbol.asyncDispose]();
+  }
+} catch (err) {
+  console.log(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+  process.exit(1);
+}

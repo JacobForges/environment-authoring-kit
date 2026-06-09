@@ -55,12 +55,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             System.Environment.SetEnvironmentVariable("CAVE_CURSOR_RUNG", rung);
             System.Environment.SetEnvironmentVariable("CAVE_WORKFLOW", workflowEnv);
             System.Environment.SetEnvironmentVariable("CAVE_FORCE_PROMPT_EXPORT", "1");
-            if (TryExportRungSync(rung, out _))
+            var allowSyncExport = !CaveBuildSessionConfig.HasFinalizedActive ||
+                                  CaveBuildSessionConfig.Active.agentInvokes;
+            if (allowSyncExport && TryExportRungSync(rung, out _))
             {
                 CaveBuildEditorLog.LogSurface(
                     $"[TerrainMeat] Fix prompt (research + ladder) → {TailoredPromptPath}",
                     forceUnityConsole: true);
                 return;
+            }
+
+            if (!allowSyncExport)
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[TerrainMeat] Planner session — markdown fix prompt only (skipped blocking tsx export).",
+                    forceUnityConsole: true);
             }
 
             var hub = CaveBuildCursorSettings.ResolveHubRoot();

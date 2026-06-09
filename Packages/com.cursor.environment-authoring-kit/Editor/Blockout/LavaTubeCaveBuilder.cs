@@ -60,6 +60,55 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void BuildCompleteCaveActiveScene() =>
             TryConfirmAndStartBuild(openMainSceneFirst: false, SurfaceBuildScope.FullWorld);
 
+        /// <summary>
+        /// Start FullWorld when the web planner wrote finalize JSON but the wizard gate lost its callback
+        /// (domain reload, opened planner without Build Complete Cave, etc.).
+        /// </summary>
+        public static bool TryStartFullWorldFromPlannerFinalize()
+        {
+            if (CaveBuildHubSessionReconcile.IsCoreBuildRunning())
+                return false;
+
+            if (!CaveBuildSessionConfig.HasFinalizedActive ||
+                !CaveBuildSessionConfig.TryReadWizardPhase(out var phase) ||
+                !string.Equals(phase, "finalized", System.StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            CaveBuildPauseController.ClearOnNewBuildSession();
+            if (!SamplePresetsExist())
+                SamplePresetsCreator.CreateAll();
+
+            EnvironmentKitSceneSafeguards.GuardActiveSceneForBuild();
+            ClearInvalidStoredGround();
+            LastSurfaceScope = SurfaceBuildScope.FullWorld;
+
+            var ground = ResolveGroundForBuild(LoadUserGround(), SurfaceBuildScope.FullWorld);
+            if (!ground.HasAnchor)
+            {
+                Debug.LogWarning(
+                    "[CaveBuild] Planner plan finalized but no Ground in scene — tag walkable terrain as Ground.");
+                return false;
+            }
+
+            var portalName = CaveBuildPortalSettings.PortalForBuild != null
+                ? CaveBuildPortalSettings.PortalForBuild.name
+                : "(auto-detect PortalFive)";
+
+            var active = CaveBuildSessionConfig.LoadActive();
+            if (active == null)
+                return false;
+
+            CaveBuildSessionConfig.ReloadAndApplyPlannerSession(out _);
+            CaveBuildSessionConfig.PrepareFreshBuild(active);
+            Debug.Log(
+                $"[CaveBuild] Planner finalize consumed — {active.label}, {CaveBuildSessionConfig.DescribeActiveTilePlan()}.");
+
+            CaveBuildWizardGate.BeginFinalizedBuild(() =>
+                StartFullWorldBuildAfterWizard(ground, portalName, openMainSceneFirst: false));
+            CaveBuildSessionConfig.WriteWizardState("started");
+            return true;
+        }
+
         [MenuItem(CaveBuildMenuPaths.BuildSurfaceOnly, false, 1)]
         public static void BuildSurfaceWorldOnlyActiveScene() =>
             TryConfirmAndStartBuild(openMainSceneFirst: false, SurfaceBuildScope.SurfaceOnly);
@@ -202,6 +251,31 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static bool TryConfirmAndStartBuild(bool openMainSceneFirst, SurfaceBuildScope scope)
         {
+            if (CaveBuildPauseController.UserPauseActive)
+            {
+                var hasTerrain = SurfaceTerrainTileExpansion.FindMainTerrainInScene() != null;
+                if (hasTerrain)
+                {
+                    var choice = EditorUtility.DisplayDialogComplex(
+                        "Build already paused",
+                        "A build is paused with terrain in the scene.\n\n" +
+                        "• Continue build — resume the queued pipeline (keeps terrain).\n" +
+                        "• Start new build — clears pause and may purge/rebuild terrain.\n\n" +
+                        "Use Continue build after a playtest break unless you intend to restart.",
+                        "Continue build",
+                        "Cancel",
+                        "Start new build");
+                    if (choice == 0)
+                    {
+                        CaveBuildPauseController.Continue();
+                        return false;
+                    }
+
+                    if (choice == 1)
+                        return false;
+                }
+            }
+
             CaveBuildPauseController.ClearOnNewBuildSession();
             if (!SamplePresetsExist())
                 SamplePresetsCreator.CreateAll();
@@ -223,15 +297,55 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var portalName = CaveBuildPortalSettings.PortalForBuild != null
                 ? CaveBuildPortalSettings.PortalForBuild.name
                 : "(auto-detect PortalFive)";
+            if (scope == SurfaceBuildScope.FullWorld)
+            {
+                CaveBuildWizardGate.RequestFullWorldBuild(() =>
+                    StartFullWorldBuildAfterWizard(ground, portalName, openMainSceneFirst));
+                return true;
+            }
+
+            return StartScopedBuildAfterConfirm(ground, portalName, openMainSceneFirst, scope);
+        }
+
+        static void StartFullWorldBuildAfterWizard(SceneGroundInfo ground, string portalName, bool openMainSceneFirst)
+        {
             _unifiedBuildRoll = CreateLayoutRoll();
 
-            if (scope == SurfaceBuildScope.FullWorld &&
-                !CaveBuildAutomatedFullWorldBootstrap.Prepare(
+            if (!CaveBuildAutomatedFullWorldBootstrap.Prepare(
                     ground,
                     _unifiedBuildRoll.Seed,
                     invalidateEntireLadder: false,
-                    out var blockMsg))
-                return false;
+                    out _))
+                return;
+
+            EnvironmentKitHubWindow.EnsureOpenForBuild();
+            if (!CaveBuildCompletionSummary.ConfirmStartBuild(
+                    ground, portalName, _unifiedBuildRoll, SurfaceBuildScope.FullWorld, out _))
+                return;
+
+            if (CaveBuildSessionConfig.HasFinalizedActive && CaveBuildSessionConfig.IsFastDemo())
+            {
+                Debug.Log(
+                    "[CaveBuild] Fast demo session — " + CaveBuildSessionConfig.Active.tileCount +
+                    " tiles, fresh seed " + _unifiedBuildRoll.Seed +
+                    ", props=" + (CaveBuildSessionConfig.Active.playDiskProps ? "on" : "off") + ".");
+            }
+
+            CaveBuildDemoAutoRecorder.OnHubBuildStarting(SurfaceBuildScope.FullWorld.ToString());
+            BuildInActiveScene(
+                openMainSceneFirst: openMainSceneFirst,
+                hideLegacyBlockout: true,
+                skipDialogs: true,
+                surfaceScope: SurfaceBuildScope.FullWorld);
+        }
+
+        static bool StartScopedBuildAfterConfirm(
+            SceneGroundInfo ground,
+            string portalName,
+            bool openMainSceneFirst,
+            SurfaceBuildScope scope)
+        {
+            _unifiedBuildRoll = CreateLayoutRoll();
 
             EnvironmentKitHubWindow.EnsureOpenForBuild();
             if (!CaveBuildCompletionSummary.ConfirmStartBuild(ground, portalName, _unifiedBuildRoll, scope, out _))
@@ -448,6 +562,110 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         internal static void ReleaseBuildLock() => _buildInProgress = false;
 
+        internal static void ArmResumeBuildLock()
+        {
+            if (_buildInProgress)
+                return;
+
+            CaveBuildPipelineCompletion.OnUserStartedBuild();
+            var buildSettings = CaveBuildCursorSettings.LoadOrCreate();
+            buildSettings.LoadFromPrefs();
+            CaveBuildEditorResponsiveness.ApplyForActiveBuild(buildSettings);
+            EnvironmentKitHardwareBudget.BeginEditorSession();
+            _buildInProgress = true;
+        }
+
+        /// <summary>Resume after playtest break — does not restart ground lay from batch 1 when research was in progress.</summary>
+        public static bool TryResumeFromPacedCheckpoint(
+            CaveBuildPacedStepPersistence.PacedStepSnapshot doc,
+            out string message)
+        {
+            message = string.Empty;
+            if (doc == null)
+            {
+                message = "Checkpoint document is null.";
+                return false;
+            }
+
+            if (_buildInProgress || CaveBuildStartupCoordinator.IsActive)
+            {
+                message = "Build already in progress.";
+                return false;
+            }
+
+            CaveBuildActionPacing.EmergencyAbortAll();
+            EditorUtility.ClearProgressBar();
+
+            CaveBuildPlaytestSessionSnapshot.TryLoad(out var snap);
+            snap ??= new CaveBuildPlaytestSessionSnapshot.SnapshotDoc();
+            if (snap.pacedStep <= 0)
+                snap.pacedStep = doc.pacedStep;
+            if (snap.seed == 0)
+                snap.seed = doc.seed;
+            if (snap.conceptIndex < 0)
+                snap.conceptIndex = doc.conceptIndex;
+            if (snap.terrainCount <= 0)
+                snap.terrainCount = doc.terrainCount;
+
+            if (snap.conceptIndex >= 0)
+                FullWorldGenerationStylePreset.SaveSelectedIndex(snap.conceptIndex);
+
+            ClearInvalidStoredGround();
+            LastSurfaceScope = SurfaceBuildScope.FullWorld;
+            var ground = ResolveGroundForBuild(LoadUserGround(), SurfaceBuildScope.FullWorld);
+            if (!ground.HasAnchor)
+            {
+                message = "No ground anchor — tag SurfaceTerrainMain as Ground.";
+                return false;
+            }
+
+            var seed = snap.seed != 0 ? snap.seed : doc.seed;
+            if (seed == 0)
+                seed = CreateLayoutRoll().Seed;
+
+            _unifiedBuildRoll = CaveLayoutRoll.CreateRandom(seed);
+            if (!CaveBuildAutomatedFullWorldBootstrap.Prepare(
+                    ground,
+                    _unifiedBuildRoll.Seed,
+                    invalidateEntireLadder: false,
+                    out message))
+                return false;
+
+            EnvironmentKitHubWindow.EnsureOpenForBuild();
+            EnvironmentKitSceneSafeguards.GuardActiveSceneForBuild();
+            CaveBuildStepCounter.RestoreSession(snap.pacedStep > 0 ? snap.pacedStep : doc.pacedStep);
+            CaveBuildDemoAutoRecorder.OnHubBuildStarting("playtest resume");
+            ArmResumeBuildLock();
+
+            if (CaveBuildFullWorldGridCheckpoint.TryResumeGridCheckpointSilent())
+            {
+                message = $"Resumed FullWorld grid (paced step {snap.pacedStep}).";
+                return true;
+            }
+
+            if (snap.researchSubStep >= 0 &&
+                snap.researchSubStep < CaveBuildPrePlacementResearch.QueuedResearchStepCount &&
+                snap.terrainCount < 9)
+            {
+                CaveBuildStartupCoordinator.QueueResumeAtResearch(
+                    ground,
+                    _unifiedBuildRoll,
+                    snap.researchSubStep,
+                    deferRelease => { if (!deferRelease) _buildInProgress = false; });
+                message =
+                    $"Resuming research step {snap.researchSubStep + 1}/" +
+                    $"{CaveBuildPrePlacementResearch.QueuedResearchStepCount} (paced {snap.pacedStep}).";
+                return true;
+            }
+
+            CaveBuildStartupCoordinator.QueueResumeAtSurfacePipeline(
+                ground,
+                _unifiedBuildRoll,
+                deferRelease => { if (!deferRelease) _buildInProgress = false; });
+            message = $"Resuming surface pipeline (paced step {snap.pacedStep}) — keeps terrain.";
+            return true;
+        }
+
         /// <param name="skipPreBuildGate">Internal auto-rebuild after Cursor — skips readiness block.</param>
         public static void BuildInActiveScene(
             bool openMainSceneFirst = false,
@@ -465,6 +683,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             CaveBuildPipelineCompletion.OnUserStartedBuild();
+            CaveBuildPersistedSessionReset.ClearForNewBuild();
             CaveBuildSurfaceCompletionGate.ResetForNewBuildSession();
             CaveTerrainPipelineOrchestrator.ResetWaitState();
             var buildSettings = CaveBuildCursorSettings.LoadOrCreate();
@@ -925,17 +1144,34 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             report.QualityAcceptable = finalQuality.MeetsShipTarget;
                         }
 
-                        CaveBuildCompletionSummary.ShowFinished(
-                            sceneName,
-                            report,
-                            roll,
-                            finalQuality,
-                            showDialog: !EnvironmentKitHubWindow.IsOpen);
+                        if (!CaveBuildPostBuildFinalizeGate.TryOfferPlayModeRecording(
+                                sceneName,
+                                report,
+                                roll,
+                                finalQuality,
+                                skipDialogs: EnvironmentKitHubWindow.IsOpen))
+                        {
+                            CaveBuildCompletionSummary.ShowFinished(
+                                sceneName,
+                                report,
+                                roll,
+                                finalQuality,
+                                showDialog: !EnvironmentKitHubWindow.IsOpen);
+                        }
+
                         CaveBuildDialogPolicy.EndUnifiedSession();
                     });
             }
             else
             {
+                if (CaveBuildPostBuildFinalizeGate.TryOfferPlayModeRecording(
+                        sceneName,
+                        report,
+                        roll,
+                        quality,
+                        skipDialogs))
+                    return;
+
                 CaveBuildCompletionSummary.ShowFinished(sceneName, report, roll, quality, showDialog: !skipDialogs);
             }
 

@@ -9,6 +9,7 @@ import {
   GAUSSIAN_SPLAT_UNITY_PAPERS,
 } from "./gaussian-splat-research-catalog.js";
 import { PIPELINE_RESPONSIVENESS_PAPERS } from "./pipeline-responsiveness-papers.js";
+import { FULLWORLD_CC0_FINALIZE_PAPERS } from "./fullworld-cc0-finalize-papers.js";
 import { MOUNTAIN_TERRAIN_PAPERS } from "./mountain-terrain-papers.js";
 import { MOUNTAIN_LABYRINTH_PAPERS } from "./mountain-labyrinth-papers.js";
 import {
@@ -614,6 +615,7 @@ export function papersForMinYear(minYear = RESEARCH_MIN_YEAR): ResearchEntry[] {
     ...GAUSSIAN_SPLAT_RESEARCH_PAPERS,
     ...GAUSSIAN_SPLAT_UNITY_PAPERS,
     ...PIPELINE_RESPONSIVENESS_PAPERS,
+    ...FULLWORLD_CC0_FINALIZE_PAPERS,
     ...MOUNTAIN_TERRAIN_PAPERS,
     ...MOUNTAIN_LABYRINTH_PAPERS,
     MOUNTAIN_LABYRINTH_DEFINITION,

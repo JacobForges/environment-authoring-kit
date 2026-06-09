@@ -249,7 +249,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildStepCounter.EndSession();
             Publish(force: true);
             _startedAt = 0;
-            CaveBuildDemoAutoRecorder.TryFinalizeOnBuildSessionEnd();
+            CaveBuildPostBuildFinalizeGate.OnRunStatusSessionEnded();
         }
 
         public static void BeginSession(string sceneName, int seed, bool additiveSurface)
@@ -340,6 +340,49 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _subOperationDetail = detail ?? string.Empty;
             RecordActivity("sub", FormatSubActionSummary());
             Publish(force: true);
+        }
+
+        /// <summary>Maps editor queue labels to Hub sub-action (always publishes — no pulse throttle).</summary>
+        public static void SetSubOperationFromQueueLabel(string queueLabel)
+        {
+            if (string.IsNullOrEmpty(queueLabel))
+                return;
+
+            var detail = queueLabel;
+            const string caveQueue = "[Cave|Queue] ";
+            const string surfaceQueue = "[Surface|Queue] ";
+            if (detail.StartsWith(caveQueue, StringComparison.Ordinal))
+                detail = detail.Substring(caveQueue.Length);
+            else if (detail.StartsWith(surfaceQueue, StringComparison.Ordinal))
+                detail = detail.Substring(surfaceQueue.Length);
+
+            var operation =
+                detail.Contains("CC0", StringComparison.OrdinalIgnoreCase) ||
+                detail.Contains("Titan", StringComparison.OrdinalIgnoreCase) ||
+                detail.Contains("Hollow", StringComparison.OrdinalIgnoreCase) ||
+                detail.Contains("boss tree", StringComparison.OrdinalIgnoreCase)
+                    ? "Full AAA"
+                    : detail.Contains("FullWorld", StringComparison.OrdinalIgnoreCase) ||
+                      detail.Contains("grid", StringComparison.OrdinalIgnoreCase) ||
+                      detail.Contains("terraform", StringComparison.OrdinalIgnoreCase) ||
+                      detail.Contains("weld", StringComparison.OrdinalIgnoreCase) ||
+                      detail.Contains("snap", StringComparison.OrdinalIgnoreCase) ||
+                      detail.Contains("ground lay", StringComparison.OrdinalIgnoreCase)
+                        ? "FullWorld grid"
+                        : "editor queue";
+
+            SetSubOperation(operation, StripDuplicateOperationPrefix(operation, detail));
+        }
+
+        static string StripDuplicateOperationPrefix(string operation, string detail)
+        {
+            if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(detail))
+                return detail;
+
+            var prefix = operation + " — ";
+            return detail.StartsWith(prefix, StringComparison.Ordinal)
+                ? detail.Substring(prefix.Length)
+                : detail;
         }
 
         public static void PulseSubOperation(string operation, string detail)

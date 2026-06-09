@@ -24,6 +24,7 @@ FullWorld builds were freezing at **neighbor seam stitch 8/8** while the **Cave 
 | Editor UI | Hub reads in-memory status + activity feed; must not rely on file-only during freezes |
 | Status file | Write to `Library/EnvironmentKit/` every pulse; Assets mirror every 8s |
 | Long builds | `CaveBuildActionPacing.ScheduleHeavyChain` + `TouchQueueActivity` |
+| CC0 finalize (~70% grid) | See [RESEARCH_FULLWORLD_CC0_FINALIZE.md](RESEARCH_FULLWORLD_CC0_FINALIZE.md) — scoped `SaveAssetIfDirty`, tiered MemoryGuard, no `SaveAssets()` |
 
 ---
 

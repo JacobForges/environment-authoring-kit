@@ -252,5 +252,11 @@ namespace EnvironmentAuthoringKit.Editor
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);
         }
+
+        /// <summary>
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RenderRecapBotAvatar -quit
+        /// Env: RECAP_BOT_ENVELOPE_JSON, RECAP_BOT_FRAME_DIR.
+        /// </summary>
+        public static void RenderRecapBotAvatar() => CaveBuildRecapBotAvatarRecorder.RenderFromEnvironment();
     }
 }

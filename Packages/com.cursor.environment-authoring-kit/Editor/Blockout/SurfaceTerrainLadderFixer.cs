@@ -131,6 +131,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             float extent,
             Action<bool, string> onComplete)
         {
+            if (CaveBuildSessionConfig.SkipTerrainHelperScripts(null))
+            {
+                onComplete?.Invoke(false, "Planner fast demo — skipped crater repair.");
+                return;
+            }
+
             var terrains = SurfaceTerrainPlayRegion.CollectSurfaceTerrains(ground.Terrain);
             var totalCrater = 0;
             var tileIndex = 0;

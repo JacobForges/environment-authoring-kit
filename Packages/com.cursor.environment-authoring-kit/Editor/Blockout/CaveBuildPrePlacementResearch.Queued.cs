@@ -12,14 +12,40 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// Paced pre-placement research (6 queue steps) — never blocks startup after layout roll in one frame.
         /// Uses <see cref="CaveBuildResearchExecutionBrief"/> + ResearchCache per research-workflow.md.
         /// </summary>
+        static int _lastActiveSubStep = -1;
+
+        public static int LastActiveSubStep => _lastActiveSubStep;
+
         public static void QueueRunBeforeAnyPlacement(
             SceneGroundInfo ground,
             WorldGenerationRequest request,
             bool additiveSurface,
             Action<bool, string> onComplete)
         {
+            QueueResumeFromSubStep(ground, request, additiveSurface, 0, onComplete);
+        }
+
+        public static void QueueResumeFromSubStep(
+            SceneGroundInfo ground,
+            WorldGenerationRequest request,
+            bool additiveSurface,
+            int startSubStep,
+            Action<bool, string> onComplete)
+        {
             if (onComplete == null)
                 return;
+
+            _lastActiveSubStep = Mathf.Clamp(startSubStep, 0, QueuedResearchStepCount - 1);
+
+            if (request != null &&
+                (CaveBuildSpeedDemoPolicy.IsActive(request) ||
+                 (CaveBuildSessionConfig.HasFinalizedActive &&
+                  !CaveBuildSessionConfig.Active.prePlacementResearch)))
+            {
+                TryPassSpeedDemoSkip(additiveSurface, request.Seed, out var speedMsg);
+                onComplete(true, speedMsg);
+                return;
+            }
 
             if (request != null && IsGatePassedForSeed(request.Seed))
             {
@@ -44,7 +70,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 Request = request,
                 AdditiveSurface = additiveSurface,
-                SubStep = 0,
+                SubStep = _lastActiveSubStep,
                 OnComplete = onComplete,
             };
 
@@ -77,6 +103,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void RunQueuedResearchSubStep(QueuedResearchState state)
         {
+            _lastActiveSubStep = state.SubStep;
             CaveBuildProgressUI.ShowThrottled(
                 "Environment Kit",
                 $"[Startup] Research {state.SubStep + 1}/{QueuedResearchStepCount}: {QueuedResearchStepLabels[state.SubStep]}…",

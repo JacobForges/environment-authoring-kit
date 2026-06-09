@@ -145,6 +145,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 });
         }
 
+        /// <summary>Playtest resume — research already done or being resumed separately.</summary>
+        public static void ResumeSurfaceBuildAfterResearch(
+            SceneGroundInfo ground,
+            WorldGenerationRequest request,
+            System.Action<SurfaceWorldBuildReport> onComplete)
+        {
+            if (!TryBeginSurfaceWorldSetup(ground, request, out var replaceSurface, out var failReport))
+            {
+                CaveBuildSurfaceCompletionGate.MarkSurfacePipelineFailed(request);
+                onComplete?.Invoke(failReport);
+                return;
+            }
+
+            QueueSurfaceWorldBuildAfterResearch(ground, request, replaceSurface, onComplete);
+        }
+
         static void QueueSurfaceWorldBuildAfterResearch(
             SceneGroundInfo ground,
             WorldGenerationRequest request,

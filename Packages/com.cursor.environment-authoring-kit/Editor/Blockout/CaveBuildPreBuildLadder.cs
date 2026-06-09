@@ -309,7 +309,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             g.Score = 60;
             g.Issues.Add(CaveBuildCursorSettings.GraderCredentialHint());
-            g.Fixes.Add("Hub → Settings → pick provider + key, or Build → Apply Offline (No API) for procedural-only.");
+            g.Fixes.Add("Hub → Settings → pick provider + key, or leave AI off for procedural-only planner builds.");
         }
 
         static void GradeResearchManifest(PreBuildStageGrade g)

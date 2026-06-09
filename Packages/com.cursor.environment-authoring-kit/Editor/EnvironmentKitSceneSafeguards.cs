@@ -16,6 +16,9 @@ namespace EnvironmentAuthoringKit.Editor
     {
         public const string AutoSaveBeforeBuildPrefKey = "EnvironmentKit_AutoSaveScenesBeforeBuild";
         public const string NeverSwitchSceneDuringBuildPrefKey = "EnvironmentKit_NeverSwitchSceneDuringBuild";
+        public const string PreserveWorldOnPlayPrefKey = "EnvironmentKit_PreserveWorldOnPlay";
+
+        const string DefaultSceneSaveRel = "Assets/Scenes/MainScene.unity";
 
         public static bool AutoSaveBeforeBuildEnabled
         {
@@ -29,14 +32,46 @@ namespace EnvironmentAuthoringKit.Editor
             set => EditorPrefs.SetBool(NeverSwitchSceneDuringBuildPrefKey, value);
         }
 
+        public static bool PreserveWorldOnPlayEnabled
+        {
+            get => EditorPrefs.GetBool(PreserveWorldOnPlayPrefKey, true);
+            set => EditorPrefs.SetBool(PreserveWorldOnPlayPrefKey, value);
+        }
+
         public static bool IsKitBuildSessionActive =>
             LavaTubeCaveBuilder.IsBuildInProgress ||
             CaveBuildStartupCoordinator.IsActive ||
             LavaTubeCaveBuildPipeline.IsPhasedBuildActive;
 
+        /// <summary>Assign a disk path so paced checkpoints can write MainScene + terrain.</summary>
+        public static void EnsureActiveSceneHasSavePath()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            var scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.IsNullOrEmpty(scene.path))
+                return;
+
+            if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
+            {
+                if (!AssetDatabase.IsValidFolder("Assets"))
+                    return;
+                AssetDatabase.CreateFolder("Assets", "Scenes");
+            }
+
+            if (EditorSceneManager.SaveScene(scene, DefaultSceneSaveRel))
+            {
+                Debug.Log(
+                    "[Environment Kit] Assigned save path for active scene — " + DefaultSceneSaveRel);
+            }
+        }
+
         /// <summary>Call at the start of Hub / menu builds — saves dirty scenes without prompting.</summary>
         public static void GuardActiveSceneForBuild()
         {
+            EnsureActiveSceneHasSavePath();
+
             if (!AutoSaveBeforeBuildEnabled)
             {
                 if (HasAnyDirtyScenes())
@@ -98,7 +133,11 @@ namespace EnvironmentAuthoringKit.Editor
         /// <summary>
         /// Checkpoint snapshot: active scene (even if Unity did not mark dirty) + all dirty scenes + terrain/assets.
         /// </summary>
-        public static bool SaveBuildCheckpointSnapshot(string context, out string detail)
+        public static bool SaveBuildCheckpointSnapshot(string context, out string detail) =>
+            SaveBuildCheckpointSnapshot(context, out detail, flushAssets: false);
+
+        /// <param name="flushAssets">When true, persists TerrainData + prefabs even during long builds (milestone saves).</param>
+        public static bool SaveBuildCheckpointSnapshot(string context, out string detail, bool flushAssets)
         {
             detail = string.Empty;
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -116,11 +155,20 @@ namespace EnvironmentAuthoringKit.Editor
             }
 
             savedScenes += SaveAllDirtyScenesSilently();
-            AssetDatabase.SaveAssets();
+            var wroteAssets = false;
+            if (flushAssets || !CaveBuildEditorResponsiveness.IsLongBuildActive)
+            {
+                AssetDatabase.SaveAssets();
+                wroteAssets = true;
+            }
 
             detail = savedScenes > 0
-                ? $"saved {savedScenes} scene(s) + assets"
-                : "flushed assets (active scene had no path or save failed)";
+                ? wroteAssets
+                    ? $"saved {savedScenes} scene(s) + assets"
+                    : $"saved {savedScenes} scene(s); asset flush deferred during long build"
+                : wroteAssets
+                    ? "flushed assets (active scene had no path or save failed)"
+                    : "flushed deferred (long build — no project-wide SaveAssets)";
 
             if (!string.IsNullOrEmpty(context))
             {

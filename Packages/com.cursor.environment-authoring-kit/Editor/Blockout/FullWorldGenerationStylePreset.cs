@@ -71,14 +71,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var index = FullWorldConceptLayoutCatalog.ResolveIndexForBuild(request.Seed);
             FullWorldConceptLayoutCatalog.ApplyByIndex(request, index);
+            if (request.SurfaceScope == SurfaceBuildScope.FullWorld && request.RunEnhancementPhases)
+            {
+                var rng = new System.Random(request.Seed ^ (index * 7919 + 104729));
+                CaveBuildEnhancementCreativePasses.ApplyRequestRolls(request, rng);
+            }
+
             WriteActiveStyleFile(request, index);
+            if (request.SurfaceScope == SurfaceBuildScope.FullWorld)
+                CaveBuildConceptSession.LockForBuild(index, request.Seed);
 
             if (request.SurfaceScope != SurfaceBuildScope.FullWorld)
                 return;
 
+            var tilePlan = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
             Debug.Log(
                 $"[CaveBuild] Concept layout {index}: {FullWorldConceptLayoutCatalog.GetDisplayName(index)} " +
-                $"({request.GenerationStyleId}). Guide: {ConceptImageRelForIndex(index)}");
+                $"({request.GenerationStyleId}) — ~{tilePlan} terrain tiles, seed {request.Seed}, " +
+                $"layoutVariant {request.SurfaceTileLayoutVariant}. Guide: {ConceptImageRelForIndex(index)}");
         }
 
         public static void WriteActiveStyleFile(WorldGenerationRequest request, int? styleIndexOverride = null)

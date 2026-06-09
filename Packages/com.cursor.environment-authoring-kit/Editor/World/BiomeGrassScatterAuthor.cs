@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using EnvironmentAuthoringKit.Editor;
 using EnvironmentAuthoringKit.Editor.Blockout;
 using EnvironmentAuthoringKit.Editor.Generation;
@@ -14,6 +15,65 @@ namespace EnvironmentAuthoringKit.Editor.World
     {
         const int MinGrassInstancesBeforeSkip = 120;
 
+        public static void QueueEnsureBiomePropsScattered(
+            Terrain mainTerrain,
+            WorldGenerationRequest request,
+            Transform surfaceRoot,
+            Action onComplete)
+        {
+            if (mainTerrain == null || request == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (!TryBeginScatterSession(mainTerrain, request, ref surfaceRoot, out var session, out var vegRoot))
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var placed = 0;
+            void PlaceNextChunk()
+            {
+                if (session.IsComplete)
+                {
+                    if (SurfaceIntelligentPropPlacer.TryFinalizeCategoryPlacementSession(
+                            mainTerrain,
+                            vegRoot,
+                            SurfacePropCategory.Grass,
+                            session,
+                            out var finalizeMsg))
+                    {
+                        CaveBuildEditorLog.LogSurface(
+                            $"[Surface] Biome grass scatter — {placed} CC0 grass instances ({finalizeMsg}).",
+                            forceUnityConsole: true);
+                    }
+
+                    onComplete?.Invoke();
+                    return;
+                }
+
+                CaveBuildActionPacing.ScheduleLight(
+                    () =>
+                    {
+                        SurfaceIntelligentPropPlacer.TryPlaceCategoryLadderPassChunk(
+                            mainTerrain,
+                            vegRoot,
+                            request.Seed + 0x47524153,
+                            SurfacePropCategory.Grass,
+                            session,
+                            SurfaceIntelligentPropPlacer.DefaultPropsPerEditorChunk,
+                            out var chunk);
+                        placed += chunk;
+                        PlaceNextChunk();
+                    },
+                    CaveBuildPipelineDomains.QueueLabel("surface biome grass scatter"));
+            }
+
+            PlaceNextChunk();
+        }
+
         public static void EnsureBiomePropsScattered(
             Terrain mainTerrain,
             WorldGenerationRequest request,
@@ -22,17 +82,57 @@ namespace EnvironmentAuthoringKit.Editor.World
             if (mainTerrain == null || request == null)
                 return;
 
+            if (!TryBeginScatterSession(mainTerrain, request, ref surfaceRoot, out var session, out var vegRoot))
+                return;
+
+            var placed = 0;
+            while (!session.IsComplete)
+            {
+                SurfaceIntelligentPropPlacer.TryPlaceCategoryLadderPassChunk(
+                    mainTerrain,
+                    vegRoot,
+                    request.Seed + 0x47524153,
+                    SurfacePropCategory.Grass,
+                    session,
+                    SurfaceIntelligentPropPlacer.DefaultPropsPerEditorChunk * 2,
+                    out var chunk);
+                placed += chunk;
+            }
+
+            if (SurfaceIntelligentPropPlacer.TryFinalizeCategoryPlacementSession(
+                    mainTerrain,
+                    vegRoot,
+                    SurfacePropCategory.Grass,
+                    session,
+                    out var finalizeMsg))
+            {
+                CaveBuildEditorLog.LogSurface(
+                    $"[Surface] Biome grass scatter — {placed} CC0 grass instances ({finalizeMsg}).",
+                    forceUnityConsole: true);
+            }
+        }
+
+        static bool TryBeginScatterSession(
+            Terrain mainTerrain,
+            WorldGenerationRequest request,
+            ref Transform surfaceRoot,
+            out SurfaceIntelligentPropPlacer.CategoryPlacementSession session,
+            out Transform vegRoot)
+        {
+            session = null;
+            vegRoot = null;
+
             Cc0ContentImportUtility.EnsureAll(importItems: true);
             surfaceRoot ??= mainTerrain.transform.parent;
 
-            var vegRoot = surfaceRoot != null ? surfaceRoot.Find(SurfaceIntelligentPropPlacer.VegetationLayerName) : null;
+            vegRoot = surfaceRoot != null ? surfaceRoot.Find(SurfaceIntelligentPropPlacer.VegetationLayerName) : null;
             var existingGrass = CountGrassInstances(vegRoot);
             if (existingGrass >= MinGrassInstancesBeforeSkip)
             {
                 CaveBuildEditorLog.LogSurface(
                     $"[Surface] Biome grass scatter skipped — {existingGrass} vegetation instances already placed.",
                     forceUnityConsole: false);
-                return;
+                return false;
             }
 
             var catalog = SurfaceIntelligentPropPlacer.LoadVegetationCatalog();
@@ -43,7 +143,7 @@ namespace EnvironmentAuthoringKit.Editor.World
             {
                 CaveBuildEditorLog.LogSurfaceWarning(
                     "[Surface] Biome grass scatter — no G-G/G-C/G-T prefabs found after CC0 import.");
-                return;
+                return false;
             }
 
             SurfaceIntelligentPropPlacer.ImportCatalogPrefabsOnce(catalog);
@@ -74,39 +174,15 @@ namespace EnvironmentAuthoringKit.Editor.World
                     null,
                     biomeCatalog,
                     request,
-                    out var session,
+                    out session,
                     out vegRoot,
                     out var beginMsg))
             {
                 CaveBuildEditorLog.LogSurfaceWarning($"[Surface] Biome grass scatter begin failed: {beginMsg}");
-                return;
+                return false;
             }
 
-            var placed = 0;
-            while (!session.IsComplete)
-            {
-                SurfaceIntelligentPropPlacer.TryPlaceCategoryLadderPassChunk(
-                    mainTerrain,
-                    vegRoot,
-                    request.Seed + 0x47524153,
-                    SurfacePropCategory.Grass,
-                    session,
-                    SurfaceIntelligentPropPlacer.DefaultPropsPerEditorChunk * 2,
-                    out var chunk);
-                placed += chunk;
-            }
-
-            if (SurfaceIntelligentPropPlacer.TryFinalizeCategoryPlacementSession(
-                    mainTerrain,
-                    vegRoot,
-                    SurfacePropCategory.Grass,
-                    session,
-                    out var finalizeMsg))
-            {
-                CaveBuildEditorLog.LogSurface(
-                    $"[Surface] Biome grass scatter — {placed} CC0 grass instances ({finalizeMsg}).",
-                    forceUnityConsole: true);
-            }
+            return true;
         }
 
         static int CountGrassInstances(Transform vegRoot)

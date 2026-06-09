@@ -161,8 +161,8 @@ def total_hold_seconds(milestones: list[dict], spec: dict) -> float:
 def preview_milestone_indices(
     milestones: list[dict[str, Any]],
     *,
-    max_beats: int = 24,
-    checkpoint_slots: int = 7,
+    max_beats: int = 12,
+    checkpoint_slots: int = 5,
 ) -> list[int]:
     """Preview cut: spaced checkpoints plus every subbeat between them (sub-step captions)."""
     n = len(milestones)

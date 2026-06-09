@@ -33,6 +33,79 @@ def open_recap_video(path: Path) -> None:
     subprocess.run(["open", str(p)], check=False)
 
 
+def _milestone_wants_play_broll(m: dict[str, Any]) -> bool:
+    blob = " ".join(
+        str(m.get(k) or "") for k in ("chapter", "phase", "line1", "captionKey", "sub")
+    ).lower()
+    return any(
+        token in blob
+        for token in ("play disk", "playtest", "play mode", "locomotion readability")
+    )
+
+
+def _resolve_playthrough_movs(run_dir: Path) -> list[Path]:
+    hybrid = _load("hybrid", "hybrid_recap_common.py")
+    return hybrid.resolve_playthrough_recordings(run_dir)
+
+
+def _apply_bot_avatar_overlay(
+    ffmpeg: str,
+    final_silent: Path,
+    wav: Path,
+    work: Path,
+    run_dir: Path,
+    spec: dict[str, Any],
+) -> Path:
+    """Layer Jacob Adkins's Bot lip-sync avatar before narration mux."""
+    if not (spec.get("botAvatarOverlay", True) and spec.get("botAvatarLipSync", True)):
+        return final_silent
+    narr = _load("narrator", "demo-recap-narrator.py")
+    if not wav.is_file() or not narr.wav_is_audible(wav):
+        print("Bot avatar: skipped (no audible narration.wav)", flush=True)
+        return final_silent
+    bot_mod = _load("bot", "jacob-adkins-bot.py")
+    envkit = _load("envkit", "envkit_paths.py")
+    ffprobe = narr.find_ffprobe(ffmpeg)
+    approved_root = envkit.approved_dir()
+    bot_mod.ensure_animated_avatar_asset(approved_root, ffmpeg)
+    avatar_export = run_dir / "JacobAdkinsBot-Avatar"
+    bot_video = work / "_final_video_bot.mp4"
+    lipsync_mov = work / "_bot_lipsync" / f"{bot_mod.LIPSYNC_BASENAME}.mov"
+    lipsync_manifest = work / "_bot_lipsync" / f"{bot_mod.LIPSYNC_MANIFEST_BASENAME}.json"
+    if lipsync_mov.is_file() and lipsync_mov.stat().st_size > 1024 * 1024:
+        if bot_mod.lipsync_cache_matches_spec(lipsync_manifest, spec):
+            print(f"Reusing lip-sync avatar → {lipsync_mov.name}", flush=True)
+            bot_mod.apply_animated_avatar_to_video(
+                ffmpeg, final_silent, bot_video, lipsync_mov, spec=spec,
+            )
+            if bot_video.is_file():
+                avatar_export.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.copy2(lipsync_mov, avatar_export / lipsync_mov.name)
+                except OSError as exc:
+                    print(f"WARNING: avatar export copy skipped: {exc}", flush=True)
+                return bot_video
+        else:
+            print(
+                "Stale lip-sync cache (procedural vs Unity cyborg) — regenerating avatar…",
+                flush=True,
+            )
+            shutil.rmtree(work / "_bot_lipsync", ignore_errors=True)
+    if bot_mod.generate_lipsync_avatar_for_narration(
+        wav,
+        final_silent,
+        bot_video,
+        ffmpeg,
+        ffprobe,
+        layer_export=avatar_export,
+        spec=spec,
+    ):
+        print(f"Lip-sync layered avatar baked → {bot_video}", flush=True)
+        return bot_video
+    print("Bot avatar: lip-sync generation failed — video without avatar", flush=True)
+    return final_silent
+
+
 def find_ffmpeg() -> str:
     for c in ("ffmpeg", "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"):
         try:
@@ -170,11 +243,7 @@ def _encode_timelapse(
     symlink_seq(seq, picked)
     input_fps = max(6.0, min(12.0, len(picked) / sec))
     enc_fps = min(fps, int(spec.get("timelapseEncodeFps", 60)))
-    vf = (
-        f"{prep_vf(spec)},minterpolate=fps={enc_fps}:mi_mode=blend,"
-        "fade=t=in:st=0:d=0.8,"
-        f"fade=t=out:st={max(0.0, sec - 0.7):.2f}:d=0.7"
-    )
+    vf = _timelapse_vf(spec, enc_fps, sec, fade_in=0.8, fade_out=0.7)
     subprocess.run(
         [
             ffmpeg, "-y",
@@ -237,11 +306,7 @@ def bridge_segment(ffmpeg: str, frames: list[Path], out: Path, spec: dict[str, A
     symlink_seq(seq, picked)
     input_fps = max(4.0, len(picked) / sec)
     enc_fps = min(fps, int(spec.get("timelapseEncodeFps", 60)))
-    vf = (
-        f"{prep_vf(spec)},minterpolate=fps={enc_fps}:mi_mode=blend,"
-        "fade=t=in:st=0:d=1.0,"
-        f"fade=t=out:st={max(0.0, sec - 0.8):.2f}:d=0.8"
-    )
+    vf = _timelapse_vf(spec, enc_fps, sec, fade_in=1.0, fade_out=0.8)
     subprocess.run(
         [
             ffmpeg, "-y",
@@ -255,6 +320,25 @@ def bridge_segment(ffmpeg: str, frames: list[Path], out: Path, spec: dict[str, A
     )
 
 
+def _caption_stagger_sec(spec: dict[str, Any]) -> tuple[float, float, float, float, float, float, float]:
+    """Key fade, bullet base delay, stagger, bullet fade, future delay, future fade, read dwell."""
+    return (
+        float(spec.get("captionLine1FadeSec", 2.5)),
+        float(spec.get("captionLine2DelaySec", 3.0)),
+        float(spec.get("captionBulletStaggerSec", 1.8)),
+        float(spec.get("captionBulletFadeSec", 2.0)),
+        float(spec.get("captionLine3DelaySec", 11.0)),
+        float(spec.get("captionFutureFadeSec", 2.0)),
+        float(spec.get("captionReadPauseSec", 7.0)),
+    )
+
+
+def _bullet_alpha_at(t_sec: float, bi: int, spec: dict[str, Any]) -> float:
+    _, base, stagger, fade, _, _, _ = _caption_stagger_sec(spec)
+    start = base + bi * stagger
+    return min(1.0, max(0.0, (t_sec - start) / max(0.01, fade)))
+
+
 def _hold_keyframe_indices(
     total_frames: int,
     l2_f: int,
@@ -263,8 +347,11 @@ def _hold_keyframe_indices(
     fade_f: int,
     l1_fade: int,
     read_pause_f: int = 0,
+    *,
+    fps: int = 30,
+    spec: dict[str, Any] | None = None,
 ) -> list[int]:
-    keys = {
+    keys: set[int] = {
         0,
         total_frames - 1,
         l1_fade,
@@ -275,7 +362,35 @@ def _hold_keyframe_indices(
         delay_f,
         min(total_frames - 1, delay_f + fade_f),
     }
+    if spec:
+        l1s, b0, stagger, bfade, f0, ffade, _dwell = _caption_stagger_sec(spec)
+        l1_f = max(1, int(l1s * fps))
+        keys.update(range(0, min(total_frames, l1_f + 1)))
+        for bi in range(3):
+            start = int((b0 + bi * stagger) * fps)
+            end = min(total_frames, start + max(1, int(bfade * fps)) + 1)
+            keys.update(range(start, end))
+        f_start = int(f0 * fps)
+        keys.update(range(f_start, min(total_frames, f_start + max(1, int(ffade * fps)) + 1)))
+        dwell_start = min(total_frames - 1, f_start + max(1, int(ffade * fps)))
+        step = max(1, fps // 2)
+        keys.update(range(dwell_start, total_frames, step))
     return sorted(i for i in keys if 0 <= i < total_frames)
+
+
+def _timelapse_vf(spec: dict[str, Any], enc_fps: int, sec: float, *, fade_in: float, fade_out: float) -> str:
+    base = prep_vf(spec)
+    if spec.get("staticSceneMotion", True):
+        return (
+            f"{base},fps={enc_fps:.3f},"
+            f"fade=t=in:st=0:d={fade_in:.2f},"
+            f"fade=t=out:st={max(0.0, sec - fade_out):.2f}:d={fade_out:.2f}"
+        )
+    return (
+        f"{base},minterpolate=fps={enc_fps}:mi_mode=blend,"
+        f"fade=t=in:st=0:d={fade_in:.2f},"
+        f"fade=t=out:st={max(0.0, sec - fade_out):.2f}:d={fade_out:.2f}"
+    )
 
 
 def hold_segment(
@@ -330,10 +445,7 @@ def _hold_segment_build(
     show_ann = bool(spec.get("showAnnotations", True))
     ann_delay = float(spec.get("annotationDelaySec", 5.0))
     ann_fade = float(spec.get("annotationFadeSec", 0.65))
-    l2 = float(spec.get("captionLine2DelaySec", 1.5))
-    l3 = float(spec.get("captionLine3DelaySec", 3.0))
-    if milestone.get("beatKind") == "subbeat":
-        l3 = min(l3, float(spec.get("captionLine3DelaySecSubbeat", 1.8)))
+    l1s, l2, _, _, l3, ffade, _dwell = _caption_stagger_sec(spec)
 
     img = compose.Image.open(frame_path).convert("RGB")
     if spec.get("videoEnhance", True):
@@ -345,8 +457,8 @@ def _hold_segment_build(
     delay_f = min(total_frames - 1, int(ann_delay * fps))
     fade_f = max(1, int(ann_fade * fps))
     l2_f, l3_f = int(l2 * fps), int(l3 * fps)
-    l1_fade = max(1, int(float(spec.get("captionLine1FadeSec", 1.1)) * fps))
-    read_pause_f = max(1, int(float(spec.get("captionReadPauseSec", 2.0)) * fps))
+    l1_fade = max(1, int(l1s * fps))
+    read_pause_f = max(1, int(_dwell * fps))
     use_opencv = milestone.get("annotationSource") in ("opencv", "cursor") and milestone.get("regions")
     chapter_focus = bool(spec.get("chapterFocusAnnotations", False))
     keyframe_mode = bool(spec.get("holdKeyframeMode", True))
@@ -356,15 +468,19 @@ def _hold_segment_build(
     _clear_seq_pngs(seq_dir)
 
     indices = (
-        _hold_keyframe_indices(total_frames, l2_f, l3_f, delay_f, fade_f, l1_fade, read_pause_f)
+        _hold_keyframe_indices(
+            total_frames, l2_f, l3_f, delay_f, fade_f, l1_fade, read_pause_f, fps=fps, spec=spec
+        )
         if keyframe_mode
         else list(range(total_frames))
     )
 
     for seq_i, fi in enumerate(indices):
-        line1_a = min(1.0, fi / l1_fade)
-        line2_a = min(1.0, max(0, fi - l2_f) / max(1, l1_fade)) if fi >= l2_f else 0.0
-        line3_a = min(1.0, max(0, fi - l3_f) / max(1, l1_fade)) if fi >= l3_f else 0.0
+        t_sec = fi / max(1, fps)
+        line1_a = min(1.0, t_sec / max(0.01, l1s))
+        bullet_alphas = [_bullet_alpha_at(t_sec, bi, spec) for bi in range(3)]
+        line2_a = max(bullet_alphas) if bullet_alphas else 0.0
+        line3_a = min(1.0, max(0.0, (t_sec - l3) / max(0.01, ffade)))
         if fi < delay_f:
             ann_a = 0.0
         elif fi < delay_f + fade_f:
@@ -374,9 +490,11 @@ def _hold_segment_build(
         cine_t = (fi / max(1, total_frames - 1)) if use_cine else None
         fr = compose.render_captioned_frame(
             img,
-            line1=milestone.get("line1", ""),
+            line1=milestone.get("captionKey") or milestone.get("line1", ""),
             line2=milestone.get("line2", ""),
-            line3=milestone.get("line3"),
+            line3=milestone.get("captionFuture") or milestone.get("line3"),
+            caption_bullets=milestone.get("captionBullets"),
+            future_hint=milestone.get("captionFuture") or milestone.get("line3"),
             chapter=str(milestone.get("chapter", ""))[:52],
             index=index,
             total=total,
@@ -393,6 +511,12 @@ def _hold_segment_build(
             scene_fit=str(spec.get("sceneFit", "contain")),
             cinematic_t=cine_t,
             cinematic_seed=index,
+            javafx_effects=bool(spec.get("javafxEffects", True)),
+            frame_index=fi,
+            total_frames=total_frames,
+            javafx_spec=spec,
+            bullet_alphas=bullet_alphas,
+            hold_time_sec=t_sec,
         )
         fr.save(seq_dir / f"f_{seq_i:06d}.png")
 
@@ -401,7 +525,10 @@ def _hold_segment_build(
         # Spread keyframes across full hold — never use a high min fps (that truncates to ~1s).
         input_fps = max(0.2, n_keys / max(hold_sec, 0.5))
         enc_fps = min(fps, int(spec.get("timelapseEncodeFps", 60)))
-        vf = f"{prep_vf(spec)},minterpolate=fps={enc_fps}:mi_mode=blend"
+        if spec.get("staticSceneMotion", True):
+            vf = f"{prep_vf(spec)},fps={enc_fps}"
+        else:
+            vf = f"{prep_vf(spec)},minterpolate=fps={enc_fps}:mi_mode=blend"
     else:
         input_fps = fps
         enc_fps = min(fps, int(spec.get("timelapseEncodeFps", 60)))
@@ -486,6 +613,7 @@ def _compose_presentation_impl(
     for m in milestones:
         m["frame"] = min(max(0, int(m.get("frame", 0))), len(frames) - 1)
         captions.fill_milestone_captions(m)
+        captions.fill_milestone_narrator_script(m, force=True)
     opencv.sync_region_labels_from_timeline(milestones)
     spec["_milestoneFrames"] = [int(m.get("frame", 0)) for m in all_milestones]
 
@@ -590,6 +718,21 @@ def _compose_presentation_impl(
     clip_plan.append(("bridge", bridge_mp4, do_bridge))
     clip_idx += 1
 
+    playthroughs: list[Path] = []
+    playthrough_idx = 0
+    if spec.get("presentationPlayModeBroll", True):
+        playthroughs = _resolve_playthrough_movs(run_dir)
+        if playthroughs:
+            print(
+                f"Play Mode B-roll: {len(playthroughs)} screen recording(s) → inserts after play-disk beats",
+                flush=True,
+            )
+        else:
+            print(
+                "Play Mode B-roll: no uploads/playthroughs/*.mp4|*.mov — Scene view only",
+                flush=True,
+            )
+
     prev_f = 0
     for mi, m in enumerate(milestones):
         fidx = int(m["frame"])
@@ -632,6 +775,29 @@ def _compose_presentation_impl(
         clip_plan.append((f"hold_{mi}", hold, do_hold))
         hold_clip_indices.append(clip_idx)
         clip_idx += 1
+
+        if playthroughs and _milestone_wants_play_broll(m):
+            mov = playthroughs[playthrough_idx % len(playthroughs)]
+            playthrough_idx += 1
+            play_out = work / f"seg_play_{mi:03d}.mp4"
+            broll_sec = float(spec.get("playModeBrollSec", 42.0))
+            start_sec = float(m.get("playthroughStartSec", 0.0))
+
+            def do_play(
+                play_out=play_out,
+                mov=mov,
+                start_sec=start_sec,
+                broll_sec=broll_sec,
+                mi=mi,
+            ) -> None:
+                if _reuse_cached_segment(narration_only, spec, play_out, f"play_{mi}"):
+                    return
+                hybrid = _load("hybrid", "hybrid_recap_common.py")
+                hybrid.screen_segment(ffmpeg, mov, play_out, start_sec, broll_sec)
+
+            clip_plan.append((f"play_{mi}", play_out, do_play))
+            clip_idx += 1
+
         prev_f = fidx
 
     if prev_f < len(frames) - 8:
@@ -714,7 +880,9 @@ def _compose_presentation_impl(
         if narr.is_personal_narration(spec) and not pv_ready:
             print(f"Personal Voice: {pv_reason}", flush=True)
 
-        if use_full_script:
+        if narr.try_apply_preserved_personal_voice(final, wav, work, spec):
+            narr_ok = True
+        elif use_full_script:
             script_after_video = bool(spec.get("narrationScriptAfterVideo", True))
             if script_after_video:
                 director = _load("cursor_dir", "demo-recap-cursor-director.py")
@@ -732,7 +900,7 @@ def _compose_presentation_impl(
                     spec = {**spec, "fullNarrationScript": ensure_full}
             full_script = narr.resolve_full_narration_script(run_dir, spec, milestones)
             align_to_clips = bool(
-                spec.get("fullScriptAlignToMilestones", narr.is_personal_narration(spec))
+                spec.get("fullScriptAlignToMilestones", False)
             )
             if full_script and align_to_clips:
                 audit_rows = narr.audit_clip_narration_sync(
@@ -778,6 +946,11 @@ def _compose_presentation_impl(
                         hold_indices=hold_clip_indices,
                     )
                 else:
+                    print(
+                        "Full-script sync: one continuous Personal Voice capture "
+                        "(natural speech flow, not per-clip staccato)…",
+                        flush=True,
+                    )
                     narr_ok = narr.build_narration_for_full_video(
                         final,
                         full_script,
@@ -787,6 +960,7 @@ def _compose_presentation_impl(
                         engine=engine,
                         spec=spec,
                         run_dir=run_dir,
+                        milestones=all_milestones,
                     )
                 if narr_ok and narr.is_personal_narration(spec):
                     method = str(spec.get("_lastCaptureMethod") or "say+mysay")
@@ -834,7 +1008,21 @@ def _compose_presentation_impl(
                 "_narrationCueLabels": cue_labels,
                 "_narrPlanDir": str(plan_dir),
             }
-            if pv_ready or narr.is_personal_narration(spec):
+            parts_dir = work / "_narr_parts"
+            if (
+                narr.should_preserve_personal_capture(spec)
+                and parts_dir.is_dir()
+                and sorted(parts_dir.glob("p_*.wav"))
+                and not spec.get("forceRegenNarration")
+            ):
+                if narr.concat_narration_parts(parts_dir, wav, spec):
+                    spec["_preservedPersonalVoice"] = True
+                    narr_ok = True
+                    print(
+                        "Preserved per-clip Personal Voice (_narr_parts; no regen)",
+                        flush=True,
+                    )
+            if not narr_ok and (pv_ready or narr.is_personal_narration(spec)):
                 narr_ok = narr.build_narration_for_clips(
                     clips,
                     milestones,
@@ -850,8 +1038,11 @@ def _compose_presentation_impl(
         finalized = False
         if narr_ok:
             try:
+                video_for_mux = _apply_bot_avatar_overlay(
+                    ffmpeg, final, wav, work, run_dir, spec
+                )
                 narr.mux_narration_video_only(
-                    final,
+                    video_for_mux,
                     wav,
                     output,
                     volume=float(spec.get("narratorVolume", 1.0)),

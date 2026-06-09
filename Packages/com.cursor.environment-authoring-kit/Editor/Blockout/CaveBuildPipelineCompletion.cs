@@ -14,6 +14,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _fullPipelineJustFinished = false;
             _postBuildCursorStartedForThisBuild = false;
+            CaveBuildPostBuildFinalizeGate.CancelIfActive();
             LavaTubeCaveBuildPipeline.ResetResumeAfterAgentArmed();
         }
 

@@ -86,7 +86,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (previewOnly)
                     args += " --preview";
                 if (useTerminalNarration)
-                    args += " --no-narrator";
+                    args += " --no-narrator --local-captions";
 
                 var headlessOk = CaveBuildCursorProcessResolver.TryRunPythonScript(
                     hub,
@@ -187,13 +187,34 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return !Mp4HasAudioTrack(output);
         }
 
-        static string ResolveOutputPath(string runFolder, bool previewOnly) =>
-            previewOnly
-                ? Path.Combine(
-                    System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),
-                    "DemoRecap-Card-Preview",
-                    "DirectorPreview.mp4")
-                : Path.Combine(runFolder, "DemoRecapPresentation.mp4");
+        static string ResolveOutputPath(string runFolder, bool previewOnly)
+        {
+            if (!previewOnly)
+                return Path.Combine(runFolder, "DemoRecapPresentation.mp4");
+
+            var inCapture = Path.Combine(runFolder, "DirectorPreview.mp4");
+            if (File.Exists(inCapture))
+                return inCapture;
+
+            try
+            {
+                var mirror = Path.Combine(
+                    EnvironmentKitDataRoot.ResolveRoot(),
+                    "DesktopMirror",
+                    "DirectorPreview.mp4");
+                if (File.Exists(mirror))
+                    return mirror;
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),
+                "DemoRecap-Card-Preview",
+                "DirectorPreview.mp4");
+        }
 
         static bool SilentComposeVideoExists(string runFolder, bool previewOnly)
         {
@@ -268,8 +289,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var previewArg = previewOnly ? " --preview" : string.Empty;
             var narrationArg = narrationOnly ? " --narration-only" : string.Empty;
+            var styleArgs = previewOnly
+                ? " --local-captions"
+                : " --local-captions --regen-narration-script";
+            var dataRoot = EnvironmentKitDataRoot.ResolveRoot();
+            var envPrefix =
+                $"export ENVIRONMENT_KIT_DATA_ROOT={BashQuote(dataRoot)}; " +
+                $"export TMPDIR={BashQuote(Path.Combine(dataRoot, ".recap-tmp"))}; ";
             var shellCmd =
-                $"cd {BashQuote(toolsDir)} && bash ./run-recap-terminal.sh {BashQuote(runFolder)}{previewArg}{narrationArg}";
+                envPrefix +
+                $"cd {BashQuote(toolsDir)} && bash ./run-recap-terminal.sh {BashQuote(runFolder)}{previewArg}{narrationArg}{styleArgs}";
             var escaped = shellCmd.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             try

@@ -56,9 +56,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildLadderMetrics.BeginSession(sceneName, seed, recipe?.id ?? FullProductionRecipeId);
             var additive = !CaveBuildAaaSessionPolicy.ForceNonAdditiveSurface;
             CaveBuildRunStatusPublisher.BeginSession(sceneName, seed, additive);
-            CaveBuildStepCounter.ConfigureForBuild(
-                SurfaceBuildScope.FullWorld,
-                CaveBuildAaaSessionPolicy.IsFullAaaRebuild);
+            var stepEstimate = FullWorldConceptLayoutCatalog.CreateHubBoundRequest(seed);
+            CaveBuildStepCounter.ConfigureForRequest(stepEstimate);
 
             Debug.Log(
                 "[CaveBuild] AAA production mode — FullWorld ladder: incremental rungs, phased queue, " +

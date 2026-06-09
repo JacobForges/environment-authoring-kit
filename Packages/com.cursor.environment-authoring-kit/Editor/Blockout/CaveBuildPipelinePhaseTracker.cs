@@ -17,10 +17,39 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static int PipelineMacroTotal { get; private set; } = CaveBuildQueuedPipelineSchedule.Total;
 
-        public static void OnBuildSessionStart(SurfaceBuildScope scope)
+        public static void RefreshProvisionalExtended(WorldGenerationRequest request)
         {
-            var aaa = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid;
-            CaveBuildStepCounter.ConfigureForBuild(scope, aaa);
+            if (request == null || request.SurfaceScope != SurfaceBuildScope.FullWorld)
+            {
+                CaveBuildAaaSessionPolicy.MarkProvisionalFullWorldExtended(false);
+                return;
+            }
+
+            CaveBuildAaaSessionPolicy.MarkProvisionalFullWorldExtended(request.UseExtendedOpenWorldGrid);
+        }
+
+        public static void OnBuildSessionStart(SurfaceBuildScope scope, WorldGenerationRequest request = null)
+        {
+            if (scope == SurfaceBuildScope.FullWorld && request != null)
+                CaveBuildConceptSession.LockForBuild(request.ConceptLayoutIndex, request.Seed);
+
+            var conceptIndex = request?.ConceptLayoutIndex >= 0
+                ? request.ConceptLayoutIndex
+                : CaveBuildConceptSession.ResolveLockedConceptIndex();
+            var estimate = scope == SurfaceBuildScope.FullWorld
+                ? FullWorldConceptLayoutCatalog.CreateHubBoundRequest(request?.Seed ?? 0, conceptIndex)
+                : null;
+            var provisionalExtended = scope == SurfaceBuildScope.FullWorld &&
+                                      (estimate?.UseExtendedOpenWorldGrid ?? false);
+            CaveBuildAaaSessionPolicy.MarkProvisionalFullWorldExtended(provisionalExtended);
+            CaveBuildMicroProcessQueue.ApplyForBuildScope(scope);
+            if (request != null)
+                CaveBuildStepCounter.ConfigureForRequest(request);
+            else if (estimate != null)
+                CaveBuildStepCounter.ConfigureForRequest(estimate);
+            else
+                CaveBuildStepCounter.ConfigureForBuild(scope, extendedOpenWorldGrid: false);
+
             SetPhase("startup", "Build session queued");
         }
 
@@ -31,9 +60,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void OnFlatGridPipelineStarted(int tilePlanCount)
         {
-            var label = CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                ? $"Extended flat grid + terraform (~{tilePlanCount} tiles, Chebyshev 8)"
-                : $"FullWorld core grid + terraform ({tilePlanCount} tiles)";
+            if (tilePlanCount > 81)
+                CaveBuildStepCounter.ConfigureForExtendedTilePlan(tilePlanCount);
+
+            var label = tilePlanCount <= SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
+                        CaveBuildSessionConfig.IsFloatingIslandsDemo()
+                ? $"Floating islands demo — 3×3 play disk + 4 cardinal tiles ({tilePlanCount} terrains)"
+                : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                    ? $"Extended flat grid + terraform (~{tilePlanCount} tiles, Chebyshev 8)"
+                    : $"FullWorld core grid + terraform ({tilePlanCount} tiles)";
             CaveBuildStepCounter.SetSegment(
                 CaveBuildStepCounter.BuildSegment.FlatGrid,
                 tilePlanCount * 2 + 320,
@@ -57,6 +92,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void OnTerrainAiStarted() =>
             SetPhase("terrain_ai", "Terrain AI phases + grading ladder");
+
+        public static void OnLateBuildBandEntered() =>
+            SetPhase("late_build", "Titan · seams · props · cave macro (~20k–69k steps)");
 
         public static void OnTerrainGradingComplete()
         {

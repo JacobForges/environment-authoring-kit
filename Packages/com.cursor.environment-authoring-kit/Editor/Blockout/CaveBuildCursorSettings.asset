@@ -30,11 +30,11 @@ MonoBehaviour:
   autoInvokeAfterEveryBuild: 0
   autoInvokeOnDud: 1
   autoRebuildAfterAgentSuccess: 0
-  autoInvokeEachMeatLoopPass: 0
-  suppressMeatLoopCursorInvokes: 1
-  autoInvokePreBuildWorkflow: 0
+  autoInvokeEachMeatLoopPass: 1
+  suppressMeatLoopCursorInvokes: 0
+  autoInvokePreBuildWorkflow: 1
   enforcePreBuildGate: 1
-  preBuildReloopUntilPass: 0
+  preBuildReloopUntilPass: 1
   maxPreBuildReloopAttempts: 12
   skipResearchNetworkSyncWhenCachePresent: 1
   autoContinueAfterPreBuildCursor: 1
@@ -42,7 +42,7 @@ MonoBehaviour:
   showLiveScenePlacement: 1
   lidarGuidedSculptOnly: 1
   cinematicSceneCamera: 1
-  liveSceneCameraZoomOut: 30.1
+  liveSceneCameraZoomOut: 39.9
   forceLivePreviewWhenRecording: 1
   useIncrementalLadder: 1
   constrainBotToResearchOnFailure: 1

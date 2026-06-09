@@ -111,6 +111,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return true;
         }
 
+        internal static bool TryPassSpeedDemoSkip(bool additiveSurface, int seed, out string message)
+        {
+            message = "Speed demo (concept 9) — skipped pre-placement research.";
+            WriteGate(true, message, additiveSurface, seed);
+            CaveBuildRunStatusPublisher.SetResearchPhase(
+                message,
+                CaveBuildRunStatusPublisher.ResearchGateState.Passed);
+            Debug.Log("[CaveBuild] Pre-placement research: " + message);
+            return true;
+        }
+
         internal static bool TryPassProceduralResearchFallback(
             bool additiveSurface,
             int seed,

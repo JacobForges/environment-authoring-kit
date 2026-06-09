@@ -77,6 +77,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!Enabled || !CaveBuildCursorSettings.LoadOrCreate().requireHollowTitanOnSurface)
                 return true;
 
+            if (!SurfaceTerrainTileExpansion.IsTerrainReadyForHollowTitan &&
+                CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive)
+                return true;
+
             var root = GameObject.Find(HollowTitanLandmarkAuthor.RootName);
             if (root != null && HollowTitanLandmarkAuthor.IsMeatBuildComplete(root.transform))
             {
@@ -84,7 +88,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return true;
             }
 
-            message = "Hollow Titan landmark missing on surface — re-placing before terraform.";
+            message = "Hollow Titan landmark missing on surface — expected after terrain sculpt, before props.";
             return false;
         }
 
@@ -97,10 +101,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (HollowTitanLandmarkAuthor.TryFindPreservableRoot(request, out _, out _))
                 return;
 
-            if (HollowTitanLandmarkMeatPhases.IsRunning)
+            if (HollowTitanLandmarkMeatPhases.IsRunning || HollowTitanStumpSculptPhases.IsRunning)
                 return;
 
-            HollowTitanLandmarkAuthor.PlaceAaaBeforeTerraform(mainTerrain, request);
+            if (!SurfaceTerrainTileExpansion.IsTerrainReadyForHollowTitan)
+                return;
+
+            HollowTitanLandmarkAuthor.PlaceAaaAfterTerrainComplete(mainTerrain, request);
         }
 
         static void LogHollowTitanGradeIfBelowTarget(Transform root)

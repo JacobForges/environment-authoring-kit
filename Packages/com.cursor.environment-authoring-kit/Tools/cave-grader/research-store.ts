@@ -48,6 +48,7 @@ export const RESEARCH_CATEGORIES = [
   "3d_gaussian_splat",
   "3d_gaussian_splat_unity",
   "pipeline_editor_responsiveness",
+  "fullworld_cc0_finalize",
   "mountain_terrain",
   "mountain_lidar",
   "mountain_labyrinth",
@@ -157,6 +158,8 @@ const CATEGORY_LABELS: Record<ResearchCategory, string> = {
   "3d_gaussian_splat": "3D Gaussian Splat — fundamentals, labs, Mac",
   "3d_gaussian_splat_unity": "3D Gaussian Splat — Unity Editor integration",
   pipeline_editor_responsiveness: "Pipeline pacing — editor stalls & live status",
+  fullworld_cc0_finalize:
+    "FullWorld CC0 finalize — grid ~70% catalog/Resources save stalls, scoped persist",
   mountain_terrain: "Mountain massifs — cliffs, trails, perimeter ring",
   mountain_lidar: "Mountain LiDAR / DEM — outer ring & open-world tiles",
   mountain_labyrinth:
@@ -250,6 +253,8 @@ function inferCategory(
   if (sourceType === "engine_doc") return "engine_docs";
 
   const blob = `${title} ${topics}`.toLowerCase();
+  if (blob.includes("fullworld_cc0_finalize") || blob.includes("cc0 finalize") || blob.includes("fullworld_simple_build_parity"))
+    return "fullworld_cc0_finalize";
   if (blob.includes("pipeline_editor_responsiveness")) return "pipeline_editor_responsiveness";
   if (blob.includes("3d_gaussian_splat_unity")) return "3d_gaussian_splat_unity";
   if (blob.includes("3d_gaussian_splat")) return "3d_gaussian_splat";

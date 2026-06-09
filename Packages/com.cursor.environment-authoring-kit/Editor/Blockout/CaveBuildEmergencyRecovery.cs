@@ -48,6 +48,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildStartupCoordinator.EmergencyResetStartup();
             LavaTubeCaveBuildPipeline.EmergencyAbortQueuedBuild();
             LavaTubeCaveBuilder.ReleaseBuildLock();
+            CaveBuildRunStatusPublisher.EndSession();
+            CaveBuildPauseController.ClearOnNewBuildSession();
 
             for (var i = 0; i < 4; i++)
                 AssetDatabase.AllowAutoRefresh();

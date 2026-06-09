@@ -127,16 +127,19 @@ Compose: `compose-presentation-recap.py` + `run-producer-recap.py`.
 
 ## Voice ladder (default phases)
 
-Phases run in order: **algorithm → character → tone → polish → auditor → finalizer**
+Phases run in order: **algorithm → character → tone → polish → auditor → static → finalizer**
 
 | Phase | Helpers (approved default) |
 |-------|----------------------------|
-| algorithm | antiStutter, lowClean, speakerSafe, steadyVoice |
-| character | character, casualTone, warmth, breathSmooth, vocalSpark |
-| tone | naturalPitch, phraseFall, phraseDynamics, ttsSmooth |
-| polish | deClick, autoEq25, midTreble, autoDynamics, spatialHarmony, deEss |
+| algorithm | antiStutter, lowClean, speakerSafe |
+| character | character, casualTone, warmth |
+| tone | naturalPitch, phraseFall, ttsSmooth (skipped on dry master) |
+| polish | deClick, autoEq25, midTreble, deEss, segmentVolume |
 | auditor | Peak/RMS QC, trim rules |
+| static | gapDehiss, staticClean, gapDehiss (silence-only hiss tame) |
 | finalizer | loudnorm + limiter |
+
+Master timeline pass sets `narratorDryVoiceMaster` — skips spatialHarmony/ttsSmooth width on full narration.
 
 List defaults: `python3 personal-voice-ladder.py`  
 Helper reference: [VOICE_HELPERS.md](VOICE_HELPERS.md)

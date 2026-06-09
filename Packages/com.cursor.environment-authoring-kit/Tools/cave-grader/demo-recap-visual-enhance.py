@@ -35,12 +35,19 @@ def apply_cinematic_motion(
     *,
     mode: str = "auto",
     seed: int = 0,
+    disable_pan: bool = False,
 ) -> Image.Image:
-    """Slow dolly/pan on an oversized crop — simulates Scene camera movement on stills."""
+    """Slow dolly on an oversized crop — pan modes optional (disable for stable Scene holds)."""
+    if mode == "static" or disable_pan:
+        return img
     t = max(0.0, min(1.0, t))
     w, h = img.size
-    modes = ("dolly_in", "pan_right", "pan_left", "crane_up", "dolly_out")
+    modes = ("dolly_in", "dolly_out", "crane_up") if disable_pan else (
+        "dolly_in", "pan_right", "pan_left", "crane_up", "dolly_out"
+    )
     pick = mode if mode in modes else modes[seed % len(modes)]
+    if disable_pan and pick in ("pan_right", "pan_left"):
+        pick = "dolly_in"
 
     pad = 1.10
     big = img.resize((max(w, int(w * pad)), max(h, int(h * pad))), Image.Resampling.LANCZOS)

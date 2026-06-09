@@ -16,7 +16,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             LavaTubeCaveBuilder.IsBuildInProgress ||
             CaveBuildStartupCoordinator.IsActive ||
             LavaTubeCaveBuildPipeline.IsPhasedBuildActive ||
-            SurfaceTerrainAiPhases.IsPipelineActive;
+            SurfaceTerrainAiPhases.IsPipelineActive ||
+            CaveBuildRunStatusPublisher.HasActiveSession ||
+            CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive ||
+            CaveBuildSurfaceCompletionGate.IsSurfaceBuildActive;
 
         public static void BeginSlice() =>
             _sliceStartedAt = EditorApplication.timeSinceStartup;

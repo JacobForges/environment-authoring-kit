@@ -36,8 +36,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool HasBlockingErrors(string hubRoot = null)
         {
-            var snap = Capture(hubRoot);
-            return snap.VerifiedErrorCount > 0;
+            if (EditorApplication.isCompiling)
+                return false;
+
+            // Unity cleared the failure flag — do not block on stale Editor.log CS lines.
+            if (!EditorUtility.scriptCompilationFailed)
+                return false;
+
+            return Capture(hubRoot).VerifiedErrorCount > 0;
         }
 
         /// <summary>Lightweight capture during pre-build reloop — no 512KB Editor.log tail scan.</summary>
@@ -194,7 +200,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var seen = new HashSet<string>();
             var list = new List<CompileError>();
             AppendParsedErrors(list, seen, ReadBeeLogText(hubRoot));
-            if (includeEditorLogTail && (list.Count == 0 || EditorUtility.scriptCompilationFailed))
+            // Only triage Editor.log when Unity still reports a failed compile — never when Bee is
+            // empty but Editor.log retains hours-old CS lines from prior broken builds.
+            if (includeEditorLogTail && EditorUtility.scriptCompilationFailed)
                 AppendParsedErrors(list, seen, ReadEditorLogTail());
             return list;
         }
@@ -330,6 +338,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var msg = error.Message ?? string.Empty;
 
             if (error.Code == "error CS0104" &&
+                msg.IndexOf("'Object'", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].Contains("using Object = UnityEngine.Object", StringComparison.Ordinal))
+                        return false;
+                }
+
+                if (line.IndexOf("UnityEngine.Object.", StringComparison.Ordinal) >= 0)
+                    return false;
+            }
+
+            if (error.Code == "error CS0103" &&
+                msg.IndexOf("The name 'Array'", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                (line.IndexOf("System.Array.", StringComparison.Ordinal) >= 0 ||
+                 line.IndexOf("new string[0]", StringComparison.Ordinal) >= 0))
+                return false;
+
+            if (error.Code == "error CS0104" &&
                 msg.IndexOf("Debug", StringComparison.OrdinalIgnoreCase) >= 0 &&
                 line.Contains("UnityEngine.Debug.", StringComparison.Ordinal))
                 return false;
@@ -363,6 +390,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 msg.Contains("forceUnityConsole", StringComparison.Ordinal) &&
                 !line.Contains("forceUnityConsole", StringComparison.Ordinal))
                 return false;
+
+            // CS0050: ResolveScheduleWeight was public while ActionWeight is internal — fixed by private helper.
+            if (error.Code == "error CS0050" &&
+                msg.Contains("ResolveScheduleWeight", StringComparison.Ordinal) &&
+                msg.Contains("ActionWeight", StringComparison.Ordinal) &&
+                !line.Contains("public static CaveBuildActionPacing.ActionWeight ResolveScheduleWeight",
+                    StringComparison.Ordinal))
+                return false;
+
+            // CS0246: SurfaceBuildScope before Editor.Generation using was added.
+            if (error.Code == "error CS0246" &&
+                msg.Contains("SurfaceBuildScope", StringComparison.Ordinal))
+            {
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].Contains("using EnvironmentAuthoringKit.Editor.Generation;",
+                            StringComparison.Ordinal))
+                        return false;
+                }
+            }
 
             var member = Regex.Match(msg, @"definition for '([^']+)'");
             if (member.Success)

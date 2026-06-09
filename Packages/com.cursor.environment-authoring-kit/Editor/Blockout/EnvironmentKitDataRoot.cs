@@ -74,6 +74,64 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return $"{label}: {root}";
         }
 
+        public static string ResolveProjectGeneratedRoot()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            return Path.GetFullPath(Path.Combine(hub, "Assets/EnvironmentKit/Generated"));
+        }
+
+        public static string ResolveProjectResearchCacheRoot()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            return Path.GetFullPath(Path.Combine(hub, "Assets/EnvironmentKit/ResearchCache"));
+        }
+
+        public static string ResolveProjectGeneratedFile(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return ResolveProjectGeneratedRoot();
+            return Path.Combine(ResolveProjectGeneratedRoot(), fileName.Trim().TrimStart('/', '\\'));
+        }
+
+        public static bool IsPathOnExternalVolume(string absolutePath)
+        {
+            if (string.IsNullOrWhiteSpace(absolutePath))
+                return false;
+
+            try
+            {
+                return Path.GetFullPath(absolutePath).StartsWith("/Volumes/", StringComparison.Ordinal);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static long ResolveAvailableFreeBytes(string absolutePath)
+        {
+            try
+            {
+                var full = Path.GetFullPath(absolutePath);
+                var root = Path.GetPathRoot(full);
+                if (string.IsNullOrEmpty(root))
+                    root = "/";
+
+                var drive = new DriveInfo(root);
+                return drive.IsReady ? drive.AvailableFreeSpace : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public static bool HasMinimumFreeSpaceForWrites(string absolutePath, long minBytes)
+        {
+            var free = ResolveAvailableFreeBytes(absolutePath);
+            return free <= 0 || free >= minBytes;
+        }
+
         public static void ApplyToProcessEnvironment(System.Diagnostics.ProcessStartInfo psi)
         {
             if (psi?.EnvironmentVariables == null)

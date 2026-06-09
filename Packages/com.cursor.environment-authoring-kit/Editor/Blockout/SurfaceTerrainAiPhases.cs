@@ -779,6 +779,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     CaveBuildEditorLog.LogSurface("[Surface] " + coverageMsg, forceUnityConsole: true);
                 else
                     CaveBuildEditorLog.LogSurfaceWarning("[Surface] " + coverageMsg);
+                SurfacePropGroundLock.Apply(state.Ground, state.Surface);
                 CaveBuildEditorLog.LogSurface(
                     state.PropCategoriesPlaced > 0
                         ? $"[Surface] Vegetation pass complete ({state.PropCategoriesPlaced} categories placed)."
@@ -943,6 +944,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (state.LadderIteration == 0 && !state.PreLadderCraterRepairDone)
             {
                 state.PreLadderCraterRepairDone = true;
+                if (CaveBuildSessionConfig.SkipTerrainHelperScripts(state.Request))
+                {
+                    CaveBuildEditorLog.LogSurface(
+                        "[TerrainLadder] Planner fast demo — skipped pre-grade crater repair.",
+                        forceUnityConsole: true);
+                    ScheduleLadderGradeRung(state);
+                    return;
+                }
+
                 var center = state.Center;
                 var extent = state.Extent;
                 CaveBuildEditorLog.LogSurface(

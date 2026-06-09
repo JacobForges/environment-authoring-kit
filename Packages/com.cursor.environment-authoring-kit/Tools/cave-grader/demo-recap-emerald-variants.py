@@ -144,6 +144,19 @@ OUTRO_VARIANTS = [
 ]
 
 
+def _scaled_panel_rect(
+    panel: tuple[int, int, int, int],
+    scale: float = 1.0,
+) -> tuple[int, int, int, int]:
+    """Shrink caption card display area (linear scale; 0.875 = 7/8 size)."""
+    if scale >= 0.999:
+        return panel
+    x0, y0, x1, y1 = panel
+    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+    w, h = (x1 - x0) * scale, (y1 - y0) * scale
+    return (int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2))
+
+
 def _glow_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font, fill: tuple[int, int, int]) -> None:
     g = (fill[0] // 4, fill[1] // 4, fill[2] // 4)
     for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, 1)]:
@@ -151,10 +164,16 @@ def _glow_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font, 
     draw.text(xy, text, fill=fill, font=font)
 
 
-def build_intro(bg: Path, copy: dict[str, Any], style: dict[str, Any]) -> Image.Image:
+def build_intro(
+    bg: Path,
+    copy: dict[str, Any],
+    style: dict[str, Any],
+    *,
+    display_scale: float = 1.0,
+) -> Image.Image:
     accent = style["accent"]
     img = scene_base(bg, dim=115)
-    panel = (72, 88, W - 72, H - 88)
+    panel = _scaled_panel_rect((72, 88, W - 72, H - 88), display_scale)
     ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
     d.rounded_rectangle(list(panel), radius=20, fill=(6, 14, 12, 232), outline=(*accent, 230), width=3)
@@ -203,11 +222,12 @@ def build_outro(
     *,
     signature: Image.Image | None = None,
     signature_max_h: int = 72,
+    display_scale: float = 1.0,
 ) -> Image.Image:
     accent = style["accent"]
     img = scene_base(bg, dim=130)
     photo_box = (W - 500, 48, W - 28, H - 48)
-    text_box = (40, 72, photo_box[0] - 20, H - 72)
+    text_box = _scaled_panel_rect((40, 72, photo_box[0] - 20, H - 72), display_scale)
     outro_portrait = portrait_with_signature(
         portrait, signature, signature_max_h=signature_max_h
     )

@@ -20,6 +20,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var settings = CaveBuildCursorSettings.LoadOrCreate();
             settings.LoadFromPrefs();
 
+            if (CaveBuildSpeedDemoPolicy.IsActiveHubSelection() ||
+                (CaveBuildSessionConfig.HasFinalizedActive && CaveBuildSessionConfig.IsFloatingIslandsDemo()))
+            {
+                CaveBuildSpeedDemoPolicy.ApplySessionSettings(settings);
+                CaveBuildEditorResponsiveness.ApplyForActiveBuild(settings);
+                settings.SaveToPrefs();
+                EditorUtility.SetDirty(settings);
+                Debug.Log(
+                    "[CaveBuild] Speed demo preset — procedural fast path with play-disk props (concept 9).");
+                return;
+            }
+
             if (HasUsableAiProvider)
             {
                 CaveBuildReliableFullWorldPreset.Apply(savePrefs: false);

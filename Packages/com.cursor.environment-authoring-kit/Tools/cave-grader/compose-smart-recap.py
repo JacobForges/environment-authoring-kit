@@ -480,6 +480,7 @@ def compose_smart(run_dir: Path, output: Path, spec: dict) -> Path:
     for m in milestones:
         m["frame"] = min(max(0, int(m.get("frame", 0))), len(frames) - 1)
         captions_mod.fill_milestone_captions(m)
+        captions_mod.fill_milestone_narrator_script(m, force=True)
     ms_idx = [int(m["frame"]) for m in milestones]
 
     work_raw = spec.get("composeWorkDir") or os.environ.get("DEMO_RECAP_WORK_DIR")

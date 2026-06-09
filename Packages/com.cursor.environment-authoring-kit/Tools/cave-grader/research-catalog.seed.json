@@ -2076,6 +2076,296 @@
       "provenInProduction": true
     },
     {
+      "lab": "Unity",
+      "title": "AssetDatabase.StartAssetEditing — batch imports",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.StartAssetEditing.html",
+      "topics": "fullworld_cc0_finalize, CC0 Resources copy, CopyAsset deps, one import per queue step",
+      "provenInProduction": true,
+      "notes": "Wrap titan Resources CopyAsset + prefab write; StopAssetEditing once per paced step — not per dependency."
+    },
+    {
+      "lab": "Unity",
+      "title": "AssetDatabase.SaveAssetIfDirty — scoped persist",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.SaveAssetIfDirty.html",
+      "topics": "fullworld_cc0_finalize, item registry, WorldItemCatalog, never project-wide SaveAssets",
+      "provenInProduction": true,
+      "notes": "SaveAssets() during 289-tile build flushes all dirty terrains/meshes — beachball at CC0 finalize."
+    },
+    {
+      "lab": "Unity",
+      "title": "AssetDatabase API — avoid sync import storms",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetDatabase.html",
+      "topics": "fullworld_cc0_finalize, scoped refresh, Library status writes, batch asset ops",
+      "provenInProduction": true,
+      "notes": "Pair with EnvironmentKitScopedAssetRefresh — never Refresh() whole project mid-grid."
+    },
+    {
+      "lab": "Unity",
+      "title": "PrefabUtility.SaveAsPrefabAsset",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/PrefabUtility.SaveAsPrefabAsset.html",
+      "topics": "fullworld_cc0_finalize, CC0 Resources prefab copy already on disk",
+      "provenInProduction": true,
+      "notes": "No follow-up SaveAssets per prefab; paced finalize saves ScriptableObjects only."
+    },
+    {
+      "lab": "Unity",
+      "title": "Resources.UnloadUnusedAssets",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Resources.UnloadUnusedAssets.html",
+      "topics": "fullworld_cc0_finalize, defer full unload until queue idle or memory pressure",
+      "provenInProduction": true,
+      "notes": "Periodic trim during CC0 save steps caused 30–60s stalls on 16GB Mac despite 23% budget."
+    },
+    {
+      "lab": "Unity",
+      "title": "EditorUtility.UnloadUnusedAssetsImmediate",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorUtility.UnloadUnusedAssetsImmediate.html",
+      "topics": "fullworld_cc0_finalize, memory guard full release only above pressure threshold",
+      "provenInProduction": true,
+      "notes": "Use terrain heightmap ReleaseWorkingSet + GC on routine steps; full unload at pause only."
+    },
+    {
+      "lab": "Unity",
+      "title": "EditorApplication.delayCall",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorApplication-delayCall.html",
+      "topics": "fullworld_cc0_finalize, one registry/catalog save per queue frame",
+      "provenInProduction": true,
+      "notes": "Same pattern as seam stitch 8/8 fix — defer heavy persist across editor frames."
+    },
+    {
+      "lab": "Unity",
+      "title": "EditorApplication.update — live Hub heartbeat",
+      "year": 2026,
+      "venue": "Unity Scripting",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorApplication-update.html",
+      "topics": "fullworld_cc0_finalize, sub-action must update during asset save micro-steps",
+      "provenInProduction": true,
+      "notes": "Stale sub-action during main-thread stall = false freeze diagnosis."
+    },
+    {
+      "lab": "Unity Discussions",
+      "title": "Editor freezes during terrain / asset operations",
+      "year": 2024,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/editor-freezes-when-modifying-terrain/",
+      "topics": "fullworld_cc0_finalize, split main-thread work, profile 30–60s stalls",
+      "provenInProduction": true,
+      "notes": "FullWorld CC0 finalize at grid 70% is asset I/O not terrain — still same main-thread rule."
+    },
+    {
+      "lab": "Guerrilla",
+      "title": "Streaming the World — incremental commit",
+      "year": 2026,
+      "venue": "GDC archive",
+      "url": "https://www.guerrilla-games.com/read/Streaming-the-World-of-Horizon-Zero-Dawn",
+      "topics": "fullworld_cc0_finalize, commit in slices, defer global flush",
+      "provenInProduction": true,
+      "notes": "Catalog 12 items/step + registry/catalog SO save mirrors streaming cell commits."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "Cc0ContentImportPipeline paced finalize",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/Cc0ContentImportPipeline.cs",
+      "topics": "fullworld_cc0_finalize, prep → items 1/frame → registry → catalog slices → titan Resources → SO save",
+      "provenInProduction": true,
+      "notes": "Post-weld bottleneck after extended flat grid + terraform ~70%."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "CaveBuildMemoryGuard — tiered working-set release",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/CaveBuildMemoryGuard.cs",
+      "topics": "fullworld_cc0_finalize, light GC vs full UnloadUnusedAssets",
+      "provenInProduction": true,
+      "notes": "Routine step: terrain cache + GC. Pressure ≥72% or queue idle: full unload."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "EnvironmentKitScopedAssetRefresh",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/EnvironmentKitScopedAssetRefresh.cs",
+      "topics": "fullworld_cc0_finalize, no bulk Generated JSON import during build",
+      "provenInProduction": true,
+      "notes": "CC0 deferred refresh uses task-scoped import only."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "WorldRuntimeResourcesAuthor — Hollow Titan Resources only",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/World/WorldRuntimeResourcesAuthor.cs",
+      "topics": "fullworld_cc0_finalize, legendary slots + loot, not EnsureAllEnemyPrefabsInResources at grid weld",
+      "provenInProduction": true,
+      "notes": "World enemy Resources copy deferred to surface finalize — cuts finalize RAM spike."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "RESEARCH_PIPELINE_RESPONSIVENESS",
+      "year": 2026,
+      "venue": "Hub Docs",
+      "url": "Packages/com.cursor.environment-authoring-kit/docs/RESEARCH_PIPELINE_RESPONSIVENESS.md",
+      "topics": "fullworld_cc0_finalize, parent category — queue pacing + live status",
+      "provenInProduction": true,
+      "notes": "Seam stitch fix pattern applies to CC0 finalize save chain."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "RESEARCH_FULLWORLD_DO_NOT",
+      "year": 2026,
+      "venue": "Hub Docs",
+      "url": "Packages/com.cursor.environment-authoring-kit/docs/RESEARCH_FULLWORLD_DO_NOT.md",
+      "topics": "fullworld_cc0_finalize, research guides agents; C# execution fixes stalls",
+      "provenInProduction": true,
+      "notes": "DO NOT FullWorld before surface lock; CC0 runs after grid weld at ~70%."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "SURFACE_BUILD_RESPONSIVENESS",
+      "year": 2026,
+      "venue": "Hub Docs",
+      "url": "Packages/com.cursor.environment-authoring-kit/docs/SURFACE_BUILD_RESPONSIVENESS.md",
+      "topics": "fullworld_cc0_finalize, one heavy step per frame, skip SceneView repaint during long build",
+      "provenInProduction": true,
+      "notes": "FullWorld 289 tiles × micro steps — never sync SaveAssets/Refresh on hot path."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "MacBook hardware budget",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/EnvironmentKitHardwareBudget.cs",
+      "topics": "fullworld_cc0_finalize, UnloadUnusedAssetsBetweenQueueSteps throttled when queue busy",
+      "provenInProduction": true,
+      "notes": "16GB unified memory — CC0 finalize must not trigger project-wide asset flush."
+    },
+    {
+      "lab": "Unity",
+      "title": "Profiling the Editor",
+      "year": 2026,
+      "venue": "Unity Manual",
+      "url": "https://docs.unity3d.com/6000.0/Documentation/Manual/Profiler.html",
+      "topics": "fullworld_cc0_finalize, verify CC0 save sub-steps under 2s each",
+      "provenInProduction": true,
+      "notes": "If a single SaveAssetIfDirty exceeds 5s, split catalog entries further."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "LavaTubeMaterialUpgrader — deferred SaveAssets flush",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/LavaTubeMaterialUpgrader.cs",
+      "topics": "fullworld_cc0_finalize, defer disk flush until build teardown, _deferredAssetFlush flag",
+      "provenInProduction": true,
+      "notes": "Catalog persist mirrors FlushDeferredAssetChanges — not mid-grid SaveAssetIfDirty on Resources."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "LavaTubeCaaBuilder — StartAssetEditing session nest",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/LavaTubeCaveBuilder.cs",
+      "topics": "fullworld_cc0_finalize, BeginBuildAssetEditing nest, StopAssetEditing once at teardown",
+      "provenInProduction": true,
+      "notes": "Cc0ContentImportAssetSession uses same nest pattern during paced CC0 import."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "WorldItemCatalogBuilder.QueuePacedSaveIfDirty",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/World/WorldItemCatalogBuilder.cs",
+      "topics": "fullworld_cc0_finalize, defer Resources catalog YAML write until MarkFullWorldGridPipelineFinished",
+      "provenInProduction": true,
+      "notes": "SaveAssetIfDirty on WorldItemCatalog in Resources/ caused grid ~70% beachball."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "PLAN_FULLWORLD_CC0_FINALIZE",
+      "year": 2026,
+      "venue": "Hub Docs",
+      "url": "Packages/com.cursor.environment-authoring-kit/docs/PLAN_FULLWORLD_CC0_FINALIZE.md",
+      "topics": "fullworld_cc0_finalize, verification checklist for grid 70% → CC0 complete",
+      "provenInProduction": true,
+      "notes": "Success = CC0 finalize → grid continues; catalog disk persist at grid finish."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "Build Complete Cave vs Full AAA Rebuild — grid pipeline parity",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/SurfaceTerrainTileExpansion.cs",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, QueueFullWorldLayAllGroundTilesOnly, MarkFullWorldGridPipelineStarted",
+      "provenInProduction": true,
+      "notes": "Simple build used lay-only ground path without grid prepare/snap safeguards; Full AAA purge+prepare worked. Fix: same MarkFullWorldGridPipelineStarted + RunFullWorldGridPrepare as directional pipeline."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "CaveBuildAaaSessionPolicy — provisional extended grid before request bind",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/CaveBuildAaaSessionPolicy.cs",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, PreferOneTilePerQueueStep, batch size 1, step counter 7500",
+      "provenInProduction": true,
+      "notes": "UsesExtendedOpenWorldGrid was false until BindActiveRequest — simple build snapped 289 tiles with 8–12/batch and wrong Hub phase label."
+    },
+    {
+      "lab": "Unity",
+      "title": "AssetDatabase API restrictions during import (Unity 6.4)",
+      "year": 2026,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/changes-to-assetdatabase-apis-when-called-during-import/1689358",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, SetDirty ScriptableObject mid-build, SaveAssetIfDirty exception",
+      "provenInProduction": true,
+      "notes": "SetDirty(CaveBuildCursorSettings) during preflight caused CaveBuildCursorSettings.asset reimport while grid snap ran — avoid asset writes during long builds."
+    },
+    {
+      "lab": "Unity",
+      "title": "Domain reload — avoid AssetDatabase.Refresh in editor hooks",
+      "year": 2026,
+      "venue": "Unity Discussions",
+      "url": "https://discussions.unity.com/t/current-stage-of-the-reload-script-assemblies-problem-in-2023/927393/1",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, import storm, incremental additive surface",
+      "provenInProduction": true,
+      "notes": "Incremental Build Complete Cave keeps existing terrains; orphan purge in RunFullWorldGridPrepare is required before 289-tile snap — Full AAA invalidate skips stale slots."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "QueueAaaPreTerraformLandmarkAndSeams — CC0 paced import at grid weld",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/Blockout/SurfaceTerrainTileExpansion.cs",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, Cc0ContentImportPipeline.QueueEnsureAll, UsesExtendedOpenWorldGrid",
+      "provenInProduction": true,
+      "notes": "Extended grid weld must queue paced CC0 before Hollow Titan — not direct PlaceAaaBeforeTerraform. Both build modes share this when UsesExtendedOpenWorldGrid is true."
+    },
+    {
+      "lab": "Environment Kit",
+      "title": "Hollow Titan forceSyncFullBuild — grid ~70% post-CC0 freeze",
+      "year": 2026,
+      "venue": "Hub Package",
+      "url": "Packages/com.cursor.environment-authoring-kit/Editor/World/HollowTitanStumpSculptPhases.cs",
+      "topics": "fullworld_cc0_finalize, fullworld_simple_build_parity, RunAllSync, PlaceAaaBeforeTerraform, grid 70 percent",
+      "provenInProduction": true,
+      "notes": "After CC0 import complete, delayCall invoked PlaceAaaBeforeTerraform(forceSync:true) → RunAllSync(32 stump sculpt passes) on main thread. Hub stuck on CC0 import complete. Fix: pace meat+stump whenever IsLongBuildActive."
+    },
+    {
       "lab": "MIT CSAIL",
       "title": "Learning to Generate Terrains with Reinforcement Learning",
       "year": 2025,
@@ -6804,7 +7094,7 @@
   "dataAttribution": "Packages/com.cursor.environment-authoring-kit/docs/RESEARCH_DATA_ATTRIBUTION.md",
   "stats": {
     "labCount": 18,
-    "paperCount": 469,
+    "paperCount": 498,
     "visualRefCount": 146,
     "floridaAquiferRefs": 13
   }
