@@ -7,10 +7,6 @@
 #
 .utmp/
 /[Ll]ibrary/
-# Track demo recap brand kit only (portrait, cards, narrator config)
-!/[Ll]ibrary/EnvironmentKit/DemoRecapApproved/
-!/[Ll]ibrary/EnvironmentKit/DemoRecapApproved/**
-/[Ll]ibrary/EnvironmentKit/DemoRecapApproved/_approval_portrait*.png
 /[Tt]emp/
 /[Oo]bj/
 /[Bb]uild/
