@@ -8,6 +8,12 @@ Format: **date** — short title — details.
 
 ## 2026-06-09
 
+### Chat routing docs (agent direct, `@` global)
+
+- **Runtime model:** plain chat → owner’s agent; `@` prefix → global broadcast (no `@` bridge to agent).
+- **Docs:** [COMPETITION_AGENT_GAME.md](COMPETITION_AGENT_GAME.md), [AGENT_EMBODIED_WORLD_PLAN.md](AGENT_EMBODIED_WORLD_PLAN.md), [CHAT_SOCIAL_AND_COMMANDS_SPEC.md](../Tools/competition-models/CHAT_SOCIAL_AND_COMMANDS_SPEC.md), [FEATURE_LAYOUT.md](../Tools/competition-models/FEATURE_LAYOUT.md).
+- **Training encoders:** `text_encoder.py` / `chat_intent_trainer.py` aligned with C# `AgentChatAddress` (slot [62] = direct agent, not `@agent`).
+
 ### Documentation accuracy pass
 
 - **Author:** sole credit **JacobForges** everywhere (no co-authors; removed stale “Jacob Adkins” / “Jacob Forges” variants).

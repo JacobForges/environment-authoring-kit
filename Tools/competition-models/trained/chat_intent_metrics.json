@@ -1,0 +1,72 @@
+{
+  "model": "competition_chat_intent",
+  "intents": [
+    "cmd_hold",
+    "cmd_follow",
+    "cmd_rush",
+    "cmd_attack",
+    "cmd_defend",
+    "cmd_skill",
+    "cmd_cancel",
+    "greet",
+    "status",
+    "strategy",
+    "encourage",
+    "taunt",
+    "learned",
+    "hurt",
+    "victory",
+    "stuck",
+    "social_local",
+    "unknown"
+  ],
+  "featureDim": 64,
+  "trainRows": 15664,
+  "valRows": 2136,
+  "valLoss": 0.3325,
+  "valAccuracy": 0.919,
+  "epochs": 160,
+  "note": "Keyword encoder + synthetic paraphrases.",
+  "canary": {
+    "hi": {
+      "want": "greet",
+      "got": "greet",
+      "ok": true
+    },
+    "hello": {
+      "want": "greet",
+      "got": "greet",
+      "ok": true
+    },
+    "how are you": {
+      "want": "status",
+      "got": "status",
+      "ok": true
+    },
+    "how are you?": {
+      "want": "status",
+      "got": "status",
+      "ok": true
+    },
+    "hold": {
+      "want": "cmd_hold",
+      "got": "cmd_hold",
+      "ok": true
+    },
+    "hold": {
+      "want": "cmd_hold",
+      "got": "cmd_hold",
+      "ok": true
+    },
+    "rush now": {
+      "want": "cmd_rush",
+      "got": "cmd_rush",
+      "ok": true
+    },
+    "what did you learn": {
+      "want": "learned",
+      "got": "learned",
+      "ok": true
+    }
+  }
+}
