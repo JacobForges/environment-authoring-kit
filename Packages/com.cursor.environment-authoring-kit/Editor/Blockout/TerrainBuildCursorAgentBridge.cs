@@ -79,6 +79,35 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return CaveBuildCursorAgentBridge.TryInvokeTerrainAgentBackground(out message, rung);
         }
 
+        /// <summary>After tailored prompt is on disk — before local ladder fix (not in parallel with fix).</summary>
+        public static bool TryInvokeAfterPromptExported(
+            string rung,
+            SurfaceTerrainLadderReport report,
+            string workflowEnv,
+            int sameRungStreak,
+            out string message)
+        {
+            message = null;
+            var settings = CaveBuildCursorSettings.LoadOrCreate();
+            settings.LoadFromPrefs();
+            if (settings.suppressMeatLoopCursorInvokes)
+                return false;
+
+            var auto = settings.autoInvokeEachMeatLoopPass || settings.autoInvokeTerrainAfterSurfaceBuild;
+            if (!auto && sameRungStreak < 2)
+                return false;
+
+            if (!HasApiKey || IsAgentRunning)
+                return false;
+
+            if (string.IsNullOrEmpty(rung) || report == null)
+                return false;
+
+            System.Environment.SetEnvironmentVariable("CAVE_WORKFLOW", workflowEnv ?? WorkflowTerrain);
+            TerrainBuildRungPromptExporter.PrepareAgentInvokeFromReport(rung, report, out _);
+            return TryInvokeGradeAndFixBackground(out message, rung);
+        }
+
         public static bool TryBeginTerrainWorkflow(
             SurfaceTerrainLadderReport report,
             SceneGroundInfo ground,

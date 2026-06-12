@@ -1,8 +1,8 @@
 # Environment Authoring Kit — requirements
 
 **Status:** Living document (package scope)  
-**Last updated:** 2026-05-29  
-**Package:** `com.cursor.environment-authoring-kit` v0.3.1+
+**Last updated:** 2026-06-09  
+**Package:** `com.cursor.environment-authoring-kit` v0.3.4
 
 **Public GitHub accuracy:** [docs/PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) (consuming Hub repo).
 
@@ -58,7 +58,19 @@ Targets are **per terrain tile**; multiply by `terrainTileCount` (typically **9*
 
 Implementation: `SurfaceTerrainPropPlacementRegion.CollectUnifiedSpreadPlacementSlotsForCategory`, `SurfaceIntelligentPropPlacer`.
 
-### 2.3 Cave generation
+### 2.3 Planner session (layout-first — AI optional)
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| PL-01 | Wizard (`npm run build-wizard`) or manual JSON → `CaveBuildPlannerBrief.json` + `CaveBuildActiveSessionConfig.json`. | Must |
+| PL-02 | **Non-AI:** build from brief with no LLM at runtime (`agentInvokes: false`). | Must |
+| PL-03 | `CaveBuildPlannerTerrainGuide`, layout/mesh/trail/content authors apply brief markers + specs. | Must |
+| PL-04 | Concept PNG optional; marker-only fallback when absent. | Must |
+| PL-05 | Session config flags (`tileCount`, `use3DCaveSystem`, `floatingTiles`) override FullWorld defaults. | Must |
+
+Hub doc: [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md).
+
+### 2.4 Cave generation
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -69,9 +81,9 @@ Implementation: `SurfaceTerrainPropPlacementRegion.CollectUnifiedSpreadPlacement
 | F-05 | **Minable blocks** in block-tunnel mode per kit conventions. | Must |
 | F-06 | Entrance anchored to **`PortalFive`** when present; clear errors if ground/portal missing. | Must |
 | F-07 | **Full cave geometry** before mouth-only fixes: blocks, or floor+ceiling shell, or spline tube — not ramp-only partial. | Must |
-| F-08 | Queued pipeline **120 steps** with paced editor queue (no monolithic geo in one tick). | Must |
+| F-08 | Queued pipeline **122 steps** with paced editor queue (no monolithic geo in one tick). | Must |
 
-### 2.4 Portals and anchors
+### 2.5 Portals and anchors
 
 | ID | Requirement | Notes |
 |----|-------------|-------|
@@ -79,7 +91,7 @@ Implementation: `SurfaceTerrainPropPlacementRegion.CollectUnifiedSpreadPlacement
 | P-02 | Ground from **`SceneGroundResolver`** / Ground tag. | |
 | P-03 | **Rebuild Complete Cave (MainScene)** opens `MainScene` only if present in the consumer project (not shipped on public GitHub). | |
 
-### 2.5 Quality grading
+### 2.6 Quality grading
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -173,5 +185,6 @@ Implementation: `SurfaceTerrainPropPlacementRegion.CollectUnifiedSpreadPlacement
 | Date | Summary |
 |------|---------|
 | 2026-05-28 | PUBLIC_REPO_SCOPE alignment; XR honesty; ResearchCache gitignored on GitHub. |
-| 2026-05-27 | 9-tile vegetation; terrain-first FullWorld; 120-step queue (v0.3.0); Hub. |
+| 2026-06-09 | Doc sync — 122-step queue, v0.3.4, storage/disk docs. |
+| 2026-05-27 | 9-tile vegetation; terrain-first FullWorld; queued cave pipeline (122 steps in current code); Hub. |
 | 2026-05-21 | Initial package requirements excerpt (Florida research, grading, Cursor). |

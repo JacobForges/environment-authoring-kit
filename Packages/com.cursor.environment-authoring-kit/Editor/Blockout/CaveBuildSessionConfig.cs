@@ -17,6 +17,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public const int CurrentVersion = 2;
         public const string ActiveRelPath = "Assets/EnvironmentKit/Generated/CaveBuildActiveSessionConfig.json";
         public const string WizardStateRelPath = "Assets/EnvironmentKit/Generated/CaveBuildWizardState.json";
+        public const string PlannerBriefRelPath = CaveBuildPlannerLayoutBridge.PlannerBriefRelPath;
 
         [Serializable]
         public sealed class Doc
@@ -311,10 +312,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.autoInvokeTerrainAfterSurfaceBuild = doc.agentInvokes;
             settings.preBuildReloopUntilPass = doc.preBuildReloop;
             settings.invokeCursorOnResearchPhase = doc.agentInvokes;
-            settings.editorQueueBatchSize = doc.tileCount <= 81
-                ? Mathf.Max(settings.editorQueueBatchSize, 2)
-                : settings.editorQueueBatchSize;
+            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(
+                doc.tileCount <= 81
+                    ? Mathf.Max(settings.editorQueueBatchSize, 2)
+                    : settings.editorQueueBatchSize);
             SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = doc.sequentialTerrain;
+            SurfaceTerrainTileExpansion.PreferLightweightSeamsOnly =
+                IsFloatingIslandsDemo(doc) || (IsFastDemo(doc) && !doc.outerRingMountains);
             if (IsFloatingIslandsDemo(doc))
             {
                 CaveBuildSpeedDemoPolicy.ApplySessionSettings(settings, savePrefs: false);
@@ -323,6 +327,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 settings.autoInvokePreBuildWorkflow = false;
                 settings.preBuildReloopUntilPass = false;
                 settings.invokeCursorOnResearchPhase = false;
+                settings.lidarGuidedSculptOnly = true;
+                SurfaceLidarGuidedSculptPolicy.PreferSculptOverStamp = true;
                 SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = false;
             }
 
@@ -346,6 +352,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             FullWorldConceptLayoutCatalog.SetRandomOnBuild(doc.randomSeedEachBuild);
             CaveBuildConceptSession.ClearLock();
             CaveBuildPersistedSessionReset.ClearForNewBuild("planner fresh build");
+            CaveBuildPlannerLayoutAuthor.ResetBuildSession();
+            CaveBuildPlannerMeshLandscapeAuthor.ResetBuildSession();
+            CaveBuildPlannerMarkerPropScatter.ResetBuildSession();
+            CaveBuildPlannerContentAuthor.ResetBuildSession();
+            CaveBuildPlannerTrailAuthor.ResetBuildSession();
+            CaveBuildPlannerTerrainGuide.ClearSession();
 
             if (doc.randomSeedEachBuild)
             {

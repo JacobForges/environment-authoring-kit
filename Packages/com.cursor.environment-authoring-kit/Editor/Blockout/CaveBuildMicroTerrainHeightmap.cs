@@ -15,28 +15,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Vector3 origin,
             Vector3 size);
 
+        /// <summary>Heightmap rows per queue step — capped at 1–2 under load/memory pressure.</summary>
         public static int BandRowsFor(int res)
         {
-            if (CaveBuildEditorResponsiveness.IsLongBuildActive)
-            {
-                if (SurfaceTerrainTileExpansion.IsLiveFullWorldTerraformPhase)
-                {
-                    if (CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f)
-                        return res >= 1025 ? 4 : res >= 513 ? 8 : res >= 257 ? 12 : 16;
+            if (CaveBuildLoadAwareBatching.PreferSingleItem())
+                return 1;
 
-                    return res >= 1025 ? 8 : res >= 513 ? 12 : res >= 257 ? 16 : 24;
-                }
+            if (CaveBuildEditorResponsiveness.IsLongBuildActive ||
+                CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive)
+                return CaveBuildLoadAwareBatching.Clamp(2);
 
-                if (CaveBuildLateBuildPerformance.IsInLateBuildBand &&
-                    CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f)
-                    return res >= 1025 ? 4 : res >= 513 ? 6 : res >= 257 ? 10 : 14;
-
-                if (SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain)
-                    return res >= 1025 ? 32 : res >= 513 ? 128 : res >= 257 ? 256 : res;
-                return res >= 1025 ? 16 : res >= 513 ? 64 : res >= 257 ? 128 : res;
-            }
-
-            return res >= 1025 ? 4 : res >= 513 ? 8 : res >= 257 ? 16 : 32;
+            return CaveBuildLoadAwareBatching.Clamp(2);
         }
 
         /// <summary>One SyncHeightmap after height commits — prevents SetResource ID overflow spam.</summary>

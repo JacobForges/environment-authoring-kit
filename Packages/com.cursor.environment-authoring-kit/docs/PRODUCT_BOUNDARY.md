@@ -8,11 +8,13 @@
 
 | In scope | Out of scope |
 |----------|----------------|
+| **Planner session** — layout brief → terrain, trails, props, optional caves (AI wizard **optional**; non-AI JSON path) | Finished shipped game in git |
 | Radial surface terrain (panhandle LiDAR / hillshade refs) | Generic open-world MMO tooling |
 | Trail / NavMesh walk bands to cave mouth | Multiplayer netcode |
 | Procedural lava-tube cave (layout, shell, route floor) | Custom renderers or physics engines |
-| Editor-queue builds, graders, route bots | Replacing Unity Terrain / NavMesh |
-| Cursor agent workflows + ResearchCache | Runtime game logic (lives in Hub game code) |
+| Editor-queue builds (**122** cave steps), paced terrain, graders | Replacing Unity Terrain / NavMesh |
+| Cursor agent workflows + ResearchCache (optional) | Mandatory cloud AI for builds |
+| Playable demo scaffolding (`Assets/Scripts/`, Phase 2 bot) | Store art / scenes committed on GitHub |
 
 ## Ownership
 
@@ -33,8 +35,8 @@ Aquifer, LiDAR, and karst references are **cave-structure only** (voids, mouths,
 
 **One county · one seed · one path** — requires **your** scene, art, and optional XR rig locally.
 
-- Production recipe (default **Build Complete Cave**): `Assets/EnvironmentKit/Recipes/aaa-full-cave-production.json`
-- Menu: **Window → Environment Kit → Hub** → **Build Complete Cave Level (Active Scene)** (or showcase menu when present in your branch)
+- **Planner demo:** `npm run build-wizard` or non-AI brief JSON → Hub → Build — [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md)
+- **Classic FullWorld:** recipe `Assets/EnvironmentKit/Recipes/aaa-full-cave-production.json` → Hub → **Build Complete Cave (122)**
 - Headless (when batch API exists in your tree): `Unity -batchmode -projectPath <project> -executeMethod … -quit`
 - **Not implied:** VITURE hardware validated or committed on GitHub
 

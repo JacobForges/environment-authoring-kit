@@ -708,6 +708,46 @@ def _compose_presentation_impl(
     clip_plan.append(("intro", intro_mp4, do_intro))
     clip_idx += 1
 
+    try:
+        from wizard_chapter_compose import list_wizard_frames, resolve_wizard_chapter_mp4
+
+        wizard_frames = list_wizard_frames(run_dir)
+        has_wizard_chapter = len(wizard_frames) >= 2 or (run_dir / "wizard" / "wizard-chapter.mp4").is_file()
+        if has_wizard_chapter:
+            wizard_mp4 = work / "seg_wizard_chapter.mp4"
+
+            def do_wizard_chapter() -> None:
+                if _reuse_cached_segment(narration_only, spec, wizard_mp4, "wizard_chapter"):
+                    return
+                src = resolve_wizard_chapter_mp4(run_dir, ffmpeg)
+                if not src or not src.is_file():
+                    return
+                subprocess.run(
+                    [
+                        ffmpeg,
+                        "-y",
+                        "-i",
+                        str(src),
+                        "-vf",
+                        f"fps={int(fps)}",
+                        "-c:v",
+                        "libx264",
+                        "-pix_fmt",
+                        "yuv420p",
+                        "-r",
+                        str(fps),
+                        str(wizard_mp4),
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+                print(f"Wizard chapter: {src.name} → presentation segment", flush=True)
+
+            clip_plan.append(("wizard_chapter", wizard_mp4, do_wizard_chapter))
+            clip_idx += 1
+    except Exception as exc:
+        print(f"Wizard chapter skipped: {exc}", flush=True)
+
     bridge_mp4 = work / "seg_bridge.mp4"
 
     def do_bridge() -> None:
@@ -842,7 +882,7 @@ def _compose_presentation_impl(
         print(f"Encoding {len(clip_plan)} segments (parallel={min(workers, len(clip_plan))})…")
     _run_parallel([(label, fn) for label, _, fn in clip_plan], workers)
 
-    clips = [p for _, p, _ in clip_plan]
+    clips = [p for _, p, _ in clip_plan if p.is_file()]
     clip_labels = [label for label, _, _ in clip_plan]
     final = work / "_final_video.mp4"
     must_reconcat = not narration_only or spec.get("syncHoldToNarration", True)

@@ -153,6 +153,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             WriteCheckpoint(step, label, forceSceneSave: true);
         }
 
+        static bool HasMinimumFreeDiskSpace()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var abs = Path.Combine(hub, RelPath);
+            return EnvironmentKitDataRoot.HasMinimumFreeSpaceForWrites(abs, MinFreeDiskBytes);
+        }
+
         static void WriteCheckpoint(int step, string label, bool forceSceneSave)
         {
             if (!HasMinimumFreeDiskSpace())
@@ -226,39 +233,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void WriteDoc(PacedStepSnapshot doc)
         {
-            if (!HasMinimumFreeDiskSpace())
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            CaveBuildAgentContextExporter.EnsureFolderPublic();
+            var abs = Path.Combine(hub, RelPath);
+            if (!EnvironmentKitDataRoot.HasMinimumFreeSpaceForWrites(abs, MinFreeDiskBytes))
             {
                 NotifyDiskFullOnce();
                 return;
             }
 
-            var hub = CaveBuildCursorSettings.ResolveHubRoot();
-            CaveBuildAgentContextExporter.EnsureFolderPublic();
-            var abs = Path.Combine(hub, RelPath);
-            try
-            {
-                File.WriteAllText(abs, JsonUtility.ToJson(doc, true) + "\n");
-            }
-            catch (IOException ex) when (IsDiskFullException(ex))
-            {
-                NotifyDiskFullOnce(ex.Message);
-            }
-        }
-
-        static bool HasMinimumFreeDiskSpace()
-        {
-            var writeRoot = EnvironmentKitDataRoot.ResolveProjectGeneratedRoot();
-            return EnvironmentKitDataRoot.HasMinimumFreeSpaceForWrites(writeRoot, MinFreeDiskBytes);
-        }
-
-        static bool IsDiskFullException(IOException ex)
-        {
-            if (ex == null)
-                return false;
-
-            var msg = ex.Message ?? string.Empty;
-            return msg.IndexOf("disk full", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   msg.IndexOf("no space left", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!EnvironmentKitDataRoot.TryWriteAllText(abs, JsonUtility.ToJson(doc, true) + "\n", "paced checkpoint"))
+                NotifyDiskFullOnce();
         }
 
         static void NotifyDiskFullOnce(string detail = null)
@@ -268,13 +253,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             _diskFullLogged = true;
             Enabled = false;
-            var writeRoot = EnvironmentKitDataRoot.ResolveProjectGeneratedRoot();
-            var freeGb = EnvironmentKitDataRoot.ResolveAvailableFreeBytes(writeRoot) / (1024d * 1024 * 1024);
-            Debug.LogWarning(
-                "[CaveBuild] Disk nearly full on the active write volume — paced checkpoints paused. " +
-                $"({freeGb:F1} GB free at {writeRoot}). " +
-                "Move heavy data: Environment Kit → Storage → Move heavy data to external drive. " +
-                (string.IsNullOrEmpty(detail) ? string.Empty : detail));
+            EnvironmentKitDataRoot.NotifyDiskPressureOnce(
+                EnvironmentKitDataRoot.ResolveProjectGeneratedRoot(),
+                "paced checkpoints paused",
+                detail);
         }
     }
 }

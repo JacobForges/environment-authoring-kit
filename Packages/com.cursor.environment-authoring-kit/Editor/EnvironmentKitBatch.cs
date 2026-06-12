@@ -79,14 +79,56 @@ namespace EnvironmentAuthoringKit.Editor
         /// </summary>
         public static void RunBotProductionPostPass() => CaveBuildBotProductionBatch.Run();
 
+        /// <summary>
+        /// Read-only pipeline audit — probes + JSON only (no meat loop, no scene save).
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RunBotPipelineAudit
+        /// </summary>
+        public static void RunBotPipelineAudit() => CaveBuildBotValidationBatch.Run();
+
+        /// <summary>Code bot post-pass — compile, competition smoke, HubCodeProgress sync.</summary>
+        public static void RunCodeBotPostPass() => InvokeHubEditorStaticVoid("CodeBotPostPass", "RunSilently");
+
         /// <summary>Export Hub demo smoke checklist JSON for bot supervisor.</summary>
         public static void ExportHubDemoSmokeChecklist()
         {
             TryOpenWorldScene();
-            var exporter = System.Type.GetType("HubDemoSmokeExporter, Hub.Editor");
-            exporter?.GetMethod("Export", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                ?.Invoke(null, null);
+            InvokeHubEditorStatic("HubDemoSmokeExporter", "Export");
             EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RunHubDemoSmokeGate -quit
+        /// Exports scene checklist, syncs HubGameProgress from play report when acceptancePass.
+        /// </summary>
+        public static void RunHubDemoSmokeGate()
+        {
+            TryOpenWorldScene();
+            InvokeHubEditorStatic("HubDemoSmokeExporter", "Export");
+            var synced = InvokeHubEditorStatic("HubDemoSmokeProgressSync", "TrySyncFromPlayReport", false);
+            Debug.Log($"[HubDemoSmoke] Gate export complete — progressSynced={synced}");
+            EditorApplication.Exit(synced ? 0 : 1);
+        }
+
+        static bool InvokeHubEditorStatic(string typeName, string methodName, bool defaultValue = false)
+        {
+            var type = System.Type.GetType($"{typeName}, Hub.Editor");
+            var method = type?.GetMethod(
+                methodName,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (method == null)
+                return defaultValue;
+
+            var result = method.Invoke(null, method.GetParameters().Length == 0 ? null : new object[] { true });
+            return result is bool b ? b : defaultValue;
+        }
+
+        static void InvokeHubEditorStaticVoid(string typeName, string methodName)
+        {
+            var type = System.Type.GetType($"{typeName}, Hub.Editor");
+            var method = type?.GetMethod(
+                methodName,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            method?.Invoke(null, null);
         }
 
         /// <summary>Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.BuildCinematicTimelines -quit</summary>
@@ -258,5 +300,209 @@ namespace EnvironmentAuthoringKit.Editor
         /// Env: RECAP_BOT_ENVELOPE_JSON, RECAP_BOT_FRAME_DIR.
         /// </summary>
         public static void RenderRecapBotAvatar() => CaveBuildRecapBotAvatarRecorder.RenderFromEnvironment();
+
+        /// <summary>
+        /// Unity -batchmode -projectPath &lt;Hub&gt; -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.ExportPlannerKitCatalog -quit
+        /// Writes planner-kit-catalog manifest + AssetPreview PNGs for build wizard prop cards.
+        /// </summary>
+        public static void GeneratePlannerProps()
+        {
+            CaveBuildPlannerGeneratedProps.GenerateForBatch();
+        }
+
+        /// <summary>
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.GenerateConceptCardMesh
+        /// Reads planner-concept-card-mesh.request.json written by the build wizard.
+        /// </summary>
+        public static void GenerateConceptCardMesh()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var path = System.IO.Path.Combine(hub, CaveBuildPlannerGeneratedProps.CardMeshRequestRel);
+            if (!System.IO.File.Exists(path))
+            {
+                Debug.LogError("[PlannerProps] No card mesh request file.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            CaveBuildPlannerGeneratedProps.CardMeshRequest req;
+            try
+            {
+                req = JsonUtility.FromJson<CaveBuildPlannerGeneratedProps.CardMeshRequest>(
+                    System.IO.File.ReadAllText(path));
+                System.IO.File.Delete(path);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[PlannerProps] " + ex.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            var ok = CaveBuildPlannerGeneratedProps.TryGenerateForCard(
+                req.cardId,
+                req.categoryKey,
+                req.label,
+                req.seed,
+                req.regenIndex,
+                req.aiSpec,
+                out var prefabRel,
+                out var thumbRel,
+                out var msg);
+
+            var donePath = System.IO.Path.Combine(hub, CaveBuildPlannerGeneratedProps.CardMeshDoneRel);
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(donePath);
+                if (!string.IsNullOrEmpty(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(
+                    donePath,
+                    $"{{\"ok\":{(ok ? "true" : "false")},\"cardId\":\"{req.cardId}\","
+                    + $"\"prefabPath\":\"{prefabRel ?? ""}\",\"thumbRel\":\"{thumbRel ?? ""}\","
+                    + $"\"message\":\"{(msg ?? "").Replace("\"", "'")}\"}}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[PlannerProps] done file: " + ex.Message);
+            }
+
+            Debug.Log(ok ? "[PlannerProps] " + msg : "[PlannerProps] failed: " + msg);
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(ok ? 0 : 1);
+        }
+
+        public static void ExportPlannerKitCatalog()
+        {
+            var ok = CaveBuildPlannerKitCatalogExporter.ExportIfStale(out var msg, force: true);
+            if (!ok)
+            {
+                Debug.LogError($"[PlannerKitCatalog] Export failed: {msg}");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            Debug.Log($"[PlannerKitCatalog] {msg}");
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.ExportConceptCardThumbnail
+        /// Reads planner-concept-card-thumb.request.json for a single prefab preview.
+        /// </summary>
+        /// <summary>
+        /// Unity -batchmode -executeMethod EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.GenerateConceptCardSculpt
+        /// Reads planner-concept-card-sculpt.request.json written by the build wizard.
+        /// </summary>
+        public static void GenerateConceptCardSculpt()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var path = System.IO.Path.Combine(hub, CaveBuildPlannerGeneratedCharacters.CardSculptRequestRel);
+            if (!System.IO.File.Exists(path))
+            {
+                Debug.LogError("[PlannerCharacters] No card sculpt request file.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            CaveBuildPlannerGeneratedCharacters.CardSculptRequest req;
+            try
+            {
+                req = JsonUtility.FromJson<CaveBuildPlannerGeneratedCharacters.CardSculptRequest>(
+                    System.IO.File.ReadAllText(path));
+                System.IO.File.Delete(path);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[PlannerCharacters] " + ex.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            var ok = CaveBuildPlannerGeneratedCharacters.TrySculptForCard(req, out var prefabRel, out var msg);
+
+            var donePath = System.IO.Path.Combine(hub, CaveBuildPlannerGeneratedCharacters.CardSculptDoneRel);
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(donePath);
+                if (!string.IsNullOrEmpty(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(
+                    donePath,
+                    $"{{\"ok\":{(ok ? "true" : "false")},\"cardId\":\"{req?.cardId ?? ""}\","
+                    + $"\"prefabPath\":\"{prefabRel ?? ""}\",\"message\":\"{(msg ?? "").Replace("\"", "'")}\"}}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[PlannerCharacters] done file: " + ex.Message);
+            }
+
+            Debug.Log(ok ? "[PlannerCharacters] " + msg : "[PlannerCharacters] failed: " + msg);
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(ok ? 0 : 1);
+        }
+
+        public static void ExportConceptCardThumbnail()
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            const string requestRel =
+                "Assets/EnvironmentKit/Generated/planner-concept-card-thumb.request.json";
+            const string doneRel =
+                "Assets/EnvironmentKit/Generated/planner-concept-card-thumb.done.json";
+            var path = System.IO.Path.Combine(hub, requestRel);
+            if (!System.IO.File.Exists(path))
+            {
+                Debug.LogError("[PlannerKitCatalog] No concept card thumb request file.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            string prefabPath;
+            try
+            {
+                var json = System.IO.File.ReadAllText(path);
+                System.IO.File.Delete(path);
+                var marker = "\"prefabPath\"";
+                var idx = json.IndexOf(marker, System.StringComparison.Ordinal);
+                if (idx < 0)
+                    throw new System.InvalidOperationException("prefabPath missing");
+                var start = json.IndexOf('"', idx + marker.Length) + 1;
+                var end = json.IndexOf('"', start);
+                prefabPath = json.Substring(start, end - start);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError("[PlannerKitCatalog] " + ex.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            var thumbRel = CaveBuildPlannerKitCatalogExporter.ExportThumbnailForPrefab(prefabPath);
+            var ok = !string.IsNullOrEmpty(thumbRel);
+            var msg = ok
+                ? $"Exported preview for {System.IO.Path.GetFileNameWithoutExtension(prefabPath)}"
+                : $"Could not render preview for {prefabPath}";
+
+            var donePath = System.IO.Path.Combine(hub, doneRel);
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(donePath);
+                if (!string.IsNullOrEmpty(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(
+                    donePath,
+                    $"{{\"ok\":{(ok ? "true" : "false")},\"thumbRel\":\"{thumbRel ?? ""}\","
+                    + $"\"prefabPath\":\"{prefabPath}\",\"message\":\"{msg.Replace("\"", "'")}\"}}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[PlannerKitCatalog] done file: " + ex.Message);
+            }
+
+            Debug.Log(ok ? "[PlannerKitCatalog] " + msg : "[PlannerKitCatalog] failed: " + msg);
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(ok ? 0 : 1);
+        }
     }
 }

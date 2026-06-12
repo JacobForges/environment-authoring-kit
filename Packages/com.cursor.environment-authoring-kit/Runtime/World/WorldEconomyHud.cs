@@ -9,6 +9,12 @@ namespace EnvironmentAuthoringKit.World
         static WorldEconomyHud _instance;
 
         [SerializeField] bool showHud = true;
+
+        public static void SetHudVisible(bool visible)
+        {
+            if (_instance != null)
+                _instance.showHud = visible;
+        }
         [SerializeField] KeyCode craftKey = KeyCode.G;
 
         PlayerPersistence _persistence;

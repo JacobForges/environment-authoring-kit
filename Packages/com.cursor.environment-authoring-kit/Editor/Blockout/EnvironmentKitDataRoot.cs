@@ -132,6 +132,82 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return free <= 0 || free >= minBytes;
         }
 
+        public const long MinFreeDiskBytesForAdvisoryWrites = 256L * 1024 * 1024;
+
+        static bool _diskPressureLogged;
+
+        public static bool IsDiskFullException(IOException ex)
+        {
+            if (ex == null)
+                return false;
+
+            var msg = ex.Message ?? string.Empty;
+            return msg.IndexOf("disk full", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   msg.IndexOf("no space left", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Writes text when the volume has headroom; logs once and returns false on disk pressure (never throws).
+        /// </summary>
+        public static bool TryWriteAllText(string absolutePath, string contents, string context = null)
+        {
+            if (string.IsNullOrWhiteSpace(absolutePath))
+                return false;
+
+            var fullPath = Path.GetFullPath(absolutePath);
+            if (!HasMinimumFreeSpaceForWrites(fullPath, MinFreeDiskBytesForAdvisoryWrites))
+            {
+                NotifyDiskPressureOnce(fullPath, context);
+                return false;
+            }
+
+            try
+            {
+                var dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                var tmp = fullPath + ".tmp";
+                File.WriteAllText(tmp, contents);
+                if (File.Exists(fullPath))
+                    File.Delete(fullPath);
+                File.Move(tmp, fullPath);
+                return true;
+            }
+            catch (IOException ex) when (IsDiskFullException(ex))
+            {
+                NotifyDiskPressureOnce(fullPath, context, ex.Message);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning(
+                    $"[EnvironmentKit] Write failed{(string.IsNullOrEmpty(context) ? string.Empty : $" ({context})")}: " +
+                    $"{fullPath} — {ex.Message}");
+                return false;
+            }
+        }
+
+        public static void NotifyDiskPressureOnce(
+            string absolutePath,
+            string context = null,
+            string detail = null)
+        {
+            if (_diskPressureLogged)
+                return;
+
+            _diskPressureLogged = true;
+            var writeRoot = string.IsNullOrWhiteSpace(absolutePath)
+                ? ResolveProjectGeneratedRoot()
+                : absolutePath;
+            var freeGb = ResolveAvailableFreeBytes(writeRoot) / (1024d * 1024 * 1024);
+            Debug.LogWarning(
+                "[EnvironmentKit] Disk nearly full on the active write volume — advisory JSON writes paused. " +
+                $"({freeGb:F1} GB free). " +
+                "Free space or run: Environment Kit → Storage → Move heavy data to external drive. " +
+                (string.IsNullOrEmpty(context) ? string.Empty : context + ". ") +
+                (string.IsNullOrEmpty(detail) ? string.Empty : detail));
+        }
+
         public static void ApplyToProcessEnvironment(System.Diagnostics.ProcessStartInfo psi)
         {
             if (psi?.EnvironmentVariables == null)

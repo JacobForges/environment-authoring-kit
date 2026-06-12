@@ -5,7 +5,7 @@ using UnityEngine;
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
     /// <summary>
-    /// Default for fresh clones: complete the 120-step procedural pipeline without any LLM/API.
+    /// Default for fresh clones: complete the 122-step procedural pipeline without any LLM/API.
     /// AI grading is optional (Hub → provider + keys, or local Ollama).
     /// </summary>
     public static class CaveBuildOutOfBoxPreset

@@ -436,6 +436,12 @@ def compute_speedups(
 
 def compose_smart(run_dir: Path, output: Path, spec: dict) -> Path:
     ffmpeg = find_ffmpeg()
+    try:
+        from wizard_chapter_compose import prepend_wizard_to_timeline
+
+        prepend_wizard_to_timeline(run_dir, ffmpeg)
+    except Exception:
+        pass
     tl_dir = run_dir / "timelapse"
     if not tl_dir.is_dir():
         tl_dir = run_dir / "frames"
@@ -546,6 +552,37 @@ def compose_smart(run_dir: Path, output: Path, spec: dict) -> Path:
     )
     segments.append(intro_mp4)
     seg_i += 1
+
+    try:
+        from wizard_chapter_compose import resolve_wizard_chapter_mp4
+
+        wizard_src = resolve_wizard_chapter_mp4(run_dir, ffmpeg)
+        if wizard_src and wizard_src.is_file():
+            wizard_seg = work / f"seg_{seg_i:03d}.mp4"
+            subprocess.run(
+                [
+                    ffmpeg,
+                    "-y",
+                    "-i",
+                    str(wizard_src),
+                    "-vf",
+                    f"fps={int(output_fps)}",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-r",
+                    str(output_fps),
+                    str(wizard_seg),
+                ],
+                check=True,
+                capture_output=True,
+            )
+            segments.append(wizard_seg)
+            seg_i += 1
+            print(f"Wizard chapter: {wizard_src.name} → recap segment", flush=True)
+    except Exception as exc:
+        print(f"Wizard chapter skipped: {exc}", flush=True)
 
     total_m = len(milestones)
     gap_speed_iter = iter(speeds)

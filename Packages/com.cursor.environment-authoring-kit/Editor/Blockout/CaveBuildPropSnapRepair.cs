@@ -87,14 +87,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool MatchesCategory(Transform child, SurfacePropCategory category)
         {
             var name = child.name.ToLowerInvariant();
+            var tag = $"surface_{category.ToString().ToLowerInvariant()}_";
+            if (name.Contains(tag))
+                return true;
+
             return category switch
             {
                 SurfacePropCategory.Trees => name.Contains("tree") || name.Contains("palm") || name.Contains("oak"),
-                SurfacePropCategory.Grass => name.Contains("grass") || name.Contains("fern") || name.Contains("reed"),
-                SurfacePropCategory.Bushes => name.Contains("bush") || name.Contains("shrub") || name.Contains("hedge"),
+                SurfacePropCategory.Grass => name.Contains("grass") || name.Contains("fern") || name.Contains("reed") ||
+                                             name.StartsWith("g-g") || name.StartsWith("g-c") || name.StartsWith("g-t"),
+                SurfacePropCategory.Bushes => name.Contains("bush") || name.Contains("shrub") || name.Contains("hedge") ||
+                                              name.StartsWith("b-"),
                 SurfacePropCategory.GroundCover =>
                     name.Contains("moss") || name.Contains("cover") || name.Contains("clover") || name.Contains("leaf"),
-                SurfacePropCategory.Rocks => name.Contains("rock") || name.Contains("stone") || name.Contains("boulder"),
+                SurfacePropCategory.Rocks => name.Contains("rock") || name.Contains("stone") || name.Contains("boulder") ||
+                                             name.StartsWith("k-"),
                 _ => true,
             };
         }

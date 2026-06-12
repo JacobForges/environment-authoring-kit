@@ -8,6 +8,21 @@ Thin wrapper around the existing **cave-grader** Cursor SDK integration.
 2. Node 18+ and `npm install` in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader`.
 3. `CURSOR_API_KEY` in `Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/.env` (see `.env.example`).
 
+## Pipeline audit (read-only — no agent, no world build)
+
+Checks disk, JSON gates, compile diagnostics, route probes, gameplay progress, competition smoke (with `--unity`):
+
+```bash
+chmod +x Tools/cursor-bot/run-pipeline-audit.sh
+./Tools/cursor-bot/run-pipeline-audit.sh          # Tier 0 — JSON only
+export UNITY_PATH="/Applications/Unity/Hub/Editor/6000.4.6f1/Unity.app/Contents/MacOS/Unity"
+./Tools/cursor-bot/run-pipeline-audit.sh --unity  # Tier 2 — Unity probes (close editor first)
+```
+
+Report: `Assets/EnvironmentKit/Generated/HubBotPipelineAudit.json`
+
+`run-session.sh` and `run-until-demo.sh` run the audit automatically before each agent pass (`CAVE_SKIP_PIPELINE_AUDIT=1` to disable).
+
 ## One agent session (auto-routes Phase 1 → 2)
 
 ```bash
@@ -48,7 +63,7 @@ npm run watch-grade
 
 Each bot session gets a **Hub bot setup** block plus one matching playbook from `Tools/cursor-bot/playbooks/`:
 
-`MISSING_SPLINE`, `MOUTH_DEPTH_50M`, `SPARSE_BLOCK_TUNNEL`, `GEOMETRY_VOID`, `COMPILE_GATE`, `ROUTE_PROBE_FAIL`, `PERF_TRI_BUDGET`, `LAYOUT_AUDIT_SEAMS`, `STALE_CHECKPOINT`, `PLANNER_FAST_DEMO`, `POST_BUILD_PLAYTHROUGH`, `TERRAIN_SEAM_NINETILE`, `NAVMESH_PARTIAL`, `PROP_FLOATERS`, `PREBUILD_GATE_BLOCK`, `DEMO_RECAP_COMPOSE`, `DISK_FULL_PACED`, `GAMEPLAY_MILESTONE`, `STEP_COUNTER_ETC`, `EXTERNAL_STORAGE`.
+`MISSING_SPLINE`, `MOUTH_DEPTH_50M`, `SPARSE_BLOCK_TUNNEL`, `GEOMETRY_VOID`, `COMPILE_GATE`, `ROUTE_PROBE_FAIL`, `SURFACE_ROUTE_FAIL`, `PERF_TRI_BUDGET`, `LAYOUT_AUDIT_SEAMS`, `STALE_CHECKPOINT`, `PLANNER_FAST_DEMO`, `POST_BUILD_PLAYTHROUGH`, `TERRAIN_SEAM_NINETILE`, `NAVMESH_PARTIAL`, `PROP_FLOATERS`, `PREBUILD_GATE_BLOCK`, `DEMO_RECAP_COMPOSE`, `DISK_FULL_PACED`, `GAMEPLAY_MILESTONE`, `GAMEPLAY_SMOKE_FAIL`, `COMPETITION_SMOKE_FAIL`, `STEP_COUNTER_ETC`, `EXTERNAL_STORAGE`.
 
 Playbook selection reads `CaveBuildActiveSessionConfig.json` when issue text has no trigger match (fast demo / caves-off sessions).
 
@@ -60,4 +75,6 @@ Import draft from [automation-draft.json](./automation-draft.json) in the Automa
 
 - [docs/CURSOR_BOT_ARCHITECTURE.md](../../docs/CURSOR_BOT_ARCHITECTURE.md)
 - [docs/CURSOR_BOT_BACKLOG.md](../../docs/CURSOR_BOT_BACKLOG.md)
+- [docs/PLANNER_SESSION.md](../../docs/PLANNER_SESSION.md) — layout-first builds (AI optional)
+- [docs/PIPELINE_TRUTH.md](../../docs/PIPELINE_TRUTH.md) — 122 steps, geo 1–15, meat at 65
 - [AGENTS.md](../../AGENTS.md)

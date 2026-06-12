@@ -45,7 +45,11 @@ Blocked/early-stop outcomes are also reported as **non-modal Hub banners** durin
 
 ---
 
-## FullWorld terrain grid — **81 tiles (9×9)**
+## FullWorld terrain grid — **~289 tiles default** (81-tile mountain core)
+
+Classic FullWorld uses **`UseExtendedOpenWorldGrid=true`** → **~289** terrains (17×17, Chebyshev 8). The **81-tile mountain core** (rings 0–4 below) sits inside that grid. Planner fast demo may scope to **81** or **13** tiles via session config — [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md).
+
+### 81-tile mountain core (9×9 Chebyshev 4)
 
 Chebyshev rings from `SurfaceTerrainMain` (Ground). Counts are fixed in `SurfaceTerrainTileExpansion`:
 
@@ -112,7 +116,7 @@ You do **not** need to click Enrich/Grade before every build if `ResearchCache/`
 
 ## Queued cave pipeline
 
-After surface + startup: **122** queued steps (validate, geo 1–13, playability, meat loop, finalize). UI labels may still say **120** in places; completion target is **`CaveBuildQueuedPipelineSchedule.Total`**.
+After surface + startup: **122** queued steps (validate, geo **1–15**, playability, meat at **65**, finalize). Completion target: **`CaveBuildQueuedPipelineSchedule.Total`** (122). See [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md).
 
 ---
 

@@ -63,6 +63,13 @@ def approved_dir() -> Path:
     return resolve_envkit_root() / "DemoRecapApproved"
 
 
+def server_runtime_dir() -> Path:
+    """PID/log files for long-running EnvKit servers — on external drive when mounted."""
+    path = resolve_envkit_root() / ".server-runtime"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def recap_temp_dir() -> Path:
     """Heavy ffmpeg/Pillow temp — always on EnvKit data root (Lexar when mounted)."""
     path = resolve_envkit_root() / ".recap-tmp"
@@ -94,6 +101,57 @@ def unity_recap_scratch_dir() -> Path:
     path = resolve_envkit_root() / ".recap-unity"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+PLANNER_SESSION_LEGACY_REL = Path("Assets/EnvironmentKit/Generated/CaveBuildPlannerSession.json")
+PLANNER_SESSION_REL = Path("Library/EnvironmentKit/CaveBuildPlannerSession.json")
+
+
+def planner_session_path(hub: Path) -> Path:
+    """Live planner Q&A JSON — prefer Library/ (Unity does not import) over legacy Assets/ path."""
+    hub = Path(hub).expanduser().resolve()
+    primary = hub / PLANNER_SESSION_REL
+    legacy = hub / PLANNER_SESSION_LEGACY_REL
+    if primary.is_file():
+        return primary
+    if legacy.is_file():
+        return legacy
+    primary.parent.mkdir(parents=True, exist_ok=True)
+    return primary
+
+
+def planner_session_write_path(hub: Path) -> Path:
+    """Target path for all planner session writes (outside Assets/)."""
+    hub = Path(hub).expanduser().resolve()
+    path = hub / PLANNER_SESSION_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """Write UTF-8 text atomically so Unity/file watchers never see a partial file."""
+    import os
+    import tempfile
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 
 def mac_data_volume_free_gb() -> float | None:

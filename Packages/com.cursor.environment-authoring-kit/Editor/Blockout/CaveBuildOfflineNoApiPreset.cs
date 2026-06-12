@@ -38,7 +38,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (log)
             {
                 Debug.Log(
-                    "[CaveBuild] Offline / no-API preset — 120-step procedural pipeline only (no grade-and-fix agent). " +
+                    "[CaveBuild] Offline / no-API preset — 122-step procedural pipeline only (no grade-and-fix agent). " +
                     "For local LLM grading use Hub → Active provider → Local Ollama + run Ollama on your machine.");
             }
         }

@@ -398,8 +398,22 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildActionPacing.ScheduleLightChain(
                     () =>
                     {
+                        if (sculptOnly && CaveBuildPlannerTerrainGuide.IsActive)
+                        {
+                            CaveBuildPlannerTerrainGuide.QueueApplyPlateauToHeightmap(
+                                terrain,
+                                Vector2Int.zero,
+                                null,
+                                terrain,
+                                seed,
+                                () => onComplete?.Invoke(
+                                    "Planner LiDAR sculpt fallback — no georef/hillshade; brief plateau heightmap applied."));
+                            return;
+                        }
+
                         if (SurfaceLidarTerrainAuthor.ApplyFromResearchCache(
-                                terrain, groundCenter, extentMeters, seed, out var fallbackMsg))
+                                terrain, groundCenter, extentMeters, seed, out var fallbackMsg) &&
+                            !sculptOnly)
                             SurfaceFloridaDemBuildState.MarkAuthoritativeStampCompleted();
 
                         onComplete?.Invoke(fallbackMsg);

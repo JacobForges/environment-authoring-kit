@@ -25,14 +25,14 @@ Do not add ad-hoc `SceneView.Frame`, `SceneView.LookAt`, or zoom constants in ot
 | SessionOpen, PhaseChange, BuildArea | EstablishingWide | Show the whole world — never tight on one tile |
 | TerrainTilePlaced, PipelineStep | MasterCoverage | Hold wide; reframe every 8th tile, not every tile |
 | PropPlaced | MediumCoverage | Context around placement, still readable at distance |
-| DemoRecording | DemoHero | Widest hero framing for recap video |
+| DemoRecording | EstablishingWide | Stable documentary wide shot — no tile punch-in, no orbit |
 
 ## Rules
 
 1. **Coverage hierarchy:** `TryResolvePlacedTerrainWorkBounds` (all placed tiles) frames the shot; live focus only biases pivot via `FocusPivotBlend` — never collapse to one tile.
 2. **Hold windows:** `ShotProfileFor(role).HoldSeconds` and `ReframeEveryNthEvent` (terrain tiles: every 8th) — no jitter on every placement.
 3. **Cinematic vs documentary:** cinematic = slow orbit + `LookAt` on terrain pivot; documentary = padded `Frame(bounds)`.
-4. **Demo recording:** `PushDemoRecordingSession` forces DemoHero; `ApplyDemoCaptureFrame()` runs before each Scene PNG capture.
+4. **Demo recording:** `PushDemoRecordingSession` forces EstablishingWide + `ApplyDocumentaryFrame` (padded `Frame(bounds)`); no cinematic orbit/dolly; `ApplyDemoCaptureFrame()` runs before each Scene PNG capture.
 5. **Zoom slider:** `liveSceneCameraZoomOut` maps to `ZoomCoverageScale()` (0.75–5.0× orbit distance; `LookAt` size stays coverage-based so pull-back is visible) — single application on distance/padding, not stacked on view size.
 6. **Settings:** `CaveBuildCursorSettings.showLiveScenePlacement` and `cinematicSceneCamera`; respect `EnvironmentKitHardwareBudget.DisableLiveSceneFraming`.
 

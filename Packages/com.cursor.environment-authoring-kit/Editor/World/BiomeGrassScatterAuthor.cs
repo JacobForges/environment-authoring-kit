@@ -13,7 +13,7 @@ namespace EnvironmentAuthoringKit.Editor.World
     /// </summary>
     public static class BiomeGrassScatterAuthor
     {
-        const int MinGrassInstancesBeforeSkip = 120;
+        const int MinGrassInstancesBeforeSkip = 280;
 
         public static void QueueEnsureBiomePropsScattered(
             Terrain mainTerrain,

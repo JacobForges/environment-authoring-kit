@@ -1885,7 +1885,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return count;
         }
 
-        public const int MeatLoopGradeBatchCount = 4;
+        /// <summary>1–2 stage grades per editor queue tick (was 4 mega-batches).</summary>
+        public const int MeatLoopGradeBatchCount = 13;
 
         internal static CaveBuildQualityReport BeginMeatLoopGradeReport(
             Transform caveRoot,
@@ -1921,34 +1922,52 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 case 0:
                     report.Stages.Add(GradeSceneGround(ground));
                     report.Stages.Add(GradePath(caveRoot));
-                    report.Stages.Add(GradeLayoutIntegrity(caveRoot));
-                    report.Stages.Add(GradeVisualShell(caveRoot));
-                    report.Stages.Add(GradeEnclosurePolicy(caveRoot));
                     break;
                 case 1:
+                    report.Stages.Add(GradeLayoutIntegrity(caveRoot));
+                    report.Stages.Add(GradeVisualShell(caveRoot));
+                    break;
+                case 2:
+                    report.Stages.Add(GradeEnclosurePolicy(caveRoot));
                     report.Stages.Add(GradeOrganicTube(caveRoot));
+                    break;
+                case 3:
                     report.Stages.Add(GradeBlockTunnel(caveRoot, request));
                     report.Stages.Add(GradeGeometryIntegrity(caveRoot, request));
+                    break;
+                case 4:
                     report.Stages.Add(GradeCaveMouthSeal(caveRoot, ground));
                     report.Stages.Add(GradeInteriorRibs(caveRoot));
+                    break;
+                case 5:
                     report.Stages.Add(GradeWalkways(caveRoot));
                     report.Stages.Add(GradePlayerFloor(caveRoot));
                     break;
-                case 2:
+                case 6:
                     report.Stages.Add(GradeEnclosure(caveRoot, buildReport, request));
                     report.Stages.Add(GradeMaterials(caveRoot));
+                    break;
+                case 7:
                     report.Stages.Add(GradeWater(caveRoot, request));
                     report.Stages.Add(GradeLighting(caveRoot));
-                    report.Stages.Add(GradeAtmosphere(caveRoot));
                     break;
-                case 3:
+                case 8:
+                    report.Stages.Add(GradeAtmosphere(caveRoot));
                     report.Stages.Add(GradeNavMesh(buildReport));
+                    break;
+                case 9:
                     report.Stages.Add(GradePortalSpawn(caveRoot));
                     report.Stages.Add(GradeSpawnReachability(caveRoot));
+                    break;
+                case 10:
                     report.Stages.Add(GradeMobSpawns(caveRoot));
                     report.Stages.Add(GradePlayability(caveRoot));
+                    break;
+                case 11:
                     report.Stages.Add(GradePerformance(caveRoot));
                     report.Stages.Add(GradeExportArtifacts(report));
+                    break;
+                case 12:
                     report.Stages.Add(GradePackagingReadiness(caveRoot, ground, buildReport));
                     report.Stages.Add(GradeModeConsistency(caveRoot, layoutPrototype: false));
                     break;

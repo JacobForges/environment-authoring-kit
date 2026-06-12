@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
-    /// <summary>Pre-flight checks before a FullWorld 120-step pipeline run.</summary>
+    /// <summary>Pre-flight checks before a FullWorld 122-step pipeline run.</summary>
     public static class CaveBuildFullRunPreflight
     {
         public const string ReportRel = CaveBuildAgentContextExporter.Folder + "/CaveBuildPreflightReport.md";
@@ -156,7 +156,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 !settings.autoInvokePreBuildWorkflow
                     ? Severity.Pass
                     : Severity.Warn,
-                "OFF recommended so the 120-step queue runs unattended.");
+                "OFF recommended so the 122-step queue runs unattended.");
 
             var seed = request?.Seed ?? EditorPrefs.GetInt("CaveBuild_LastSeed", 12345);
             var ladderComplete = request != null &&
@@ -245,7 +245,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 settings.autoInvokePreBuildWorkflow = false;
                 settings.preBuildReloopUntilPass = false;
                 settings.suppressMeatLoopCursorInvokes = true;
-                fixes.Add("auto-invoke Cursor off (unattended 120-step queue)");
+                fixes.Add("auto-invoke Cursor off (unattended 122-step queue)");
             }
 
             if (fixes.Count == 0)
@@ -270,7 +270,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             sb.AppendLine("## Recommended before Build Complete Cave (FullWorld)");
             sb.AppendLine("1. **Cave Build → Diagnostics → Apply Reliable FullWorld Preset**");
             sb.AppendLine("2. **Advanced → Build Complete Cave — Full AAA Rebuild (invalidate ladder)**");
-            sb.AppendLine("3. **Diagnostics → Pipeline Console** — watch until **Build 120/120**");
+            sb.AppendLine("3. **Diagnostics → Pipeline Console** — watch until **Build 122/122**");
             sb.AppendLine("4. Confirm log: **Cave shell ready — starting Florida LiDAR**");
             sb.AppendLine("5. Read **CaveBuildCompletionReadout.md** + **CaveBuildCompletionContract.json**");
             sb.AppendLine();

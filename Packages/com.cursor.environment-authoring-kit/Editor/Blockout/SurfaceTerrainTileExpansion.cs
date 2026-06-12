@@ -1389,7 +1389,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public const int FoothillRingTileCount = 16;
         public const int PeakRingTileCount = 24;
-        public const int FullWorldFlatGridPlaceBatchSize = 8;
+        public const int FullWorldFlatGridPlaceBatchSize = 2;
 
         /// <summary>
         /// Flat 0.42 grid: skip per-tile seam queue (connectivity refresh at ring boundaries + post-grid weld).
@@ -1400,6 +1400,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// FullWorld directional: sculpt/LiDAR every tile first; batch seam/lock only after terraform completes.
         /// </summary>
         public static bool PreferDeferSeamsUntilFullWorldTerraformComplete { get; set; } = true;
+
+        /// <summary>
+        /// Floating islands / fast demo: skip paced row-band edge blend; one sync cardinal weld per tile + batch grid weld.
+        /// </summary>
+        public static bool PreferLightweightSeamsOnly { get; set; }
+
+        internal static bool ShouldUseLightweightSeamsOnly(WorldGenerationRequest request = null)
+        {
+            if (PreferLightweightSeamsOnly)
+                return true;
+
+            request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
+            if (request != null && CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+                return true;
+
+            if (!CaveBuildSessionConfig.HasFinalizedActive)
+                return false;
+
+            var doc = CaveBuildSessionConfig.LoadActive();
+            return doc != null && doc.tileCount <= 81 && !doc.outerRingMountains;
+        }
 
         public const int HorizonRingTileCount = 32;
         public const int MountainWildernessTileCount =
@@ -2619,30 +2640,86 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var tileNum = index + 1;
             var tileCenter = TileCenterWorld(entry.Tile);
             var extent = ResolveNeighborTileDemExtent(entry.Tile, request);
-            var lidarVerb = SurfaceLidarGuidedSculptPolicy.PreferSculptOverStamp ? "sculpt" : "stamp";
+            var sculptOnly = SurfaceLidarGuidedSculptPolicy.PreferSculptOverStamp ||
+                             CaveBuildPlannerTerrainGuide.IsActive;
+            var lidarVerb = sculptOnly ? "sculpt" : "stamp";
             CaveBuildRunStatusPublisher.PulseSubOperation(
                 "nine-tile LiDAR",
                 $"{lidarVerb} {tileNum}/{tiles.Count} ({entry.Tile.name})");
+            if (sculptOnly)
+            {
+                SurfaceDemGeoreferenceAuthor.QueueApplyLidarGuidedLandscapeSculpt(
+                    entry.Tile,
+                    tileCenter,
+                    extent,
+                    TileDemSeed(request.Seed, entry.Offset),
+                    _ => AdvanceNineTileLidar(mainTerrain, ground, request, tiles, index, onComplete, entry, tileNum));
+                return;
+            }
+
             SurfaceDemGeoreferenceAuthor.QueueApplyGeoreferencedStamp(
                 entry.Tile,
                 tileCenter,
                 extent,
                 TileDemSeed(request.Seed, entry.Offset),
-                _ =>
-                {
-                    if (entry.Tile != null)
-                    {
-                        CaveBuildTerrainHeightmapMemory.AfterTileHeightmapPass(entry.Tile);
-                        CaveBuildTerrainFingerprint.RecordWildernessTile(
-                            request.Seed,
-                            entry.Tile,
-                            mainTerrain);
-                    }
+                _ => AdvanceNineTileLidar(mainTerrain, ground, request, tiles, index, onComplete, entry, tileNum));
+        }
 
-                    CaveBuildActionPacing.ScheduleLight(
-                        () => QueueLidarTileAtIndex(mainTerrain, ground, request, tiles, index + 1, onComplete),
-                        CaveBuildPipelineDomains.QueueLabel($"nine-tile LiDAR — tile {tileNum}/{tiles.Count}"));
-                });
+        static void AdvanceNineTileLidar(
+            Terrain mainTerrain,
+            SceneGroundInfo ground,
+            WorldGenerationRequest request,
+            IReadOnlyList<GameplayTileEntry> tiles,
+            int index,
+            Action onComplete,
+            GameplayTileEntry entry,
+            int tileNum)
+        {
+            if (entry.Tile == null)
+            {
+                CaveBuildActionPacing.ScheduleLight(
+                    () => QueueLidarTileAtIndex(mainTerrain, ground, request, tiles, index + 1, onComplete),
+                    CaveBuildPipelineDomains.QueueLabel($"nine-tile LiDAR — tile {tileNum}/{tiles.Count}"));
+                return;
+            }
+
+            CaveBuildTerrainHeightmapMemory.AfterTileHeightmapPass(entry.Tile);
+            if (CaveBuildPlannerTerrainGuide.IsActive &&
+                TryParseTileOffset(entry.Tile.name, out var off))
+            {
+                CaveBuildPlannerTerrainGuide.QueueApplyPlateauToHeightmap(
+                    entry.Tile,
+                    off,
+                    ground,
+                    mainTerrain,
+                    request.Seed,
+                    () => AdvanceNineTileLidarAfterPlateau(
+                        mainTerrain, ground, request, tiles, index, onComplete, entry, tileNum));
+                return;
+            }
+
+            AdvanceNineTileLidarAfterPlateau(
+                mainTerrain, ground, request, tiles, index, onComplete, entry, tileNum);
+        }
+
+        static void AdvanceNineTileLidarAfterPlateau(
+            Terrain mainTerrain,
+            SceneGroundInfo ground,
+            WorldGenerationRequest request,
+            IReadOnlyList<GameplayTileEntry> tiles,
+            int index,
+            Action onComplete,
+            GameplayTileEntry entry,
+            int tileNum)
+        {
+            CaveBuildTerrainFingerprint.RecordWildernessTile(
+                request.Seed,
+                entry.Tile,
+                mainTerrain);
+
+            CaveBuildActionPacing.ScheduleLight(
+                () => QueueLidarTileAtIndex(mainTerrain, ground, request, tiles, index + 1, onComplete),
+                CaveBuildPipelineDomains.QueueLabel($"nine-tile LiDAR — tile {tileNum}/{tiles.Count}"));
         }
 
         /// <summary>Lock <see cref="MainTerrainName"/> + 8 neighbors after all tiles have DEM + edge seed.</summary>
@@ -2656,6 +2733,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             if (mainTerrain == null)
             {
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (ShouldUseLightweightSeamsOnly())
+            {
+                EnforcePlayDiskGridLayout(mainTerrain, ground);
+                RefreshMountainTerrainConnectivity(mainTerrain);
+                SurfaceFloridaDemBuildState.MarkNineTilePlayDiskPolishCompleted();
+                SurfaceTerrainGridRegistry.ReindexFromMain(mainTerrain, playDiskLocked: true);
                 onComplete?.Invoke();
                 return;
             }
@@ -3547,8 +3634,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             string emptySeamLabel = null,
             bool flatGridSkipSeamBlend = false)
         {
-            if (flatGridSkipSeamBlend)
+            if (flatGridSkipSeamBlend || ShouldUseLightweightSeamsOnly())
             {
+                if (ShouldUseLightweightSeamsOnly() && main != null && tile?.terrainData != null)
+                {
+                    QueueLightweightSeamConnect(main, tile, off, onComplete);
+                    return;
+                }
+
                 if (main != null)
                     RefreshMountainTerrainConnectivity(main);
                 tile?.Flush();
@@ -3583,6 +3676,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     },
                     flushAllSurfaceTerrains: flushAll);
             });
+        }
+
+        static void QueueLightweightSeamConnect(
+            Terrain main,
+            Terrain tile,
+            Vector2Int off,
+            Action onComplete)
+        {
+            CaveBuildActionPacing.ScheduleLight(
+                () =>
+                {
+                    var session = CreateMinimalFullWorldGridSession(main);
+                    if (session != null &&
+                        TryResolveSurfaceTileGridOffset(main, tile, out var resolvedOff))
+                    {
+                        ApplyFullWorldGridSlot(session, tile, resolvedOff);
+                        WeldFullWorldTileToCardinalNeighbors(session, tile, resolvedOff);
+                    }
+                    else
+                    {
+                        RefreshMountainTerrainConnectivity(main);
+                    }
+
+                    tile.Flush();
+                    onComplete?.Invoke();
+                },
+                CaveBuildPipelineDomains.QueueLabel("lightweight seam connect"));
         }
 
         static List<SeamStitchEdgeWork> CollectSeamEdges(
@@ -6983,6 +7103,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         }
 
                         ApplyFullWorldGridSlot(snapSession, tile, off);
+                        if (CaveBuildLivePlacementPolicy.Active && tile != null)
+                        {
+                            CaveBuildLivePlacementPolicy.CommitVisibleTerrainTile(
+                                tile,
+                                $"grid snap {index + 1}/{snapOrder.Length}");
+                        }
                     },
                     () => QueueForceSnapEntireFullWorldGridPacedFinalize(snapSession, snapOrder, snapComplete, labelPrefix),
                     (done, total) => CaveBuildStepCounter.PulseFlatGridPostPlaceProgress(
@@ -7007,6 +7133,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         CaveBuildEditorLog.LogSurface(
                             $"[Surface] FullWorld grid snap — {snapOrder.Length} slot(s) edge-to-edge on {FullWorldGridAnchorName}.",
                             forceUnityConsole: true);
+
+                        var ground = snapSession.Ground ?? SceneGroundResolver.ResolveForFullWorld(snapSession.MainTerrain.transform);
+                        var surfaceRoot = GameObject.Find(SurfaceWorldPaths.RootName)?.transform;
+                        if (ground != null && surfaceRoot != null)
+                            SurfacePropGroundLock.ResnapAndLockAll(ground, surfaceRoot);
+
                         snapComplete?.Invoke();
                     },
                     CaveBuildPipelineDomains.QueueLabel($"{labelPrefix} — finalize"));
@@ -7661,6 +7793,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            if (ShouldUseLightweightSeamsOnly())
+            {
+                RefreshMountainTerrainConnectivity(mainTerrain);
+                onComplete?.Invoke();
+                return;
+            }
+
             ShowOuterRingSeamProgress();
 
             if (PreferFastFlatGridOuterRingSeams)
@@ -8108,6 +8247,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     ? placeOffsets
                     : SurfaceFullWorldDirectionalBuild.BuildDirectionalOffsetOrder();
 
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+                PreferLightweightSeamsOnly = true;
+
             return new FullWorldGridSession
             {
                 MainTerrain = mainTerrain,
@@ -8394,22 +8536,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 forceUnityConsole: true);
         }
 
-        /// <summary>Extended grid: 1 tile/queue step. Core 81-tile grid may batch more on 18GB+ RAM.</summary>
+        /// <summary>Live demo / recording: 1 tile per queue step. Extended grid always 1; core 81 may batch when idle.</summary>
         static int ResolveFullWorldGroundLayBatchSize()
         {
-            if (CaveBuildMicroProcessQueue.PreferOneTilePerQueueStep)
+            if (CaveBuildLivePlacementPolicy.Active ||
+                CaveBuildMicroProcessQueue.PreferOneTilePerQueueStep)
                 return CaveBuildMicroProcessQueue.ResolveBatchSize(
                     CaveBuildMicroProcessQueue.WorkKind.SurfaceGridPlace);
 
-            if (EnvironmentKitHardwareBudget.Active.ConserveGpuMemory)
-                return 4;
-
-            var ramGb = EnvironmentKitHardwareBudget.ResolveEditorRamBudgetGb();
-            if (ramGb >= 18f)
-                return FullWorldFlatGridPlaceBatchSize;
-            if (ramGb >= 16f)
-                return 6;
-            return 4;
+            return CaveBuildLoadAwareBatching.Clamp(FullWorldFlatGridPlaceBatchSize);
         }
 
         static void BeginFullWorldFlatGridPlacePhase(FullWorldGridSession session) =>
@@ -8511,6 +8646,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     var laidTiles = new List<Terrain>(batchCount);
                     var laidThisStep = 0;
 
+                    var livePlace = CaveBuildLivePlacementPolicy.Active;
                     for (var i = 0; i < batchCount; i++)
                     {
                         var globalIndex = startIndex + i;
@@ -8533,15 +8669,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             off,
                             session.Request?.Seed ?? 0,
                             isSouthAnnex);
-                        laidTiles.Add(tile);
                         laidThisStep++;
 
-                        var layCameraStride = CaveBuildDemoAutoRecorder.IsRecording ? 4 : 24;
-                        if (step == 1 || step == total || step % layCameraStride == 0)
-                            CaveBuildLiveSceneFeedback.NotifyTerrainTile(tile, $"lay ground {step}/{total}");
+                        if (livePlace)
+                        {
+                            CaveBuildLivePlacementPolicy.CommitVisibleTerrainTile(
+                                tile,
+                                $"lay ground {step}/{total}");
+                        }
+                        else
+                        {
+                            laidTiles.Add(tile);
+                            var layCameraStride = CaveBuildDemoAutoRecorder.IsRecording ? 4 : 24;
+                            if (step == 1 || step == total || step % layCameraStride == 0)
+                                CaveBuildLiveSceneFeedback.NotifyTerrainTile(tile, $"lay ground {step}/{total}");
+                        }
                     }
 
-                    CaveBuildTerrainHeightmapMemory.CommitGroundLayBatch(laidTiles);
+                    if (!livePlace && laidTiles.Count > 0)
+                        CaveBuildTerrainHeightmapMemory.CommitGroundLayBatch(laidTiles);
                     EnvironmentKitHardwareBudget.OnQueueStepCompletedThrottled();
 
                     CaveBuildEditorLog.LogSurface(
@@ -8578,7 +8724,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            if (IsFirstHorizonPlaceIndex(placeOffsets, session.Index))
+            if (IsFirstHorizonPlaceIndex(placeOffsets, session.Index) &&
+                !CaveBuildLivePlacementPolicy.Active)
             {
                 QueueFullWorldHorizonRingBatchPlaceAndSeam(session);
                 return;
@@ -8653,7 +8800,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                             if (PreferSkipFlatGridPerTileSeams)
                             {
-                                tile.Flush();
+                                if (CaveBuildLivePlacementPolicy.Active)
+                                {
+                                    CaveBuildLivePlacementPolicy.CommitVisibleTerrainTile(
+                                        tile,
+                                        $"flat grid place {step}/{total}");
+                                }
+                                else
+                                    tile.Flush();
+
                                 AdvanceFlatGridTile();
                                 return;
                             }
@@ -9352,6 +9507,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void QueueDirectionalBuildCenterMain(FullWorldGridSession session, int index, Terrain main)
         {
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(session.Request))
+            {
+                CaveBuildPlannerTerrainGuide.TryBindSession(session.Request, session.Ground);
+                CaveBuildPlannerTerrainGuide.QueueTilePipeline(
+                    main,
+                    Vector2Int.zero,
+                    session.Ground,
+                    session.MainTerrain,
+                    session.Request,
+                    () => ScheduleDirectionalStep(session, index + 1));
+                return;
+            }
+
             ApplyUniformFlatHeightmap(main);
             SurfaceFloridaDemBuildState.MarkAuthoritativeStampCompleted();
             CaveBuildTerrainHeightmapMemory.AfterTileHeightmapPass(main);
@@ -9370,6 +9538,36 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Terrain tile,
             Vector2Int off)
         {
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(session.Request))
+            {
+                CaveBuildPlannerTerrainGuide.QueueTilePipeline(
+                    tile,
+                    off,
+                    session.Ground,
+                    session.MainTerrain,
+                    session.Request,
+                    () =>
+                    {
+                        if (PreferDeferSeamsUntilFullWorldTerraformComplete)
+                        {
+                            if (ShouldUseLightweightSeamsOnly(session.Request))
+                            {
+                                ScheduleDirectionalStep(session, index + 1);
+                                return;
+                            }
+
+                            QueueIncrementalFullWorldTileEdgeWeld(
+                                session.MainTerrain,
+                                tile,
+                                () => ScheduleDirectionalStep(session, index + 1));
+                            return;
+                        }
+
+                        QueueDirectionalStitchPlayTile(session, index, tile, off);
+                    });
+                return;
+            }
+
             ApplyUniformFlatHeightmap(tile);
             CaveBuildTerrainHeightmapMemory.AfterTileHeightmapPass(tile);
             tile.Flush();
@@ -9434,6 +9632,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             PulseTerraformTileMicro(session, index, tile, off, 2, 4, "sculpt");
 
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(session.Request))
+            {
+                CaveBuildPlannerTerrainGuide.QueueTilePipeline(
+                    tile,
+                    off,
+                    session.Ground,
+                    session.MainTerrain,
+                    session.Request,
+                    () => ScheduleDirectionalStep(session, index + 1));
+                return;
+            }
+
             var ringSession = new AttachOuterRingSession
             {
                 MainTerrain = session.MainTerrain,
@@ -9461,12 +9671,17 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Environment Kit",
                 $"[Surface] batch seams — all {tileCount} tiles terraformed",
                 0.96f);
+            var lightweightSeams = ShouldUseLightweightSeamsOnly(session.Request);
             CaveBuildEditorLog.LogSurface(
-                $"[Surface] FullWorld terraform complete ({tileCount} tiles) — batch seam/lock pass next.",
+                lightweightSeams
+                    ? $"[Surface] FullWorld terraform complete ({tileCount} tiles) — lightweight grid weld only (no paced edge blend)."
+                    : $"[Surface] FullWorld terraform complete ({tileCount} tiles) — batch seam/lock pass next.",
                 forceUnityConsole: true);
             CaveBuildRunStatusPublisher.PulseSubOperation(
                 "FullWorld seams",
-                $"batch stitch after {tileCount} tiles");
+                lightweightSeams
+                    ? $"grid weld after {tileCount} tiles"
+                    : $"batch stitch after {tileCount} tiles");
             QueueFinalizeDirectionalFullWorldBuild(session);
         }
 
@@ -9543,13 +9758,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void RunFinalizeDirectionalFullWorldBuildAfterSnap(FullWorldGridSession session)
         {
+            var surfaceRoot = session.MainTerrain != null ? session.MainTerrain.transform.parent : null;
+
             void FinishDirectional()
             {
                 SurfaceFloridaDemBuildState.MarkNineTilePlayDiskPolishCompleted();
                 SurfaceFloridaDemBuildState.MarkFullWorldDirectionalBuildCompleted();
                 SurfaceTerrainGridRegistry.ReindexFromMain(session.MainTerrain, playDiskLocked: true);
-
-                var surfaceRoot = session.MainTerrain.transform.parent;
 
                 void FinishAfterSurfaceProps()
                 {
@@ -9606,7 +9821,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             void AfterSeamsDressAndFinish()
             {
-                var surfaceRoot = session.MainTerrain.transform.parent;
+                if (ShouldUseLightweightSeamsOnly(session.Request))
+                {
+                    SurfaceSeamDressingPropAuthor.QueueDressFloatingIslandSeamCover(
+                        session.MainTerrain,
+                        surfaceRoot,
+                        session.Request?.Seed ?? 0,
+                        () =>
+                        {
+                            RefreshMountainTerrainConnectivity(session.MainTerrain);
+                            SurfaceFloridaDemBuildState.MarkNineTilePlayDiskPolishCompleted();
+                            FinishDirectional();
+                        });
+                    return;
+                }
+
                 SurfaceSeamDressingPropAuthor.QueueDressSeamEdges(
                     session.MainTerrain,
                     surfaceRoot,
@@ -9616,6 +9845,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             void RunSeamPipelineAfterGridWeld()
             {
+                if (ShouldUseLightweightSeamsOnly(session.Request))
+                {
+                    AfterSeamsDressAndFinish();
+                    return;
+                }
+
                 if (CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid)
                 {
                     if (PreferDeferSeamsUntilFullWorldTerraformComplete)

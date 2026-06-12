@@ -27,7 +27,8 @@ Use with [CaveGradingAndCursor.md](./CaveGradingAndCursor.md) and [CAVE-BUILD-WO
 
 **Goal:** Automate AAA-quality cave generation, grading, QA, and research enrichment with:
 
-- End-to-end phases: **pre-build → geometry → playability → world → meat loop → post-meat → export**
+- **Two entry paths:** classic FullWorld preset **or** layout-first planner session ([PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md)) — same **122-step** queued cave pipeline after surface scope
+- End-to-end phases: **pre-build → geometry (geo 1–15) → playability → world → meat loop (step 65) → post-meat → export**
 - Research from `CaveBuildResearch.json` plus agent web policy in prompts
 - Rate limiting via **editor queue + load-scaled sleep**, not blocking `Thread.Sleep` on the main thread
 - Workflow coordinator so phases do not undo each other’s work
@@ -38,13 +39,13 @@ Use with [CaveGradingAndCursor.md](./CaveGradingAndCursor.md) and [CAVE-BUILD-WO
 
 ```mermaid
 flowchart TD
-  A[Build Complete Cave FullWorld] --> S[Surface: 9-tile terrain + props ladder]
+  A[Build Complete Cave FullWorld] --> S[Surface: ~289-tile grid + props ladder]
   S --> B[Pre-build ladder]
   B --> C{Readiness OK?}
   C -->|no| D[Cursor: research / plan / compile_gate / readiness]
   C -->|yes| V[Validate step 0]
   D --> V
-  V --> E[Geo 13 steps: maze shell blocks mouth]
+  V --> E[Geo 15 steps: maze shell blocks mouth]
   E --> F[Playability 18 steps]
   F --> G[Validation + Ground polish + World 15 steps]
   G --> H[Meat loop: purge → grade → fix]

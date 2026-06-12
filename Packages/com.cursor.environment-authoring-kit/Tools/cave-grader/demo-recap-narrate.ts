@@ -3,6 +3,7 @@
  * argv[2]: path to JSON { buildMode, frames: [{ i, phase, sub, line1, line2, line3 }] }
  * stdout: { captions: [{ i, line1, line2, line3 }] }
  */
+import "./planner-load-dotenv.ts";
 import { Agent } from "@cursor/sdk";
 import { readFileSync } from "node:fs";
 

@@ -68,7 +68,7 @@ PRODUCER_SPEC_DEFAULTS: dict[str, Any] = {
     "maxMilestoneHoldSec": 20.0,
     "maxSubbeatHoldSec": 12.0,
     "narrationTailPadSec": 1.8,
-    "sceneUpscale": 1.25,
+    "sceneUpscale": 1.0,
     "timelapseEncodeFps": 30,
     "tlMaxFrames": 72,
     "tlMaxSec": 7.0,

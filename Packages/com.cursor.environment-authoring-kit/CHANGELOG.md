@@ -10,6 +10,11 @@ For Hub-wide project notes, see the consuming repo’s `docs/CHANGELOG.md` when 
 
 ## [Unreleased]
 
+### Documentation (2026-06-09)
+
+- Hub [STORAGE_AND_DISK.md](../../../../docs/STORAGE_AND_DISK.md), [GLOSSARY.md](../../../../docs/GLOSSARY.md); [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) accuracy pass (122 steps, v0.3.4, JacobForges sole author).
+- `EnvironmentKitDataRoot.TryWriteAllText` — disk-safe advisory JSON; planner terrain load pacing.
+
 ### FullWorld grid resize (~289 tiles) + immersive detail
 
 - **Grid** — `MaxChebyshevRadius` 17→8 (17×17 = 289 tiles); biome zones recalculated (9 play + 72 mixed + 208 preset).
@@ -106,9 +111,9 @@ For Hub-wide project notes, see the consuming repo’s `docs/CHANGELOG.md` when 
 
 - Hub [PUBLIC_REPO_SCOPE.md](../../docs/PUBLIC_REPO_SCOPE.md) and aligned README / REQUIREMENTS / package docs for GitHub accuracy (no sample scenes, no store art, XR honesty, ResearchCache local-only).
 
-### Pipeline (120 steps)
+### Pipeline (120 steps at release — **122** in current code)
 
-- Queued FullWorld cave build expanded from **63 → 120** paced macro steps (`CaveBuildQueuedPipelineSchedule`).
+- Queued FullWorld cave build expanded from **63 → 120** paced macro steps at v0.3.0 (`CaveBuildQueuedPipelineSchedule`; **122** as of 0.3.4+).
 - New **ground polish** block (10 steps): iterative heightmap burial, roof strip, depth-only mouth snap, entrance carve refresh.
 - New **finalize polish** block (18 steps): prop coverage, nine-tile vegetation check, burial/roof pass, completion contract before manifest.
 - World stages expanded to **15** (burial touch-up, route props, shell gap pass, grounding lock).

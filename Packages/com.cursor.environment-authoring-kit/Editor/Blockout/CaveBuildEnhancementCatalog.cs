@@ -44,7 +44,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             // Speed (1–15)
             P("speed_incremental_off_first", "Incremental ladder off for first full pass", Category.Speed, Hook.Preflight, true, 1),
             P("speed_auto_invoke_off", "Auto-invoke Cursor off during full run", Category.Speed, Hook.Preflight, true, 1),
-            P("speed_paced_phased_build", "Phased 120-step queue (not monolithic)", Category.Speed, Hook.Preflight, true, 1),
+            P("speed_paced_phased_build", "Phased 122-step queue (not monolithic)", Category.Speed, Hook.Preflight, true, 1),
             P("speed_defer_refresh_geo", "Defer asset refresh during cave geo", Category.Speed, Hook.AfterCaveShell, true, 1),
             P("speed_skip_manifest_rebuild", "Skip duplicate JSON manifest rebuild", Category.Speed, Hook.AfterResearch, true, 1),
             P("speed_research_cache_local", "Reuse local ResearchCache + images", Category.Speed, Hook.AfterResearch, true, 1),
@@ -56,7 +56,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             P("speed_no_navmesh_in_validate", "No implicit NavMesh during validate", Category.Speed, Hook.AfterResearch, true, 1),
             P("speed_suppress_mid_autonomous", "Suppress autonomous loop mid-pipeline", Category.Speed, Hook.Preflight, true, 1),
             P("speed_sequential_image_pull_log", "Sequential research image pull + progress", Category.Speed, Hook.AfterResearch, true, 1),
-            P("speed_queue_live_status", "Live status + Build X/120 progress labels", Category.Speed, Hook.Preflight, true, 1),
+            P("speed_queue_live_status", "Live status + Build X/122 progress labels", Category.Speed, Hook.Preflight, true, 1),
 
             // Quality (16–30)
             P("quality_dem_supersample_128", "DEM elevation grid supersample → 128", Category.Quality, Hook.AfterDemStamp, true, 2),

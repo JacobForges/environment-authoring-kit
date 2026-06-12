@@ -4,13 +4,15 @@ Machine-readable registry: `CaveBuildPhaseContractRegistry` → `Assets/Environm
 
 **Rule:** A rung may run only when all **input** artifacts exist. When a rung completes, it writes **outputs** and marks downstream rungs dirty if their inputs change.
 
+**Pipeline truth:** [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md) · **Planner:** [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md)
+
 | Rung ID | Inputs | Outputs | Invalidates | Max runtime (target) |
 |---------|--------|---------|-------------|----------------------|
 | `research_seed` | Hub ResearchCache index | `CaveBuildResearchExecutionBrief.json`, gate files | all | 30s |
 | `macro_terrain` | Ground anchor, seed | Terrain heightmap, `SurfaceDemGeorefStatus.json` | trails, props, cave mouth | 90s |
 | `hydrology_masks` | heightmap | Road/water masks (structure) | trails, props | 45s |
 | `trails_nav` | heightmap, masks | Trail splines, `SurfaceWorldManifest.json`, surface NavMesh | props, validation | 60s |
-| `surface_props` | trails, NavMesh | `GeneratedSurfaceWorld/Vegetation` — per-tile targets (e.g. trees 35×N, grass 150×N); scene ≥42 instances/tile | validation only | 120s |
+| `surface_props` | trails, NavMesh | `GeneratedSurfaceWorld/Vegetation` — per-tile targets; scene ≥42 instances/tile | validation only | 120s |
 | `pre_build_gate` | surface artifacts | `CaveBuildPreBuildLadderReport.json` | cave geometry | 120s |
 | `cave_layout` | pre-build pass | `CaveMazeLayout` / spline under cave root | route mesh, shell, gameplay | 120s |
 | `route_mesh_nav` | layout | `RouteTerrainFloor`, cave NavMesh | shell, materials | 90s |
@@ -21,24 +23,24 @@ Machine-readable registry: `CaveBuildPhaseContractRegistry` → `Assets/Environm
 
 ## Queued pipeline mapping (122 steps)
 
-| Queued steps | Global rung |
-|--------------|-------------|
-| 0 | `research_seed` |
-| 1–13 | `cave_layout` (+ geo artifacts) |
-| 14–31 | `route_mesh_nav` / playability |
-| 32–37 | `validation` |
-| 38–47 | `shell_materials` (ground polish / burial under terrain) |
-| 48–62 | `shell_materials` / `gameplay_props` (world stages) |
-| 63 | `polish` (meat loop entry — **not** total step count; pipeline total = **120**) |
-| 64–87 | `polish` (post-meat) |
-| 88–99 | `research_seed` (post-build research) |
-| 100–117 | `polish` (finalize: props, burial, contract) |
-| 118 | commercial manifest |
-| 119 | finalize report |
+Source: `CaveBuildQueuedPipelineSchedule` in `Editor/Blockout/CaveBuildQueuedPipelineSchedule.cs`.
 
-Constants: `CaveBuildQueuedPipelineSchedule` in `Editor/Blockout/CaveBuildQueuedPipelineSchedule.cs`.
+| Queued steps | Phase | Global rung |
+|--------------|--------|-------------|
+| 0 | Validate & prep | `research_seed` / pre-build handoff |
+| 1–15 | Geo (15 steps) | `cave_layout` |
+| 16–33 | Playability (18 steps) | `route_mesh_nav` |
+| 34–39 | Validation (6 steps) | `validation` |
+| 40–49 | Ground polish (10 steps) | `shell_materials` (burial under terrain) |
+| 50–64 | World stages (15 steps) | `shell_materials` / `gameplay_props` |
+| **65** | **Meat loop** | `polish` (entry — not total count) |
+| 66–89 | Post-meat (24 steps) | `polish` |
+| 90–101 | Research (12 steps) | `research_seed` |
+| 102–119 | Finalize polish (18 steps) | `polish` |
+| 120 | AAA manifest | commercial manifest |
+| 121 | Finish report | finalize report |
 
-**FullWorld** runs surface rungs `macro_terrain` → `surface_props` in startup **before** queued cave step 0. Surface-only builds stop after `surface_props`. Cave-only skips surface rungs when artifacts exist.
+**FullWorld** runs surface rungs `macro_terrain` → `surface_props` in startup **before** queued cave step 0. **Planner session** may scope tiles to 13/81/289 via `CaveBuildActiveSessionConfig.json`. Surface-only builds stop after `surface_props`. Cave-only skips surface rungs when artifacts exist.
 
 **Scene check:** `surface_props` is not complete from JSON plans alone — `AreOutputsPresent` requires vegetation instances on every locked terrain (`IsNineTileVegetationSufficient`).
 

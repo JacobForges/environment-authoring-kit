@@ -501,7 +501,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             ProgressQueued(show, macroStep, macroTotal, label);
         }
 
-        /// <summary>Queued pipeline progress — avoids stale Stage 1/40 while on macro step 2/120.</summary>
+        /// <summary>Queued pipeline progress — avoids stale Stage 1/40 while on macro step 2/122.</summary>
         public static void ProgressQueued(bool show, int macroStep, int macroTotal, string label)
         {
             if (!show)
@@ -896,7 +896,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 var mainTerrain = SurfaceTerrainTileExpansion.FindMainTerrainInScene();
                 var centerXZ = SurfaceTerrainTileExpansion.ResolvePlayDiskCenterXZ(ground, mainTerrain);
-                return new Vector3(centerXZ.x, ground.SurfaceY + 0.35f, centerXZ.z);
+                var near = new Vector3(centerXZ.x, ground.SurfaceY, centerXZ.z);
+                if (mainTerrain != null &&
+                    PlayerSpawnHeightUtility.TrySampleWalkableSurfaceY(near, out var surfaceY))
+                    near.y = surfaceY;
+                return PlayerSpawnHeightUtility.ResolvePivotPosition(near, null);
             }
 
             return caveRoot != null ? caveRoot.position + Vector3.up * 12f : Vector3.up * 2f;
@@ -938,7 +942,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool IsPhasedBuildActive => _queued != null;
 
-        /// <summary>Clears the 120-step queued pipeline without scheduling follow-up Cursor/auto-rebuild work.</summary>
+        /// <summary>Clears the 122-step queued pipeline without scheduling follow-up Cursor/auto-rebuild work.</summary>
         public static void EmergencyAbortQueuedBuild()
         {
             if (_queued == null)

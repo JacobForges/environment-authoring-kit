@@ -16,7 +16,7 @@ Helper / ladder reference: [VOICE_HELPERS.md](VOICE_HELPERS.md)
 
 ## What to check
 
-- Your voice (**Jacob Adkins**) shows **Ready** (not still recording/processing).
+- Your voice (**JacobForges**) shows **Ready** (not still recording/processing).
 - Section: **Allow applications to use your Personal Voice**
   - **Terminal** (or **Cursor**, **iTerm**) appears here only after you run the authorize script **from that same app** and click **Allow** on the popup.
 

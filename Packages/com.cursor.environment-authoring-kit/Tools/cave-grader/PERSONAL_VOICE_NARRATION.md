@@ -150,7 +150,7 @@ Helper reference: [VOICE_HELPERS.md](VOICE_HELPERS.md)
 
 | Key | Purpose |
 |-----|---------|
-| `narratorEngine` | `personal` (required for Jacob Adkins) |
+| `narratorEngine` | `personal` (required for JacobForges) |
 | `narratorPersonalVoice` | Exact `say -v` name |
 | `narratorWordQueue` / `narratorPortfolioMode` | Enable queue paths |
 | `narratorTestPhrase` | Line used by `prepare-narrator-voice.py --test` |

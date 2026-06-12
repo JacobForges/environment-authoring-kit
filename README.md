@@ -1,14 +1,21 @@
 # Environment Authoring Kit (Unity)
 
-**Clone → open in Unity → Build Complete Cave from the Hub.** First run sets up the project and runs the **full procedural pipeline with no API keys**.
+**Procedural Florida karst surface + lava-tube caves** for Unity 6 — with an optional **layout planner** (AI wizard or hand-written JSON), paced FullWorld builds, grading ladder, and a playable demo game layer.
 
-AI grading (Cursor, Gemini, Ollama, etc.) is **optional** — configure providers in **Hub → Settings** when you have keys or local Ollama.
+**Two entry paths:**
+
+1. **Planner-first (recommended for demos)** — `npm run build-wizard` (optional AI Q&A) **or** edit `Generated/CaveBuildPlannerBrief.json` (**no AI keys**). Finalize → **Hub → Build**. See [docs/PLANNER_SESSION.md](docs/PLANNER_SESSION.md).
+2. **Classic FullWorld** — Hub preset **02**, **Build Complete Cave (122)** — no planner session required.
+
+No API keys required for either path. AI grading (Cursor, Gemini, etc.) is **optional** — Hub → Settings.
 
 This repository is the **shareable Unity project + UPM package** (`com.cursor.environment-authoring-kit`). It does **not** include third-party Asset Store props, store cave meshes, sample scenes, or the VITURE native SDK — those stay on your machine under separate licenses.
 
-**Accuracy contract:** [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) — what is on GitHub vs local-only (read before trusting other docs).
+**Accuracy contract:** [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) + [docs/PIPELINE_TRUTH.md](docs/PIPELINE_TRUTH.md) — what is on GitHub vs local-only; canonical step/tile counts.
 
-**Package version:** **0.3.4** · queued cave build: **122** steps (some UI labels still say 120).
+**Package version:** **0.3.4** · queued cave build: **122** steps.
+
+**GitHub repo:** [environment-authoring-kit](https://github.com/JacobForges/environment-authoring-kit) · **Author:** [JacobForges](https://github.com/JacobForges) (sole author). Local folder may be named `Hub` — that is the reference Unity project, not the repo name.
 
 **Blank-scene test project:** [THE_NEST_PHASE.md](Packages/com.cursor.environment-authoring-kit/docs/THE_NEST_PHASE.md) — local clone at `~/Projects/the-nest-phase`.
 
@@ -31,15 +38,27 @@ After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)
 
 ## First build (after clone)
 
-1. **Unity Hub** → open this repo folder (Unity **6** + URP).
-2. **Window → Environment Kit → Hub** → leave **Sequential FullWorld terrain** checked (default); pick a **FullWorld preset** (default **02 — Ideal layout**) — [preset guide](Packages/com.cursor.environment-authoring-kit/docs/FULLWORLD_GENERATION_PRESETS.md).
-3. **Build Complete Cave (122)** (same as menu **Build Complete Cave Level**).
+1. **Unity Hub** → open this repo folder (Unity **6** + URP). Local folder may be `Hub`; git remote is **environment-authoring-kit**.
+2. **Node 18+** on the machine.
+
+### Path A — Planner layout (AI optional, fastest demo)
+
+```bash
+cd Packages/com.cursor.environment-authoring-kit/Tools/cave-grader && npm install && npm run build-wizard
+```
+
+Complete checklist → approve plan → **Finalize** (writes `CaveBuildPlannerBrief.json` + `CaveBuildActiveSessionConfig.json`).  
+**Non-AI:** skip the wizard; copy/edit those JSON files by hand — [docs/PLANNER_SESSION.md](docs/PLANNER_SESSION.md).
+
+Then **Window → Environment Kit → Hub → Build**. Planner drives terrain, trails, props, optional caves (`agentInvokes: false` = no blocking agents during build).
+
+### Path B — Classic FullWorld (no planner)
+
+**Hub** → **Sequential FullWorld terrain** (default on) → preset **02 — Ideal layout** → **Build Complete Cave (122)** — [preset guide](Packages/com.cursor.environment-authoring-kit/docs/FULLWORLD_GENERATION_PRESETS.md).
 
 **First click runs clone setup automatically:** tagged **Ground** plane, **PortalFive**, grid anchors (`SurfaceTerrainFlatHost`, `SurfaceFullWorldGridAnchor`), placeholder prefabs if needed, `npm install` in `Tools/cave-grader`, and paths pointed at **this** clone. **Empty scene is OK** — no manual setup.
 
 **Isolated test clone:** [THE_NEST_PHASE.md](docs/THE_NEST_PHASE.md) + `~/Projects/the-nest-phase`.
-
-4. You need **Node 18+** on the machine (setup runs `npm install` for you).
 
 **Watch the build in the Hub** — activity feed, sub-action, and live status. The floating **Environment Kit** progress bar stays hidden while Hub is open. You do **not** need **Diagnostics → Pipeline Console** unless you want a second log window.
 
@@ -47,7 +66,7 @@ After clone, open the folder in **Unity Hub** (see [Requirements](#requirements)
 
 If build blocks, open `Assets/EnvironmentKit/Generated/CaveBuildPreflightReport.md` and fix any **BLOCK** row (usually missing Node).
 
-**Layout / placement:** [PROJECT_LAYOUT_PLAN_20_STEPS.md](Packages/com.cursor.environment-authoring-kit/docs/PROJECT_LAYOUT_PLAN_20_STEPS.md) — **Build Surface World Only**, then **Build Complete Cave**; read `WorldLayoutAudit.json` between steps.
+**Layout / placement (classic FullWorld):** [PROJECT_LAYOUT_PLAN_20_STEPS.md](Packages/com.cursor.environment-authoring-kit/docs/PROJECT_LAYOUT_PLAN_20_STEPS.md). **Planner path** uses brief markers instead — see [PLANNER_SESSION.md](docs/PLANNER_SESSION.md).
 
 **Research cache (optional, speeds gates):** `Assets/EnvironmentKit/ResearchCache/` — `HUB_ROOT=/path/to/Hub npm run sync-research-cache` in `Tools/cave-grader`. Hub **Enrich** / **Grade research** buttons are maintenance only, not required every build.
 
@@ -111,7 +130,7 @@ All under **Window → Environment Kit**:
 |------|---------|
 | **Hub** | **Recommended** — builds, settings, live monitor, 20 FullWorld styles |
 | **Build Complete Cave Level** | Same FullWorld build as Hub (opens Hub) |
-| **Build Surface World Only** | Surface terrain grid (81 tiles) + mountains / props |
+| **Build Surface World Only** | Surface terrain grid (~289 default; 81-tile core) + mountains / props |
 | **Cave Build → Advanced → Snap Surface Terrain Grid** | Recovery — snap all slots to grid anchor |
 | **Cave Build → Advanced → Expand Open World — Add Next Terrain Ring** | Incremental open world (+1 ring) |
 | **Build Cave Only — Align to Surface** | Underground only |
@@ -160,14 +179,24 @@ Details: [CaveGradingAndCursor.md](Packages/com.cursor.environment-authoring-kit
 | [REQUIREMENTS.md](REQUIREMENTS.md) | Product requirements |
 | [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) | GitHub vs local |
 | [Package docs index](Packages/com.cursor.environment-authoring-kit/docs/README.md) | All package docs |
+| [docs/STORAGE_AND_DISK.md](docs/STORAGE_AND_DISK.md) | Lexar migration, disk-full recovery |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Naming + author policy |
+| [docs/PLANNER_SESSION.md](docs/PLANNER_SESSION.md) | Planner — AI wizard optional, non-AI JSON path |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | Hub changelog |
+
+---
+
+## Author
+
+**JacobForges** — [github.com/JacobForges](https://github.com/JacobForges)  
+Sole author and copyright holder. AI-assisted development tools are not listed as co-authors.
 
 ---
 
 ## License
 
 **Educational and personal non-commercial use — free.**  
-**Commercial use** requires a separate license from the copyright holder.
+**Commercial use** requires a separate license from **JacobForges** (copyright holder).
 
 [LICENSE.md](Packages/com.cursor.environment-authoring-kit/LICENSE.md) · [THIRD_PARTY_AND_LICENSE_SCOPE.md](docs/THIRD_PARTY_AND_LICENSE_SCOPE.md)
 
@@ -175,4 +204,4 @@ Details: [CaveGradingAndCursor.md](Packages/com.cursor.environment-authoring-kit
 
 ## Tagline (for GitHub About)
 
-*AI-assisted Unity framework for procedural terrain, caves, and world scaffolding — a strong base you refine, not a one-click finished world.*
+*Unity 6 procedural world pipeline — planner-driven layouts (AI optional), Florida karst surface, lava-tube caves, paced builds, grading ladder. Author: JacobForges.*

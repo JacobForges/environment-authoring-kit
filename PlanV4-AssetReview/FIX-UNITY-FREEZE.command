@@ -11,13 +11,13 @@ pkill -9 -f "Unity Hub" 2>/dev/null || true
 pkill -9 -f "Unity.app/Contents/MacOS/Unity" 2>/dev/null || true
 sleep 3
 
-echo "=== 2) Restart licensing client ==="
+echo "=== 2) Start EDITOR licensing client only (Hub client is too old — causes 505 handshake) ==="
 LIC="/Applications/Unity/Hub/Editor/6000.4.6f1/Unity.app/Contents/Helpers/UnityLicensingClient.app/Contents/MacOS/Unity.Licensing.Client"
 if [[ -x "$LIC" ]]; then
-  "$LIC" &
+  "$LIC" --namedPipe Unity-LicenseClient-jacob-6000.4.6 &
   sleep 4
 else
-  echo "Licensing client not found at expected path — open Unity Hub manually after step 3."
+  echo "Licensing client not found at expected path — install 6000.4.6f1 via Hub."
 fi
 
 echo "=== 3) Disable Cache Server wait in Hub project ==="
@@ -50,15 +50,17 @@ for s in "${HUB}/Assets/TheStart.unity" "${HUB}/Assets/MainScene.unity" "${HUB}/
   [[ -f "$s" ]] && SCENE="$s" && break
 done
 
-ARGS=(-projectPath "$HUB")
+ARGS=(-projectPath "$HUB" -acceptSoftwareTermsForThisRunOnly)
 [[ -n "$SCENE" ]] && ARGS+=(-openScene "$SCENE")
 
-echo "Launching: $UNITY ${ARGS[*]}"
+echo "Launching WITHOUT Hub IPC (avoids LicenseClient-jacob protocol mismatch):"
+echo "  $UNITY ${ARGS[*]}"
 nohup "$UNITY" "${ARGS[@]}" >/tmp/unity-hub-direct.log 2>&1 &
 sleep 2
 echo ""
 echo "Editor launching in background. Log: /tmp/unity-hub-direct.log"
 echo "If licensing dialog appears IN THE EDITOR, sign in there (not only Hub)."
+echo "Also update Unity Hub to v3.18.2+ (banner in Hub) — old Hub licensing breaks 6000.4.6."
 echo "When loaded, run:"
 echo "  Window → Environment Kit → World → Wire Hub Combat"
 echo "  Window → Environment Kit → World → Build Cinematic Timelines"

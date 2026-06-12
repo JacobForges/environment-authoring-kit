@@ -19,6 +19,12 @@ import {
 } from "./bot-supervisor.js";
 import { loadCaveGraderEnv } from "./load-env.js";
 import {
+  formatPipelineAuditLine,
+  runPipelineAudit,
+  runUnityPipelineAudit,
+} from "./bot-pipeline-audit.js";
+import { formatGameplaySmokeLine } from "./gameplay-smoke-gate.js";
+import {
   formatMissionPhaseLine,
   loadHubGameProgress,
   resolveMissionPhase,
@@ -27,7 +33,7 @@ import {
 
 loadCaveGraderEnv();
 
-const hubRoot = (process.env.HUB_ROOT ?? join(process.cwd(), "../../..")).replace(/\/$/, "");
+const hubRoot = (process.env.HUB_ROOT ?? join(process.cwd(), "../../../..")).replace(/\/$/, "");
 const graderDir = join(hubRoot, "Packages/com.cursor.environment-authoring-kit/Tools/cave-grader");
 const botDir = join(hubRoot, "Tools/cursor-bot");
 const cfg = loadBotProductionConfig(hubRoot);
@@ -42,6 +48,30 @@ function sleepMs(ms: number): void {
 
 function demoReady(): boolean {
   return loadHubGameProgress(hubRoot)?.demoReady === true;
+}
+
+function runHubDemoSmokeGate(): number | null {
+  const unity = process.env.UNITY_PATH?.trim();
+  if (skipUnityPost || !unity || !existsSync(unity)) return null;
+
+  const logFile = join(hubRoot, "Logs/agent-gameplay-smoke-gate.log");
+  console.log("[CaveCursor:until-demo] Unity gameplay smoke gate (checklist + progress sync)…");
+  const result = spawnSync(
+    unity,
+    [
+      "-batchmode",
+      "-nographics",
+      "-projectPath",
+      hubRoot,
+      "-executeMethod",
+      "EnvironmentAuthoringKit.Editor.EnvironmentKitBatch.RunHubDemoSmokeGate",
+      "-quit",
+      "-logFile",
+      logFile,
+    ],
+    { stdio: "inherit", timeout: 600_000 }
+  );
+  return result.status ?? 1;
 }
 
 function runUnityProductionPostPass(): number | null {
@@ -122,6 +152,19 @@ for (let i = 1; i <= maxIterations; i++) {
   const phase = resolveMissionPhase(hubRoot);
   console.log(`\n[CaveCursor:until-demo] === Session ${i}/${maxIterations} phase=${phase} ===\n`);
 
+  if (!skipUnityPost && process.env.CAVE_SKIP_PIPELINE_AUDIT !== "1") {
+    const unityAuditExit = runUnityPipelineAudit(hubRoot);
+    const audit = runPipelineAudit(hubRoot, { mergeUnity: unityAuditExit != null });
+    console.log(formatPipelineAuditLine(audit));
+    if (unityAuditExit === 2) {
+      console.error("[CaveCursor:until-demo] Pipeline audit blocked on compile errors.");
+      process.exit(4);
+    }
+  } else {
+    const audit = runPipelineAudit(hubRoot);
+    console.log(formatPipelineAuditLine(audit));
+  }
+
   const scoreBefore = readOverallScore();
   let agentExit = 0;
   if (shouldRunAgent(cfg)) {
@@ -141,7 +184,7 @@ for (let i = 1; i <= maxIterations; i++) {
   let rolledBack = false;
   const notes: string[] = [];
 
-  if (phase === "world" || phase === "gameplay") {
+  if (phase === "world") {
     unityExit = runUnityProductionPostPass();
     exportProductionGateStatus(hubRoot);
 
@@ -164,6 +207,14 @@ for (let i = 1; i <= maxIterations; i++) {
 
     if (unityExit === 3) {
       console.log("[CaveCursor:until-demo] Gate not passed after post-pass — next session.");
+    }
+  } else if (phase === "gameplay") {
+    unityExit = runHubDemoSmokeGate();
+    notes.push(formatGameplaySmokeLine(hubRoot));
+    if (unityExit === 1) {
+      console.log(
+        "[CaveCursor:until-demo] Gameplay smoke gate — no play report sync yet. Run Play Mode pass or wait for G8."
+      );
     }
   }
 

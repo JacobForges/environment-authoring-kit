@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
-"""Rich top-down concept map for AI Build Planner — props, NPCs, trails, enemies, collectibles."""
+"""Unity Editor Scene-view concept preview for AI Build Planner — tiles, trails, props, platforms."""
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1536, 1024
+CONCEPT_DENSITY_NAME = "concept-density.png"
+CONCEPT_LAYOUT_DETAIL_NAME = "concept-layout-detail.png"
+CONCEPT_DENSITY_DETAIL_NAME = "concept-density-detail.png"
+DETAIL_W, DETAIL_H = 1152, 864
+DETAIL_ZOOM = 2.45
+
+# Must match CaveBuildPlannerConceptGuide.ClassifyConceptColor sampling.
+DENSITY_TRAIL_RGB = (184, 148, 88)
+DENSITY_PROP_RGB = (210, 180, 90)
+DENSITY_PROP_HOT_RGB = (255, 215, 60)
 
 COLORS = {
     "bg": (18, 22, 30),
@@ -88,18 +100,26 @@ _PLAY_TILE = {
     "ne": (0, 2),
     "sw": (2, 0),
     "se": (2, 2),
+    "hub-center": (1, 1),
+    "hub-north-edge": (0, 1),
+    "hub-south-edge": (2, 1),
+    "hub-east-edge": (1, 2),
+    "hub-west-edge": (1, 0),
 }
 
 
 def _coerce_play_row_col(row: Any, col: Any, default: tuple[int, int] = (1, 1)) -> tuple[int, int]:
     for val in (row, col):
         if isinstance(val, str):
-            key = val.strip().lower()
+            key = val.strip().lower().replace("_", "-")
             if key in _PLAY_TILE:
                 return _PLAY_TILE[key]
     try:
         r = int(row) if row is not None and str(row).strip() != "" else default[0]
         c = int(col) if col is not None and str(col).strip() != "" else default[1]
+        # 9×9 shell: play disk occupies rows/cols 3–5 (centered 3×3).
+        if 3 <= r <= 5 and 3 <= c <= 5:
+            return r - 3, c - 3
         return max(0, min(2, r)), max(0, min(2, c))
     except (TypeError, ValueError):
         return default
@@ -119,6 +139,10 @@ def _coerce_island_slot(slot: Any, default: int = 0) -> int:
         return max(0, min(3, int(s)))
     named = {
         "hub-center": 0,
+        "hub-north-edge": 1,
+        "hub-south-edge": 2,
+        "hub-east-edge": 3,
+        "hub-west-edge": 4,
         "play-center": 0,
         "center": 0,
         "mid": 0,
@@ -132,7 +156,61 @@ def _coerce_island_slot(slot: Any, default: int = 0) -> int:
         "west": 0,
         "w": 0,
     }
-    return max(0, min(3, named.get(s, default)))
+    if s in named:
+        return max(0, min(3, named[s]))
+    if s.startswith("hub-"):
+        for key, val in (
+            ("north", 1),
+            ("south", 2),
+            ("east", 3),
+            ("west", 0),
+            ("center", 0),
+        ):
+            if key in s:
+                return max(0, min(3, val))
+    digest = int(hashlib.md5(s.encode()).hexdigest()[:4], 16)
+    return digest % 4
+
+
+def _coerce_marker_slot(slot: Any, default: int = 0) -> int:
+    """Scatter index for play-tile markers — LLM may emit names like hub-north-edge."""
+    if slot is None:
+        return default
+    if isinstance(slot, bool):
+        return default
+    if isinstance(slot, int):
+        return max(0, min(20, slot))
+    if isinstance(slot, float):
+        return max(0, min(20, int(slot)))
+    s = str(slot).strip().lower().replace("_", "-")
+    if s.isdigit():
+        return max(0, min(20, int(s)))
+    named = {
+        "hub-center": 4,
+        "hub-north-edge": 1,
+        "hub-south-edge": 7,
+        "hub-east-edge": 5,
+        "hub-west-edge": 3,
+        "north": 1,
+        "south": 7,
+        "east": 5,
+        "west": 3,
+        "center": 4,
+    }
+    if s in named:
+        return named[s]
+    if s.startswith("hub-"):
+        for key, val in (
+            ("north", 1),
+            ("south", 7),
+            ("east", 5),
+            ("west", 3),
+            ("center", 4),
+        ):
+            if key in s:
+                return val
+    digest = int(hashlib.md5(s.encode()).hexdigest()[:4], 16)
+    return digest % 9
 
 
 def _sanitize_layout_plan(layout: dict[str, Any]) -> dict[str, Any]:
@@ -146,9 +224,12 @@ def _sanitize_layout_plan(layout: dict[str, Any]) -> dict[str, Any]:
         if zone == "play":
             row, col = _coerce_play_row_col(item.get("row"), item.get("col"))
             item["row"], item["col"] = row, col
+            item["slot"] = _coerce_marker_slot(item.get("slot"))
         elif zone == "island":
             item["slot"] = _coerce_island_slot(item.get("slot"))
             item["dir"] = str(item.get("dir", "N")).upper()[:1] or "N"
+        else:
+            item["slot"] = _coerce_marker_slot(item.get("slot"))
         markers.append(item)
     out["markers"] = markers
     return out
@@ -294,229 +375,912 @@ def _island_slot_pos(ix: int, iy: int, cell: int, slot: int) -> tuple[int, int]:
     return int(ix + dx), int(iy + dy)
 
 
+UNITY = {
+    "chrome": (30, 30, 30),
+    "panel": (56, 56, 56),
+    "panel_edge": (26, 26, 26),
+    "tab": (68, 68, 68),
+    "scene_bg_top": (72, 88, 110),
+    "scene_bg_bot": (38, 48, 58),
+    "hier_text": (200, 200, 200),
+    "hier_sel": (44, 93, 135),
+    "terrain_top": (96, 145, 78),
+    "terrain_side": (62, 98, 52),
+    "terrain_plateau": (118, 168, 95),
+    "platform": (148, 142, 132),
+    "trail": (184, 148, 88),
+    "tree": (34, 110, 52),
+    "rock": (120, 118, 112),
+    "grass": (72, 150, 62),
+    "spawn": (90, 220, 130),
+    "water": (58, 118, 175),
+    "gizmo": (255, 196, 60),
+}
+
+
+def _parse_specs(layout: dict[str, Any]) -> dict[str, float]:
+    note = str(layout.get("gridNote") or "")
+    specs = layout.get("technicalSpecs") if isinstance(layout.get("technicalSpecs"), dict) else {}
+    plateau = float(specs.get("plateauHeightM") or 35)
+    platform = float(specs.get("platformHeightM") or 12)
+    hop = float(specs.get("platformHopM") or 4)
+    if "+35" in note or "35u" in note:
+        plateau = 35.0
+    if "+12" in note or "12u" in note:
+        platform = 12.0
+    return {"plateau": plateau, "platform": platform, "hop": hop}
+
+
+def _corner_maze_cells(layout: dict[str, Any]) -> set[tuple[int, int]]:
+    cells: set[tuple[int, int]] = set()
+    for m in layout.get("markers") or []:
+        label = str(m.get("label", "")).lower()
+        if "maze" in label and ("plateau" in label or "corner" in label):
+            row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+            cells.add((row, col))
+    if cells:
+        return cells
+    note = str((layout.get("playDisk") or {}).get("labyrinthNote") or "").lower()
+    if "corner" in note or "nw" in note:
+        return {(0, 0), (0, 2), (2, 0), (2, 2)}
+    if (layout.get("playDisk") or {}).get("labyrinth"):
+        return {(1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)}
+    return set()
+
+
+def _iso(gx: float, gy: float, gz: float, ox: float, oy: float, scale: float) -> tuple[int, int]:
+    """Isometric-ish scene view projection (Unity Scene camera ~30°)."""
+    sx = ox + (gx - gy) * scale * 0.92
+    sy = oy + (gx + gy) * scale * 0.46 - gz * scale * 0.55
+    return int(sx), int(sy)
+
+
+def _draw_iso_box(
+    draw: ImageDraw.ImageDraw,
+    gx: float,
+    gy: float,
+    gz: float,
+    w: float,
+    d: float,
+    h: float,
+    ox: float,
+    oy: float,
+    scale: float,
+    top_color: tuple[int, int, int],
+    side_color: tuple[int, int, int],
+) -> None:
+    hw, hd = w * 0.5, d * 0.5
+    top = [
+        _iso(gx - hw, gy - hd, gz + h, ox, oy, scale),
+        _iso(gx + hw, gy - hd, gz + h, ox, oy, scale),
+        _iso(gx + hw, gy + hd, gz + h, ox, oy, scale),
+        _iso(gx - hw, gy + hd, gz + h, ox, oy, scale),
+    ]
+    right = [
+        top[1],
+        top[2],
+        _iso(gx + hw, gy + hd, gz, ox, oy, scale),
+        _iso(gx + hw, gy - hd, gz, ox, oy, scale),
+    ]
+    left = [
+        top[0],
+        top[3],
+        _iso(gx - hw, gy + hd, gz, ox, oy, scale),
+        _iso(gx - hw, gy - hd, gz, ox, oy, scale),
+    ]
+    draw.polygon(right, fill=side_color)
+    draw.polygon(left, fill=tuple(max(0, c - 18) for c in side_color))
+    draw.polygon(top, fill=top_color, outline=(30, 40, 30))
+
+
+def _draw_unity_chrome(
+    draw: ImageDraw.ImageDraw,
+    title: str,
+    scene_rect: tuple[int, int, int, int],
+    font,
+    small,
+    tiny,
+) -> tuple[int, int, int, int]:
+    draw.rectangle([0, 0, W, 36], fill=UNITY["chrome"])
+    draw.text((12, 8), "Unity 6", fill=(210, 210, 210), font=small)
+    draw.text((88, 8), "MainScene.unity — Environment Kit Hub build preview", fill=(170, 170, 170), font=small)
+    draw.text((W - 220, 8), "Scene | Game | Asset Store", fill=(140, 140, 140), font=tiny)
+
+    hier_w = 248
+    draw.rectangle([0, 36, hier_w, H - 28], fill=UNITY["panel"], outline=UNITY["panel_edge"])
+    draw.text((10, 44), "Hierarchy", fill=UNITY["hier_text"], font=small)
+
+    insp_x = W - 268
+    draw.rectangle([insp_x, 36, W, H - 28], fill=UNITY["panel"], outline=UNITY["panel_edge"])
+    draw.text((insp_x + 10, 44), "Inspector", fill=UNITY["hier_text"], font=small)
+
+    sx0, sy0, sx1, sy1 = scene_rect
+    draw.rectangle([sx0, sy0, sx1, sy1], fill=UNITY["scene_bg_bot"])
+    for y in range(sy0, sy1):
+        t = (y - sy0) / max(1, sy1 - sy0)
+        r = int(UNITY["scene_bg_top"][0] * (1 - t) + UNITY["scene_bg_bot"][0] * t)
+        g = int(UNITY["scene_bg_top"][1] * (1 - t) + UNITY["scene_bg_bot"][1] * t)
+        b = int(UNITY["scene_bg_top"][2] * (1 - t) + UNITY["scene_bg_bot"][2] * t)
+        draw.line([(sx0, y), (sx1, y)], fill=(r, g, b))
+
+    draw.rectangle([sx0, sy0, sx1, sy1], outline=(20, 20, 20), width=2)
+    draw.text((sx0 + 10, sy0 + 6), "Scene", fill=(220, 220, 220), font=tiny)
+    draw.text((sx0 + 58, sy0 + 6), "Shaded | Wireframe off | 2D off", fill=(130, 130, 130), font=tiny)
+
+    draw.rectangle([0, H - 28, W, H], fill=UNITY["chrome"])
+    draw.text((12, H - 22), "Console  |  [CaveBuild] Surface props complete — planner layout preview", fill=(120, 200, 140), font=tiny)
+
+    return sx0, sy0, sx1, sy1
+
+
+def _draw_hierarchy(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    checklist: list[dict[str, Any]] | None,
+    font,
+    tiny,
+) -> None:
+    lines = [
+        ("▼ Environment", False),
+        ("  ▼ Surface", False),
+        ("    Terrain (3×3 play disk)", False),
+        ("    PlannerLayout", True),
+        ("      JumpPlatforms", False),
+        ("      PlannerFallVolume", False),
+        ("    ▼ Vegetation", False),
+    ]
+    prop_count = sum(1 for m in layout.get("markers") or [] if str(m.get("kind")) == "prop" and "plat" not in str(m.get("label", "")).lower())
+    plat_count = sum(1 for m in layout.get("markers") or [] if "plat" in str(m.get("label", "")).lower())
+    if prop_count:
+        lines.append((f"      Props ×{prop_count}", False))
+    if plat_count:
+        lines.append((f"      Platforms ×{plat_count}", False))
+    if cfg.get("surfaceTrails") or layout.get("trails"):
+        lines.append(("    Trails", False))
+    if cfg.get("use3DCaveSystem"):
+        lines.append(("  LavaTubeCaveSystem", False))
+    if cfg.get("floatingTiles"):
+        lines.append(("  Wilderness tiles (N/E/S/W)", False))
+    lines.append(("▼ PlayerSpawnPoint", False))
+
+    y = 68
+    for text, selected in lines:
+        if selected:
+            draw.rectangle([4, y - 2, 244, y + 14], fill=UNITY["hier_sel"])
+        color = (240, 240, 240) if selected else (175, 175, 175)
+        draw.text((12, y), text[:34], fill=color, font=tiny)
+        y += 18
+        if y > H - 120:
+            break
+
+    y = max(y + 8, H - 200)
+    draw.text((10, y), "Build manifest", fill=UNITY["hier_text"], font=font)
+    y += 20
+    for m in (layout.get("markers") or [])[:8]:
+        kind = str(m.get("kind", ""))[:4].upper()
+        label = str(m.get("label", ""))[:22]
+        draw.text((14, y), f"{kind} {label}", fill=(130, 140, 155), font=tiny)
+        y += 15
+
+
+def _draw_inspector(
+    draw: ImageDraw.ImageDraw,
+    brief: dict[str, Any],
+    cfg: dict[str, Any],
+    layout: dict[str, Any],
+    checklist: list[dict[str, Any]] | None,
+    font,
+    tiny,
+) -> None:
+    x = W - 256
+    y = 68
+    title = (brief.get("title") or cfg.get("label") or "Build")[:40]
+    draw.text((x, y), title, fill=(230, 230, 230), font=font)
+    y += 24
+    rows = [
+        ("Tiles", str(cfg.get("tileCount", 81))),
+        ("Props", "on" if cfg.get("playDiskProps") else "off"),
+        ("Trails", "on" if cfg.get("surfaceTrails") or layout.get("trails") else "off"),
+        ("Caves", "on" if cfg.get("use3DCaveSystem") else "off"),
+        ("Floating", "on" if cfg.get("floatingTiles") else "off"),
+        ("Seed", "random" if cfg.get("randomSeedEachBuild") else "fixed"),
+    ]
+    specs = _parse_specs(layout)
+    rows.extend(
+        [
+            ("Plateau +u", str(int(specs["plateau"]))),
+            ("Platform +u", str(int(specs["platform"]))),
+            ("Hop m", str(int(specs["hop"]))),
+        ]
+    )
+    for k, v in rows:
+        draw.text((x, y), k, fill=(140, 145, 155), font=tiny)
+        draw.text((x + 120, y), v, fill=(210, 210, 210), font=tiny)
+        y += 16
+
+    if checklist:
+        y += 8
+        draw.text((x, y), "Decisions", fill=(200, 200, 200), font=font)
+        y += 18
+        for item in checklist[:5]:
+            mark = "✓" if item.get("done") else "○"
+            color = (120, 210, 140) if item.get("done") else (120, 130, 150)
+            draw.text((x, y), f"{mark} {str(item.get('label', ''))[:28]}", fill=color, font=tiny)
+            y += 15
+
+
+def _scene_layout_params(
+    cfg: dict[str, Any],
+    scene_rect: tuple[int, int, int, int],
+    *,
+    zoom: float = 1.0,
+) -> dict[str, Any]:
+    sx0, sy0, sx1, sy1 = scene_rect
+    floating = bool(cfg.get("floatingTiles"))
+    return {
+        "scene_rect": scene_rect,
+        "ox": (sx0 + sx1) // 2,
+        "oy": sy0 + int((sy1 - sy0) * 0.58),
+        "scale": 38.0 * zoom,
+        "tile_step": 1.55 if floating else 1.15,
+        "tile_w": 1.05,
+        "floating": floating,
+    }
+
+
+def _draw_legend_key(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    font,
+    tiny,
+    *,
+    density_mode: bool = False,
+) -> None:
+    pad = 8
+    if density_mode:
+        rows = [
+            ("Trail corridor", DENSITY_TRAIL_RGB, "line"),
+            ("Prop scatter (low)", DENSITY_PROP_RGB, "dot"),
+            ("Prop scatter (high)", DENSITY_PROP_HOT_RGB, "dot"),
+            ("Tile prop count", (72, 150, 62), "text"),
+        ]
+        title = "Density legend"
+        note = "Gold = walk paths · Amber = prop targets · Brighter = denser"
+    else:
+        rows = [
+            ("Play tile", UNITY["terrain_top"], "tile"),
+            ("Maze plateau", UNITY["terrain_plateau"], "tile"),
+            ("Trail", UNITY["trail"], "line"),
+            ("Jump platform", UNITY["platform"], "tile"),
+            ("Prop / tree / rock", COLORS["prop"], "square"),
+            ("Player spawn", UNITY["spawn"], "spawn"),
+            ("NPC", COLORS["npc"], "dot"),
+            ("Enemy", COLORS["enemy"], "tri"),
+            ("Collectible", COLORS["collect"], "star"),
+            ("Cave mouth", UNITY["water"], "oval"),
+        ]
+        title = "Layout legend"
+        note = "Scene colors match Unity terrain sculpt sampling"
+
+    line_h = 16
+    box_w = 248
+    box_h = pad * 2 + 18 + line_h * len(rows) + 20
+    draw.rectangle([x, y, x + box_w, y + box_h], fill=(18, 22, 30), outline=(70, 80, 100))
+    draw.text((x + pad, y + pad), title, fill=(220, 228, 240), font=font)
+    cy = y + pad + 18
+    for label, rgb, kind in rows:
+        ix = x + pad
+        if kind == "line":
+            draw.line([(ix, cy + 6), (ix + 18, cy + 6)], fill=rgb, width=4)
+        elif kind == "tile":
+            draw.rectangle([ix, cy, ix + 14, cy + 12], fill=rgb, outline=(40, 50, 40))
+        elif kind == "square":
+            draw.rectangle([ix + 2, cy + 2, ix + 12, cy + 12], fill=rgb)
+        elif kind == "spawn":
+            draw.ellipse([ix, cy, ix + 12, cy + 12], fill=rgb, outline=(20, 80, 40))
+        elif kind == "dot":
+            draw.ellipse([ix + 2, cy + 2, ix + 12, cy + 12], fill=rgb)
+        elif kind == "tri":
+            draw.polygon([(ix + 7, cy), (ix + 14, cy + 12), (ix, cy + 12)], fill=rgb)
+        elif kind == "star":
+            draw.ellipse([ix + 2, cy + 2, ix + 12, cy + 12], fill=rgb)
+        elif kind == "oval":
+            draw.ellipse([ix, cy + 2, ix + 14, cy + 10], fill=rgb)
+        elif kind == "text":
+            draw.text((ix, cy), "3", fill=rgb, font=tiny)
+        draw.text((ix + 24, cy), label[:26], fill=(175, 185, 200), font=tiny)
+        cy += line_h
+    draw.text((x + pad, y + box_h - 16), note[:42], fill=(120, 130, 150), font=tiny)
+
+
+def _draw_trail_lines(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    params: dict[str, Any],
+    *,
+    trail_color: tuple[int, int, int],
+    width: int,
+) -> None:
+    ox = params["ox"]
+    oy = params["oy"]
+    scale = params["scale"]
+    tile_step = params["tile_step"]
+    tiny = _load_font(11)
+
+    if cfg.get("surfaceTrails") or layout.get("trails"):
+        ring_pts = []
+        for row, col in ((0, 1), (1, 2), (2, 1), (1, 0), (0, 1)):
+            gx = (col - 1) * tile_step
+            gy = (1 - row) * tile_step
+            ring_pts.append(_iso(gx, gy, 0.15, ox, oy, scale))
+        if len(ring_pts) > 1:
+            draw.line(ring_pts, fill=trail_color, width=width)
+    for tr in layout.get("trails") or []:
+        dest = str(tr.get("to", ""))
+        if dest.startswith("island-"):
+            d = dest.split("-")[-1].upper()
+            offsets = {"N": (0, 2.2), "E": (2.2, 0), "S": (0, -2.2), "W": (-2.2, 0)}
+            dx, dy = offsets.get(d, (0, 2.2))
+            a = _iso(0, 0, 0.2, ox, oy, scale)
+            b = _iso(dx * tile_step, dy * tile_step, 0.1, ox, oy, scale)
+            draw.line([a, b], fill=trail_color, width=width + 1)
+            mid = ((a[0] + b[0]) // 2, (a[1] + b[1]) // 2)
+            draw.text(mid, str(tr.get("label", ""))[:18], fill=(220, 200, 160), anchor="mm", font=tiny)
+
+
+def _prop_density_by_cell(layout: dict[str, Any]) -> dict[tuple[str, int, int], int]:
+    counts: dict[tuple[str, int, int], int] = {}
+    for m in layout.get("markers") or []:
+        if str(m.get("kind")) not in ("prop", "collectible"):
+            continue
+        zone = str(m.get("zone", "play"))
+        if zone == "play":
+            row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+            key = ("play", row, col)
+        elif zone == "island":
+            slot = _coerce_island_slot(m.get("slot"))
+            dir_n = str(m.get("dir", "N")).upper()[:1]
+            key = ("island", ord(dir_n), slot)
+        else:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _draw_scene_world(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    scene_rect: tuple[int, int, int, int],
+    tiny,
+    *,
+    zoom: float = 1.0,
+) -> None:
+    params = _scene_layout_params(cfg, scene_rect, zoom=zoom)
+    sx0, sy0, sx1, sy1 = params["scene_rect"]
+    ox = params["ox"]
+    oy = params["oy"]
+    scale = params["scale"]
+    tile_step = params["tile_step"]
+    tile_w = params["tile_w"]
+    specs = _parse_specs(layout)
+    maze_cells = _corner_maze_cells(layout)
+    floating = params["floating"]
+
+    # Ground grid lines (Unity scene grid)
+    for i in range(-6, 7):
+        a = _iso(i * 1.2, -7, 0, ox, oy, scale * 0.35)
+        b = _iso(i * 1.2, 7, 0, ox, oy, scale * 0.35)
+        draw.line([a, b], fill=(50, 58, 68), width=1)
+        a = _iso(-7, i * 1.2, 0, ox, oy, scale * 0.35)
+        b = _iso(7, i * 1.2, 0, ox, oy, scale * 0.35)
+        draw.line([a, b], fill=(50, 58, 68), width=1)
+
+    tile_step = 1.55 if floating else 1.15
+    tile_w = 1.05
+
+    # Play disk 3×3 terrains
+    for row in range(3):
+        for col in range(3):
+            gx = (col - 1) * tile_step
+            gy = (1 - row) * tile_step
+            is_maze = (row, col) in maze_cells
+            h = (specs["plateau"] / 18.0) if is_maze else 0.08
+            top = UNITY["terrain_plateau"] if is_maze else UNITY["terrain_top"]
+            side = UNITY["terrain_side"]
+            _draw_iso_box(draw, gx, gy, 0, tile_w, tile_w, h, ox, oy, scale, top, side)
+            if is_maze:
+                # Simple maze walls on plateau
+                cx, cy = _iso(gx, gy, h + 0.02, ox, oy, scale)
+                draw.rectangle([cx - 14, cy - 14, cx + 14, cy + 14], outline=(28, 70, 42), width=2)
+                draw.line([cx - 10, cy, cx + 10, cy], fill=(28, 70, 42), width=2)
+                draw.line([cx, cy - 10, cx, cy + 10], fill=(28, 70, 42), width=2)
+
+    # Floating wilderness cardinal tiles
+    if floating:
+        for d, (dx, dy) in {"N": (0, 2.2), "E": (2.2, 0), "S": (0, -2.2), "W": (-2.2, 0)}.items():
+            _draw_iso_box(draw, dx * tile_step, dy * tile_step, -0.15, tile_w * 0.9, tile_w * 0.9, 0.12, ox, oy, scale, UNITY["terrain_top"], UNITY["terrain_side"])
+            tx, ty = _iso(dx * tile_step, dy * tile_step, 0.3, ox, oy, scale)
+            draw.text((tx, ty - 28), f"{d} wild", fill=(180, 200, 220), anchor="mm", font=tiny)
+
+    _draw_trail_lines(draw, layout, cfg, params, trail_color=UNITY["trail"], width=4)
+
+    # Jump platforms from plat-* markers
+    for m in layout.get("markers") or []:
+        label = str(m.get("label", "")).lower()
+        if "plat" not in label:
+            continue
+        row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+        gx = (col - 1) * tile_step
+        gy = (1 - row) * tile_step
+        slot = _coerce_marker_slot(m.get("slot"))
+        if "-gap-" in label:
+            leg = "n" if "-n-gap" in label else "e" if "-e-gap" in label else "s" if "-s-gap" in label else "w"
+            spread = 0.35
+            t = (slot % 7) / 6.0 - 0.5
+            if leg == "n":
+                gx += t * spread
+                gy += 0.55
+            elif leg == "s":
+                gx -= t * spread
+                gy -= 0.55
+            elif leg == "e":
+                gx += 0.55
+                gy += t * spread
+            else:
+                gx -= 0.55
+                gy -= t * spread
+        pz = specs["platform"] / 20.0
+        _draw_iso_box(draw, gx, gy, pz, 0.22, 0.22, 0.06, ox, oy, scale, UNITY["platform"], (110, 105, 98))
+
+    # Props, NPCs, enemies, collectibles
+    for m in layout.get("markers") or []:
+        kind = str(m.get("kind", "prop"))
+        label = str(m.get("label", "")).lower()
+        if kind == "spawn" or "plat" in label:
+            continue
+        row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+        if (row, col) in maze_cells and kind == "prop":
+            continue
+        slot = _coerce_marker_slot(m.get("slot"))
+        gx = (col - 1) * tile_step + (slot % 3 - 1) * 0.12
+        gy = (1 - row) * tile_step + (slot // 3 - 1) * 0.1
+        px, py = _iso(gx, gy, 0.2, ox, oy, scale)
+        if "tree" in label:
+            draw.ellipse([px - 5, py - 16, px + 5, py - 4], fill=UNITY["tree"])
+            draw.rectangle([px - 2, py - 4, px + 2, py + 2], fill=(90, 60, 30))
+        elif "rock" in label:
+            draw.polygon([(px, py - 8), (px + 8, py + 2), (px - 6, py + 4)], fill=UNITY["rock"])
+        elif "grass" in label:
+            for i in range(-2, 3):
+                draw.line([(px + i * 2, py), (px + i * 2, py - 8)], fill=UNITY["grass"], width=2)
+        elif kind == "npc":
+            draw.ellipse([px - 6, py - 14, px + 6, py - 2], fill=COLORS["npc"])
+            draw.rectangle([px - 4, py - 2, px + 4, py + 8], fill=COLORS["npc"])
+        elif kind == "enemy":
+            draw.polygon([(px, py - 10), (px + 9, py + 6), (px - 9, py + 6)], fill=COLORS["enemy"])
+        elif kind == "collectible":
+            draw.ellipse([px - 6, py - 6, px + 6, py + 6], fill=COLORS["collect"])
+        else:
+            draw.rectangle([px - 5, py - 5, px + 5, py + 5], fill=COLORS["prop"])
+
+    # Player spawn gizmo
+    for m in layout.get("markers") or []:
+        if str(m.get("kind")) != "spawn":
+            continue
+        row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+        gx = (col - 1) * tile_step
+        gy = (1 - row) * tile_step
+        sx, sy = _iso(gx, gy, 0.25, ox, oy, scale)
+        draw.ellipse([sx - 10, sy - 22, sx + 10, sy - 2], fill=UNITY["spawn"], outline=(20, 80, 40), width=2)
+        draw.line([(sx - 12, sy), (sx + 12, sy)], fill=UNITY["gizmo"], width=2)
+        draw.line([(sx, sy - 12), (sx, sy + 12)], fill=UNITY["gizmo"], width=2)
+        draw.text((sx, sy - 30), "PlayerSpawn", fill=UNITY["spawn"], anchor="mm", font=tiny)
+
+    # Cave mouth
+    if layout.get("caveMouths") or cfg.get("use3DCaveSystem"):
+        mx, my = _iso(0, tile_step, 0.15, ox, oy, scale)
+        draw.ellipse([mx - 16, my - 20, mx + 16, my - 4], fill=UNITY["water"])
+        draw.text((mx, my - 28), "cave mouth", fill=(200, 220, 240), anchor="mm", font=tiny)
+
+    if cfg.get("surfaceWater") or layout.get("surfaceWater"):
+        wx, wy = _iso(0, -2.4, -0.05, ox, oy, scale)
+        draw.ellipse([wx - 80, wy - 18, wx + 80, wy + 18], fill=(45, 95, 140))
+
+    # Scene gizmo (Unity axis widget)
+    gx0, gy0 = sx1 - 54, sy0 + 12
+    draw.line([(gx0, gy0), (gx0, gy0 - 22)], fill=(180, 60, 60), width=2)
+    draw.line([(gx0, gy0), (gx0 + 18, gy0)], fill=(60, 160, 80), width=2)
+    draw.line([(gx0, gy0), (gx0 - 12, gy0 + 12)], fill=(70, 110, 200), width=2)
+
+
+def _draw_scene_density(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    scene_rect: tuple[int, int, int, int],
+    tiny,
+    *,
+    zoom: float = 1.0,
+) -> None:
+    """Trail + prop density map — same iso projection as layout (Unity samples these colors)."""
+    params = _scene_layout_params(cfg, scene_rect, zoom=zoom)
+    sx0, sy0, sx1, sy1 = params["scene_rect"]
+    ox = params["ox"]
+    oy = params["oy"]
+    scale = params["scale"]
+    tile_step = params["tile_step"]
+    tile_w = params["tile_w"]
+    floating = params["floating"]
+
+    draw.rectangle([sx0, sy0, sx1, sy1], fill=(22, 26, 34))
+
+    for row in range(3):
+        for col in range(3):
+            gx = (col - 1) * tile_step
+            gy = (1 - row) * tile_step
+            _draw_iso_box(
+                draw,
+                gx,
+                gy,
+                0,
+                tile_w,
+                tile_w,
+                0.04,
+                ox,
+                oy,
+                scale,
+                (38, 48, 42),
+                (28, 36, 32),
+            )
+
+    if floating:
+        for d, (dx, dy) in {"N": (0, 2.2), "E": (2.2, 0), "S": (0, -2.2), "W": (-2.2, 0)}.items():
+            _draw_iso_box(
+                draw,
+                dx * tile_step,
+                dy * tile_step,
+                -0.12,
+                tile_w * 0.9,
+                tile_w * 0.9,
+                0.05,
+                ox,
+                oy,
+                scale,
+                (34, 44, 38),
+                (24, 32, 28),
+            )
+
+    prop_counts = _prop_density_by_cell(layout)
+    max_count = max(prop_counts.values(), default=1)
+
+    for row in range(3):
+        for col in range(3):
+            n = prop_counts.get(("play", row, col), 0)
+            if n <= 0:
+                continue
+            gx = (col - 1) * tile_step
+            gy = (1 - row) * tile_step
+            t = n / max_count
+            heat = (
+                int(50 + 120 * t),
+                int(90 + 80 * t),
+                int(40 + 30 * t),
+            )
+            cx, cy = _iso(gx, gy, 0.12, ox, oy, scale)
+            r = int(12 + 16 * t)
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=heat, outline=(30, 60, 30))
+            draw.text((cx, cy), str(n), fill=(240, 250, 235), anchor="mm", font=tiny)
+
+    _draw_trail_lines(draw, layout, cfg, params, trail_color=DENSITY_TRAIL_RGB, width=7)
+
+    for m in layout.get("markers") or []:
+        kind = str(m.get("kind", "prop"))
+        if kind not in ("prop", "collectible"):
+            continue
+        label = str(m.get("label", "")).lower()
+        if "plat" in label:
+            continue
+        zone = str(m.get("zone", "play"))
+        if zone == "island":
+            d = str(m.get("dir", "N")).upper()[:1]
+            slot = _coerce_island_slot(m.get("slot"))
+            offsets = {"N": (0, 2.2), "E": (2.2, 0), "S": (0, -2.2), "W": (-2.2, 0)}
+            dx, dy = offsets.get(d, (0, 2.2))
+            gx = dx * tile_step + ((slot % 3) - 1) * 0.15
+            gy = dy * tile_step + ((slot // 3) - 1) * 0.1
+            px, py = _iso(gx, gy, 0.22, ox, oy, scale)
+        else:
+            row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+            slot = _coerce_marker_slot(m.get("slot"))
+            gx = (col - 1) * tile_step + (slot % 3 - 1) * 0.12
+            gy = (1 - row) * tile_step + (slot // 3 - 1) * 0.1
+            px, py = _iso(gx, gy, 0.22, ox, oy, scale)
+        rgb = DENSITY_PROP_HOT_RGB if "tree" in label or "scatter" in label else DENSITY_PROP_RGB
+        draw.ellipse([px - 7, py - 7, px + 7, py + 7], fill=rgb, outline=(120, 90, 40))
+        if len(label) > 2:
+            draw.text((px, py + 11), label[:12], fill=(200, 190, 160), anchor="mm", font=tiny)
+
+    draw.text(
+        (sx0 + 12, sy0 + 8),
+        "Trail & prop density — generation overlay",
+        fill=(210, 200, 170),
+        font=tiny,
+    )
+
+
+def _draw_revision_banner(
+    draw: ImageDraw.ImageDraw,
+    scene_rect: tuple[int, int, int, int],
+    revision_label: str | None,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+) -> None:
+    if not revision_label:
+        return
+    sx0, sy0, sx1, _ = scene_rect
+    text = revision_label.strip()[:140]
+    if not text:
+        return
+    draw.rectangle([sx0 + 8, sy0 + 8, min(sx1 - 8, sx0 + 8 + len(text) * 7), sy0 + 30], fill=(6, 18, 32))
+    draw.rectangle([sx0 + 8, sy0 + 8, min(sx1 - 8, sx0 + 8 + len(text) * 7), sy0 + 30], outline=(0, 196, 232), width=1)
+    draw.text((sx0 + 14, sy0 + 12), text, fill=(110, 235, 255), font=font)
+
+
+def render_layout_detail_crop(
+    out_path,
+    brief: dict[str, Any],
+    cfg: dict[str, Any],
+    layout: dict[str, Any] | None = None,
+    checklist: list[dict[str, Any]] | None = None,
+    revision_label: str | None = None,
+) -> None:
+    """Readable play-disk zoom — scene only, no Unity chrome."""
+    layout = layout or derive_layout_plan(brief, cfg)
+    brief = brief or {}
+    cfg = cfg or {}
+
+    img = Image.new("RGB", (DETAIL_W, DETAIL_H), UNITY["scene_bg_top"])
+    draw = ImageDraw.Draw(img)
+    body_font = _load_font(14)
+    small_font = _load_font(12)
+    tiny_font = _load_font(11)
+
+    scene_rect = (16, 48, DETAIL_W - 16, DETAIL_H - 56)
+    params = _scene_layout_params(cfg, scene_rect, zoom=DETAIL_ZOOM)
+    sx0, sy0, sx1, sy1 = scene_rect
+    for y in range(sy0, sy1):
+        t = (y - sy0) / max(1, sy1 - sy0)
+        r = int(UNITY["scene_bg_top"][0] * (1 - t) + UNITY["scene_bg_bot"][0] * t)
+        g = int(UNITY["scene_bg_top"][1] * (1 - t) + UNITY["scene_bg_bot"][1] * t)
+        b = int(UNITY["scene_bg_top"][2] * (1 - t) + UNITY["scene_bg_bot"][2] * t)
+        draw.line([(sx0, y), (sx1, y)], fill=(r, g, b))
+    draw.rectangle([sx0, sy0, sx1, sy1], outline=(40, 48, 62), width=2)
+
+    _draw_scene_world(draw, layout, cfg, scene_rect, tiny_font, zoom=DETAIL_ZOOM)
+    _draw_revision_banner(draw, scene_rect, revision_label, tiny_font)
+    _draw_legend_key(draw, sx0 + 12, sy1 - 210, body_font, tiny_font, density_mode=False)
+
+    title = (brief.get("title") or cfg.get("label") or "Layout")[:56]
+    draw.text((20, 14), f"{title} — play disk (zoomed)", fill=(220, 228, 240), font=body_font)
+    draw.text(
+        (20, DETAIL_H - 36),
+        "Layout + legend — readable play-disk view for approval",
+        fill=(120, 200, 140),
+        font=small_font,
+    )
+    img.save(str(out_path), format="PNG", optimize=True)
+
+
+def render_density_detail_crop(
+    out_path,
+    brief: dict[str, Any],
+    cfg: dict[str, Any],
+    layout: dict[str, Any] | None = None,
+    revision_label: str | None = None,
+) -> None:
+    layout = layout or derive_layout_plan(brief, cfg)
+    brief = brief or {}
+    cfg = cfg or {}
+
+    img = Image.new("RGB", (DETAIL_W, DETAIL_H), UNITY["scene_bg_top"])
+    draw = ImageDraw.Draw(img)
+    body_font = _load_font(14)
+    small_font = _load_font(12)
+    tiny_font = _load_font(11)
+
+    scene_rect = (16, 48, DETAIL_W - 16, DETAIL_H - 56)
+    sx0, sy0, sx1, sy1 = scene_rect
+    for y in range(sy0, sy1):
+        t = (y - sy0) / max(1, sy1 - sy0)
+        r = int(UNITY["scene_bg_top"][0] * (1 - t) + UNITY["scene_bg_bot"][0] * t)
+        g = int(UNITY["scene_bg_top"][1] * (1 - t) + UNITY["scene_bg_bot"][1] * t)
+        b = int(UNITY["scene_bg_top"][2] * (1 - t) + UNITY["scene_bg_bot"][2] * t)
+        draw.line([(sx0, y), (sx1, y)], fill=(r, g, b))
+    draw.rectangle([sx0, sy0, sx1, sy1], outline=(40, 48, 62), width=2)
+
+    _draw_scene_density(draw, layout, cfg, scene_rect, tiny_font, zoom=DETAIL_ZOOM)
+    _draw_revision_banner(draw, scene_rect, revision_label, tiny_font)
+    _draw_legend_key(draw, sx0 + 12, sy1 - 128, body_font, tiny_font, density_mode=True)
+
+    title = (brief.get("title") or cfg.get("label") or "Density")[:56]
+    draw.text((20, 14), f"{title} — trail & prop density (zoomed)", fill=(220, 228, 240), font=body_font)
+    draw.text(
+        (20, DETAIL_H - 36),
+        "Gold trails · amber prop scatter · green heat = count per tile",
+        fill=(200, 180, 120),
+        font=small_font,
+    )
+    img.save(str(out_path), format="PNG", optimize=True)
+
+
 def render_planner_concept(
     out_path,
     brief: dict[str, Any],
     cfg: dict[str, Any],
     checklist: list[dict[str, Any]] | None = None,
-) -> None:
+) -> str | None:
+    """Write layout concept.png; returns relative-style density filename if written."""
     layout = derive_layout_plan(brief, cfg)
     brief = brief or {}
     cfg = cfg or {}
 
-    img = Image.new("RGB", (W, H), COLORS["bg"])
+    img = Image.new("RGB", (W, H), UNITY["chrome"])
     draw = ImageDraw.Draw(img)
-    title_font = _load_font(26, bold=True)
-    body_font = _load_font(16)
+    title_font = _load_font(22, bold=True)
+    body_font = _load_font(14)
     small_font = _load_font(12)
     tiny_font = _load_font(11)
-    map_font = _load_font(14, bold=True)
 
     title = (brief.get("title") or cfg.get("label") or "Build concept")[:72]
-    draw.text((24, 20), title, fill=COLORS["text"], font=title_font)
-    draw.text((24, 52), "Top-down layout map — approve before build", fill=COLORS["muted"], font=body_font)
+    scene_rect = (252, 36, W - 268, H - 28)
+    _draw_unity_chrome(draw, title, scene_rect, body_font, small_font, tiny_font)
+    _draw_scene_world(draw, layout, cfg, scene_rect, tiny_font)
+    _draw_hierarchy(draw, layout, cfg, checklist, body_font, tiny_font)
+    _draw_inspector(draw, brief, cfg, layout, checklist, body_font, tiny_font)
 
-    # Map panel
-    map_x, map_y, map_w, map_h = 24, 88, 980, 860
-    draw.rectangle([map_x, map_y, map_x + map_w, map_y + map_h], fill=COLORS["panel"], outline=(60, 70, 95), width=2)
+    sx0, sy0, sx1, sy1 = scene_rect
+    _draw_legend_key(draw, sx0 + 10, sy1 - 198, body_font, tiny_font, density_mode=False)
 
-    cx = map_x + map_w // 2
-    cy = map_y + map_h // 2 + 20
-    tile = 58
-    gx0 = cx - (3 * tile) // 2
-    gy0 = cy - (3 * tile) // 2
-
-    extended = int(cfg.get("tileCount", 81)) > 81
-    frame = tile * (5 if extended else 3.5)
-    draw.rectangle(
-        [cx - frame, cy - frame, cx + frame, cy + frame],
-        outline=COLORS["horizon"],
-        width=2,
-    )
+    note = layout.get("gridNote", "81-tile shell")
     draw.text(
-        (cx, map_y + 14),
-        layout.get("gridNote", "81-tile shell"),
-        fill=COLORS["muted"],
-        anchor="mm",
+        (sx0 + 12, sy0 + 24),
+        f"Post-build preview — {note}",
+        fill=(190, 210, 225),
         font=small_font,
     )
-
-    labyrinth = bool((layout.get("playDisk") or {}).get("labyrinth"))
-    row_labels = ["N row", "M row", "S row"]
-
-    for row in range(3):
-        for col in range(3):
-            x0 = gx0 + col * tile
-            y0 = gy0 + row * tile
-            is_maze = labyrinth and row >= 1
-            fill = COLORS["lab"] if is_maze else COLORS["play_open"]
-            draw.rectangle([x0 + 2, y0 + 2, x0 + tile - 2, y0 + tile - 2], fill=fill, outline=(20, 50, 30), width=2)
-            if is_maze:
-                mx, my = x0 + 10, y0 + 10
-                mw, mh = tile - 20, tile - 20
-                draw.rectangle([mx, my, mx + mw, my + mh], fill=COLORS["lab_wall"])
-                draw.rectangle([mx + 6, my + 6, mx + mw - 6, my + mh - 6], fill=COLORS["lab_path"])
-                draw.line([mx + 6, my + mh // 2, mx + mw - 6, my + mh // 2], fill=COLORS["lab_wall"], width=4)
-                draw.line([mx + mw // 2, my + 6, mx + mw // 2, my + mh - 6], fill=COLORS["lab_wall"], width=3)
-            if row == 0 and col == 1:
-                draw.ellipse([x0 + tile // 2 - 8, y0 + 6, x0 + tile // 2 + 8, y0 + 18], fill=COLORS["mouth"])
-        draw.text((gx0 - 36, gy0 + row * tile + tile // 2), row_labels[row], fill=COLORS["dim"], anchor="rm", font=tiny_font)
-
-    draw.text((cx, gy0 - 22), "9 PLAY TILES (3×3)", fill=(140, 230, 170), anchor="mm", font=map_font)
-    lab_note = (layout.get("playDisk") or {}).get("labyrinthNote", "")
-    if lab_note:
-        draw.text((cx, gy0 + 3 * tile + 16), lab_note, fill=(140, 230, 170), anchor="mm", font=small_font)
-
-    if cfg.get("outerRingMountains"):
-        ring = tile * 2.2
-        draw.rectangle([cx - ring, cy - ring, cx + ring, cy + ring], outline=COLORS["foot"], width=3)
-        draw.text((cx + ring + 8, cy), "foothills", fill=COLORS["foot"], anchor="lm", font=tiny_font)
-
-    if layout.get("surfaceWater") or cfg.get("surfaceWater"):
-        draw.rectangle([gx0 - 20, gy0 + 3 * tile + 40, gx0 + 3 * tile + 20, gy0 + 3 * tile + 56], fill=COLORS["water"])
-        draw.text((cx, gy0 + 3 * tile + 70), "water band", fill=COLORS["water"], anchor="mm", font=tiny_font)
-
-    # Floating islands
-    island_info = layout.get("islands") or []
-    for isl in island_info:
-        d = str(isl.get("dir", "N")).upper()
-        ix, iy = _island_center(cx, cy, tile, d)
-        iw, ih = int(tile * 1.6), int(tile * 1.1)
-        draw.rounded_rectangle(
-            [ix - iw // 2, iy - ih // 2, ix + iw // 2, iy + ih // 2],
-            radius=14,
-            fill=COLORS["island"],
-            outline=COLORS["island_edge"],
-            width=2,
-        )
-        label = str(isl.get("label", d))[:16]
-        draw.text((ix, iy - ih // 2 - 10), label, fill=COLORS["island_edge"], anchor="mm", font=small_font)
-        counts = []
-        if isl.get("enemies"):
-            counts.append(f"⚔ {isl['enemies']}")
-        if isl.get("npcs"):
-            counts.append(f"NPC {isl['npcs']}")
-        if isl.get("props"):
-            counts.append(f"▪ {isl['props']}")
-        if isl.get("collectibles"):
-            counts.append(f"★ {isl['collectibles']}")
-        if counts:
-            draw.text((ix, iy + ih // 2 + 12), " · ".join(counts), fill=COLORS["dim"], anchor="mm", font=tiny_font)
-
-    # Trails
-    trail_colors = [COLORS["trail"], (180, 200, 255), (160, 220, 160), (255, 190, 120)]
-    for i, tr in enumerate(layout.get("trails") or []):
-        dest = str(tr.get("to", ""))
-        col = trail_colors[i % len(trail_colors)]
-        if dest.startswith("island-"):
-            d = dest.split("-")[-1].upper()
-            tx, ty = _island_center(cx, cy, tile, d)
-            sx, sy = cx, gy0 + 3 * tile - 4
-            if d == "N":
-                sx, sy = cx, gy0 - 4
-            elif d == "E":
-                sx, sy = gx0 + 3 * tile - 4, cy
-            elif d == "W":
-                sx, sy = gx0 + 4, cy
-            draw.line([sx, sy, tx, ty], fill=col, width=4)
-            mx, my = (sx + tx) // 2, (sy + ty) // 2
-            draw.text((mx, my - 8), str(tr.get("label", "trail"))[:18], fill=col, anchor="mm", font=tiny_font)
-        elif "foothill" in dest or "ring" in dest:
-            draw.arc([cx - tile * 2, cy - tile * 2, cx + tile * 2, cy + tile * 2], 200, 340, fill=col, width=3)
-
-    if layout.get("surfaceTrails") or cfg.get("surfaceTrails"):
-        draw.ellipse([cx - tile * 2.1, cy - tile * 2.1, cx + tile * 2.1, cy + tile * 2.1], outline=COLORS["trail"], width=3)
-        draw.text((cx + tile * 2.2, cy - tile * 2), "perimeter trail", fill=COLORS["trail"], font=tiny_font)
-
-    for mouth in layout.get("caveMouths") or []:
-        draw.text((cx, gy0 - 6), str(mouth.get("label", "cave"))[:12], fill=COLORS["muted"], anchor="mm", font=tiny_font)
-
-    # Markers
-    for m in layout.get("markers") or []:
-        kind = str(m.get("kind", "prop"))
-        label = str(m.get("label", ""))
-        zone = str(m.get("zone", "play"))
-        if zone == "play":
-            row, col = _coerce_play_row_col(m.get("row", 1), m.get("col", 1))
-            x, y = _play_cell_center(gx0, gy0, tile, row, col)
-        elif zone == "island":
-            d = str(m.get("dir", "N")).upper()
-            ix, iy = _island_center(cx, cy, tile, d)
-            slot = _coerce_island_slot(m.get("slot", 0))
-            x, y = _island_slot_pos(ix, iy, tile, slot)
-        else:
-            continue
-        _draw_marker(draw, x, y, kind, label, tiny_font)
-
-    # Right sidebar: symbol legend + manifest
-    leg_x = 1020
-    draw.rectangle([leg_x, 88, W - 20, H - 48], fill=(24, 30, 42), outline=(50, 60, 80))
-    draw.text((leg_x + 14, 104), "Symbol legend", fill=COLORS["text"], font=body_font)
-    legend = [
-        ("spawn", "● green", "Player spawn"),
-        ("prop", "■ tan", "Props / scatter"),
-        ("npc", "● blue", "NPCs"),
-        ("enemy", "▲ red", "Enemies"),
-        ("collectible", "★ gold", "Collectibles"),
-        ("trail", "— orange", "Trails / bridges"),
-        ("mouth", "● dark", "Cave mouths"),
-    ]
-    ly = 132
-    for key, sym, desc in legend:
-        if key in ("spawn", "npc"):
-            draw.ellipse([leg_x + 18, ly, leg_x + 30, ly + 12], fill=COLORS.get(key, COLORS["npc"]))
-        elif key == "prop":
-            draw.rectangle([leg_x + 18, ly, leg_x + 30, ly + 12], fill=COLORS["prop"])
-        elif key == "enemy":
-            draw.polygon(
-                [(leg_x + 24, ly), (leg_x + 32, ly + 12), (leg_x + 16, ly + 12)],
-                fill=COLORS["enemy"],
-            )
-        elif key == "trail":
-            draw.line([leg_x + 16, ly + 6, leg_x + 32, ly + 6], fill=COLORS["trail"], width=3)
-        elif key == "mouth":
-            draw.ellipse([leg_x + 18, ly, leg_x + 30, ly + 12], fill=COLORS["mouth"])
-        else:
-            draw.ellipse([leg_x + 18, ly, leg_x + 30, ly + 12], fill=COLORS["collect"])
-        draw.text((leg_x + 40, ly), f"{sym}  {desc}", fill=COLORS["dim"], font=tiny_font)
-        ly += 20
-
-    ly += 8
-    draw.text((leg_x + 14, ly), "Placed content", fill=COLORS["text"], font=body_font)
-    ly += 22
-    for m in layout.get("markers") or []:
-        kind = str(m.get("kind", "")).upper()
-        label = str(m.get("label", ""))[:28]
-        zone = m.get("zone", "play")
-        if zone == "play":
-            loc = f"play [{m.get('row', '?')},{m.get('col', '?')}]"
-        elif zone == "island":
-            loc = f"island {m.get('dir', '?')}"
-        else:
-            loc = zone
-        line = f"{kind}: {label} @ {loc}"
-        draw.text((leg_x + 14, ly), line[:42], fill=COLORS["dim"], font=tiny_font)
-        ly += 16
-        if ly > H - 200:
-            draw.text((leg_x + 14, ly), "…", fill=COLORS["dim"], font=tiny_font)
-            break
-
-    if checklist:
-        ly = max(ly + 12, H - 190)
-        draw.text((leg_x + 14, ly), "Decisions", fill=COLORS["text"], font=body_font)
-        ly += 20
-        for item in checklist[:6]:
-            mark = "✓" if item.get("done") else "○"
-            color = (120, 210, 140) if item.get("done") else (120, 130, 150)
-            draw.text((leg_x + 14, ly), f"{mark} {str(item.get('label', ''))[:30]}", fill=color, font=tiny_font)
-            ly += 16
-
     draw.text(
-        (24, H - 28),
-        "Concept guide — similar per seed, not pixel-identical · approve to continue",
+        (sx0 + 12, H - 52),
+        "Layout + legend — tiles, trails, props, platforms · paired with density map for generation",
         fill=(120, 200, 140),
         font=small_font,
     )
 
     out_path = str(out_path)
     img.save(out_path, format="PNG", optimize=True)
+
+    density_path = render_planner_concept_density(
+        out_path,
+        brief,
+        cfg,
+        layout,
+        checklist,
+    )
+
+    detail_dir = out_path.parent if hasattr(out_path, "parent") else Path(str(out_path)).parent
+    render_layout_detail_crop(detail_dir / CONCEPT_LAYOUT_DETAIL_NAME, brief, cfg, layout, checklist)
+    render_density_detail_crop(detail_dir / CONCEPT_DENSITY_DETAIL_NAME, brief, cfg, layout)
+
+    return CONCEPT_DENSITY_NAME if density_path else None
+
+
+def render_planner_concept_density(
+    layout_path,
+    brief: dict[str, Any],
+    cfg: dict[str, Any],
+    layout: dict[str, Any] | None = None,
+    checklist: list[dict[str, Any]] | None = None,
+    revision_label: str | None = None,
+) -> str | None:
+    from pathlib import Path
+
+    layout = layout or derive_layout_plan(brief, cfg)
+    brief = brief or {}
+    cfg = cfg or {}
+
+    density_path = Path(layout_path).parent / CONCEPT_DENSITY_NAME
+    img = Image.new("RGB", (W, H), UNITY["chrome"])
+    draw = ImageDraw.Draw(img)
+    body_font = _load_font(14)
+    small_font = _load_font(12)
+    tiny_font = _load_font(11)
+
+    title = (brief.get("title") or cfg.get("label") or "Density map")[:72]
+    scene_rect = (252, 36, W - 268, H - 28)
+    _draw_unity_chrome(draw, f"{title} — density", scene_rect, body_font, small_font, tiny_font)
+    _draw_scene_density(draw, layout, cfg, scene_rect, tiny_font)
+    _draw_revision_banner(draw, scene_rect, revision_label, tiny_font)
+    _draw_hierarchy(draw, layout, cfg, checklist, body_font, tiny_font)
+
+    prop_n = sum(1 for m in layout.get("markers") or [] if str(m.get("kind")) == "prop")
+    trail_n = len(layout.get("trails") or [])
+    sx0, sy0, sx1, sy1 = scene_rect
+    draw.text((W - 256, 68), "Density stats", fill=(230, 230, 230), font=body_font)
+    y = 92
+    for k, v in [
+        ("Prop markers", str(prop_n)),
+        ("Trail links", str(trail_n)),
+        ("Target coverage", "65–85% tile" if cfg.get("playDiskProps") else "off"),
+    ]:
+        draw.text((W - 256, y), k, fill=(140, 145, 155), font=tiny_font)
+        draw.text((W - 120, y), v, fill=(210, 210, 210), font=tiny_font)
+        y += 16
+
+    _draw_legend_key(draw, sx0 + 10, sy1 - 118, body_font, tiny_font, density_mode=True)
+    draw.text(
+        (sx0 + 12, H - 52),
+        "Trail & prop density — Unity uses with layout concept for scatter + path authoring",
+        fill=(200, 180, 120),
+        font=small_font,
+    )
+
+    img.save(str(density_path), format="PNG", optimize=True)
+    return str(density_path)
+
+
+def render_planner_concept_layout_only(
+    out_path,
+    brief: dict[str, Any],
+    cfg: dict[str, Any],
+    checklist: list[dict[str, Any]] | None = None,
+    revision_label: str | None = None,
+) -> None:
+    """Regenerate layout concept.png only (paired density unchanged)."""
+    layout = derive_layout_plan(brief, cfg)
+    brief = brief or {}
+    cfg = cfg or {}
+
+    img = Image.new("RGB", (W, H), UNITY["chrome"])
+    draw = ImageDraw.Draw(img)
+    title_font = _load_font(22, bold=True)
+    body_font = _load_font(14)
+    small_font = _load_font(12)
+    tiny_font = _load_font(11)
+
+    title = (brief.get("title") or cfg.get("label") or "Build concept")[:72]
+    scene_rect = (252, 36, W - 268, H - 28)
+    _draw_unity_chrome(draw, title, scene_rect, body_font, small_font, tiny_font)
+    _draw_scene_world(draw, layout, cfg, scene_rect, tiny_font)
+    _draw_revision_banner(draw, scene_rect, revision_label, tiny_font)
+    _draw_hierarchy(draw, layout, cfg, checklist, body_font, tiny_font)
+    _draw_inspector(draw, brief, cfg, layout, checklist, body_font, tiny_font)
+
+    sx0, sy0, sx1, sy1 = scene_rect
+    _draw_legend_key(draw, sx0 + 10, sy1 - 198, body_font, tiny_font, density_mode=False)
+
+    note = layout.get("gridNote", "81-tile shell")
+    draw.text(
+        (sx0 + 12, sy0 + 24),
+        f"Post-build preview — {note}",
+        fill=(190, 210, 225),
+        font=small_font,
+    )
+    draw.text(
+        (sx0 + 12, H - 52),
+        "Layout + legend — tiles, trails, props, platforms · paired with density map for generation",
+        fill=(120, 200, 140),
+        font=small_font,
+    )
+
+    img.save(str(out_path), format="PNG", optimize=True)
+    detail_dir = Path(str(out_path)).parent
+    render_layout_detail_crop(
+        detail_dir / CONCEPT_LAYOUT_DETAIL_NAME,
+        brief,
+        cfg,
+        layout,
+        checklist,
+        revision_label=revision_label,
+    )

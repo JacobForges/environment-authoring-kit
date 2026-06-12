@@ -29,8 +29,11 @@ from pathlib import Path
 _TOOLS = Path(__file__).resolve().parent
 _DASHBOARD = _TOOLS / "recap-dashboard"
 _SERVER = _TOOLS / "recap-dashboard-server.py"
-_PID_FILE = Path.home() / "Library" / "EnvironmentKit" / "recap-dashboard-server.pid"
-_LOG_FILE = Path.home() / "Library" / "EnvironmentKit" / "recap-dashboard-server.log"
+from envkit_paths import server_runtime_dir  # noqa: E402
+
+_RUNTIME = server_runtime_dir()
+_PID_FILE = _RUNTIME / "recap-dashboard-server.pid"
+_LOG_FILE = _RUNTIME / "recap-dashboard-server.log"
 
 
 def _port() -> int:

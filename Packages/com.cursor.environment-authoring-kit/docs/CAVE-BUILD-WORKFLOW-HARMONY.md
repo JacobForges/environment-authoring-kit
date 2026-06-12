@@ -8,7 +8,7 @@ One build session is coordinated by `CaveBuildWorkflowCoordinator` so scripts do
 
 0. **Surface** — `CaveBuildStartupCoordinator`: world generator → terrain AI phases → terrain ladder (incl. `prop_*` on all tiles)  
 1. **Pre-build** (`CaveBuildUnifiedFlow`, readiness ladder, optional Cursor pre-build)  
-2. **Queued cave (120 steps)** — validate → **geo 1–13** → playability → validation → ground polish → world → meat → post-meat → research → finalize polish → manifest  
+2. **Queued cave (122 steps)** — validate → **geo 1–15** → playability → validation → ground polish → world → **meat (step 65)** → post-meat → research → finalize polish → manifest  
 
 **CaveOnly / prototype:** skip surface when scope or layout prototype requires it.
 
@@ -19,7 +19,9 @@ Coordinator still applies:
 5. **Meat loop** (shell purge → grade batches → enrichment + targeted fix → repeat)  
 6. **Post-meat** (light shell tidy, visual, spawns, final grade, optional Cursor post-build)
 
-**Do not** treat terrain-ladder mouth fixes as a substitute for geo 1–13 — partial floor + ramp is not a completed `cave_layout` rung.
+**Do not** treat terrain-ladder mouth fixes as a substitute for geo 1–15 — partial floor + ramp is not a completed `cave_layout` rung.
+
+**Planner path:** layout-first via [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md) — same queued pipeline after surface scope from `CaveBuildActiveSessionConfig.json`.
 
 ## Coordinator rules
 

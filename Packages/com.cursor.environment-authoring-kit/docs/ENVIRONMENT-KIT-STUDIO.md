@@ -4,7 +4,7 @@
 
 Product idea: a **standalone authoring experience** where users tune all kit settings, **watch the world build live in 3D**, then **approve or reject** before exporting a **portable world pack** (prefab + manifest) into their real game project.
 
-This is **not** a second build pipeline. It is the **same** `com.cursor.environment-authoring-kit` pipeline (**122-step** cave queue, 81-tile FullWorld surface, graders) running inside a **dedicated Unity project** with a **minimal editor shell** and an explicit **approval gate** before export.
+This is **not** a second build pipeline. It is the **same** `com.cursor.environment-authoring-kit` pipeline (**122-step** cave queue, **~289-tile** FullWorld surface default, optional planner session, graders) running inside a **dedicated Unity project** with a **minimal editor shell** and an explicit **approval gate** before export.
 
 ---
 
@@ -49,7 +49,7 @@ Users experience this as “the Hub app,” but the 3D view **is** Unity — str
 │  ┌─────────────────────┐  ┌──────────────────────────────┐  │
 │  │ Scene / Game (live) │  │ Studio panel                 │  │
 │  │                     │  │ Seed, scope, presets         │  │
-│  │  terrain + cave     │  │ Build 47/120 …               │  │
+│  │  terrain + cave     │  │ Build 47/122 …               │  │
 │  │  updating in place  │  │ Grade B+ (preview)           │  │
 │  │                     │  │ [Approve] [Reject] [Rebuild] │  │
 │  └─────────────────────┘  └──────────────────────────────┘  │

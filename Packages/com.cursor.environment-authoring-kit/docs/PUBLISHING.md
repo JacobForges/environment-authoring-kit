@@ -6,7 +6,7 @@ Checklist for publishing **`com.cursor.environment-authoring-kit`** to GitHub, O
 
 1. **Version** — bump `package.json` and add an entry to [CHANGELOG.md](../CHANGELOG.md).
 2. **Compile** — open a Unity 6000 + URP project; zero console errors from the package.
-3. **Smoke build** — **Hub → Build Complete Cave** to **122/122** on a scene with Ground + `PortalFive` (81 terrains when FullWorld completes).
+3. **Smoke build** — **Hub → Build Complete Cave** to **122/122** on a scene with Ground + `PortalFive` (~289 terrains default FullWorld; planner may scope to 81/13). See [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md).
 4. **Visual** — spot-check all terrain tiles for vegetation; cave has blocks or full shell (not ramp-only).
 5. **Docs** — [README.md](../README.md), [REQUIREMENTS.md](REQUIREMENTS.md), and [docs/README.md](README.md) match menus and contracts.
 
@@ -36,7 +36,7 @@ com.cursor.environment-authoring-kit/
 Consumers add:
 
 ```json
-"com.cursor.environment-authoring-kit": "https://github.com/JacobForges/environment-authoring-kit.git?path=Packages/com.cursor.environment-authoring-kit#v0.3.0"
+"com.cursor.environment-authoring-kit": "https://github.com/JacobForges/environment-authoring-kit.git?path=Packages/com.cursor.environment-authoring-kit#v0.3.4"
 ```
 
 Or copy the folder into `Packages/`.

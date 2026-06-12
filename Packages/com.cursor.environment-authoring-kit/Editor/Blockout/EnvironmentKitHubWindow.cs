@@ -286,6 +286,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         return;
                     }
 
+                    CaveBuildDemoAutoRecorder.OnHubBuildStarting(label);
                     buildAction?.Invoke();
                 }
                 catch (Exception ex)
@@ -357,7 +358,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 DrawBuildLiveActivityPanel();
             DrawBuildPauseControls(pacedWorkActive);
             var aiNote = CaveBuildSessionPreset.HasUsableAiProvider
-                ? $"AI: {CaveBuildCursorSettings.ResolveActiveProvider()} (grading enabled when steps need it)"
+                ? $"AI: {CaveBuildCursorSettings.ActiveProviderDisplayLabel()} (grading enabled when steps need it)"
                 : CaveBuildSessionPreset.HasLocalResearchCache
                     ? "AI: none — procedural build + on-disk research data"
                     : "AI: none — procedural build only (import ResearchCache optional)";
@@ -408,7 +409,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (_showRecoveryBuild)
                 {
                     EditorGUILayout.HelpBox(
-                        "Only if a normal build stopped mid-way or reuses bad geometry. Same 120 steps as above, " +
+                        "Only if a normal build stopped mid-way or reuses bad geometry. Same 122 steps as above, " +
                         "but always clears incremental cache.",
                         MessageType.None);
                     EditorGUILayout.BeginHorizontal();
@@ -736,7 +737,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Narrator: Personal Voice (Jacob Adkins)",
                 CaveBuildDemoAutoRecorder.ProducerNarratorEnabled);
             CaveBuildRecapDashboardGate.OpenRecapDashboardBeforeCompose = EditorGUILayout.Toggle(
-                "Open recap dashboard before compose",
+                "Open AI Director before compose",
                 CaveBuildRecapDashboardGate.OpenRecapDashboardBeforeCompose);
             CaveBuildRecapDashboardGate.SkipRecapReview = EditorGUILayout.Toggle(
                 "Skip recap review",
@@ -773,7 +774,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (CaveBuildDemoNarrationAi.AiNarrationEnabled && !aiReady)
             {
                 EditorGUILayout.HelpBox(
-                    "AI captions need API credentials for the active provider in Cave Build Cursor Settings.",
+                    "AI captions need API credentials for the active provider in AI provider settings.",
                     MessageType.Warning);
             }
             EditorGUILayout.LabelField(
@@ -937,7 +938,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUI.BeginChangeCheck();
             _settings.hubProjectRoot = EditorGUILayout.TextField("Hub project root", _settings.hubProjectRoot);
             _settings.aiProvider = (EnvironmentKitAiProvider)EditorGUILayout.EnumPopup("Active provider", _settings.aiProvider);
-            _settings.modelId = EditorGUILayout.TextField("Cursor model", _settings.modelId);
+            _settings.modelId = EditorGUILayout.TextField("AI model", _settings.modelId);
             _settings.hardwareBudget = (EnvironmentKitHardwareBudget.Preset)EditorGUILayout.EnumPopup(
                 "Hardware budget",
                 _settings.hardwareBudget);
@@ -1034,7 +1035,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EditorGUILayout.HelpBox(
                 "Optional: limit scanning to specific folders. When empty, the kit scans all of Assets/ and picks floor/wall/ceiling prefabs by name + mesh shape. " +
                 "Texture-only packs and 2D tile sprites cannot be used as cave modules.\n\n" +
-                "AI: Active provider can be Cursor, Gemini, Claude, OpenAI, OpenRouter, Ollama, or LM Studio — not Cursor-only. " +
+                "AI: Active provider can be cloud or local (Gemini, Claude, OpenAI, OpenRouter, Ollama, LM Studio, and more). " +
                 "No API? Procedural builds still work — configure provider here or leave AI off for planner-only runs.",
                 MessageType.None);
             _caveLavaFolders = DrawPrefabFolderField("Prefab folders for environment modules", _caveLavaFolders);
@@ -1181,7 +1182,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Run post-build research phase",
                 _settings.runPostBuildResearchPhase);
             _settings.autoInvokeAfterEveryBuild = EditorGUILayout.Toggle(
-                "Auto invoke Cursor after every build",
+                "Auto invoke AI after every build",
                 _settings.autoInvokeAfterEveryBuild);
             _settings.autoInvokeOnDud = EditorGUILayout.Toggle("Auto invoke on dud grade", _settings.autoInvokeOnDud);
             _settings.enforcePreBuildGate = EditorGUILayout.Toggle("Enforce pre-build gate", _settings.enforcePreBuildGate);
@@ -1232,7 +1233,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             EditorGUILayout.LabelField("Provider routing", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Choose provider credentials/endpoints here. Non-Cursor providers can run through the external execution layer when enabled below.",
+                "Choose provider credentials/endpoints here. Alternate providers can run through the external execution layer when enabled below.",
                 MessageType.None);
 
             _apiKey = DrawApiField("CURSOR_API_KEY", _apiKey);

@@ -79,14 +79,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const float ZoomCoverageAtExtendedMax = 8.5f;
         const float ZoomCoverageAtAbsoluteMax = 24.3f;
         const double UserOverrideHoldSeconds = 20.0;
-        const float PivotSmoothTimeMin = 0.28f;
-        const float PivotSmoothTimeMax = 0.58f;
-        const float DistanceSmoothTime = 0.36f;
-        const float PitchSmoothTime = 0.44f;
-        const float YawSmoothTime = 0.5f;
-        const float LookSizeSmoothTime = 0.38f;
-        const float PivotMaxSpeed = 1400f;
-        const float YawMaxSpeed = 95f;
+        const float PivotSmoothTimeMin = 0.42f;
+        const float PivotSmoothTimeMax = 0.78f;
+        const float DistanceSmoothTime = 0.52f;
+        const float PitchSmoothTime = 0.58f;
+        const float YawSettleSmoothTime = 0.72f;
+        const float LookSizeSmoothTime = 0.5f;
+        const float PivotMaxSpeed = 920f;
+        const float YawMaxSpeed = 42f;
+        const float SettledPivotEpsilon = 0.018f;
+        const float SettledScalarEpsilon = 0.035f;
 
         static CameraRigState _rig;
         static CameraRigTargets _targets;
@@ -115,6 +117,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static double _userCameraOverrideUntil;
         static double _lastEventPulseAt;
         static CameraBeat _pendingBeat = CameraBeat.BuildArea;
+        static bool _pendingPulseAfterSettle;
+        static bool _pendingPulseForce;
+        static CameraBeat _pendingPulseBeat = CameraBeat.BuildArea;
 
         static CaveBuildSceneCameraDirector()
         {
@@ -124,7 +129,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool SessionActive => _sessionActive || _demoRecordingDepth > 0;
 
-        public static void PushDemoRecordingSession() => _demoRecordingDepth++;
+        public static void PushDemoRecordingSession()
+        {
+            _demoRecordingDepth++;
+            _orbitArcActive = false;
+            _orbitDwellUntil = 0;
+            _forceInstantSnapOnce = true;
+            EditorApplication.delayCall += () =>
+            {
+                if (_demoRecordingDepth > 0)
+                    ApplyDemoCaptureFrame();
+            };
+        }
 
         public static void PopDemoRecordingSession() =>
             _demoRecordingDepth = Mathf.Max(0, _demoRecordingDepth - 1);
@@ -150,6 +166,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _userCameraOverrideUntil = 0;
             _lastEventPulseAt = 0;
             _pendingBeat = CameraBeat.SessionOpen;
+            _pendingPulseAfterSettle = false;
             PulseLiveView(force: true);
         }
 
@@ -168,7 +185,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         public static void RequestPhaseChange(string label, Transform focus = null) =>
-            TryRequest(CameraBeat.PhaseChange, force: true);
+            TryRequest(CameraBeat.PhaseChange, force: false);
 
         public static void RequestTerrainTile(Terrain terrain, bool force = false)
         {
@@ -178,10 +195,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             SurfaceTerrainTileExpansion.SetLiveTerrainFocus(terrain);
             _rig.EventSerial++;
             if (_demoRecordingDepth > 0)
-                force = true;
+                return;
 
-            var profile = ShotProfileFor(
-                _demoRecordingDepth > 0 ? ShotRole.DemoHero : ShotRoleFor(CameraBeat.TerrainTilePlaced));
+            var profile = ShotProfileFor(ShotRoleFor(CameraBeat.TerrainTilePlaced));
             if (!force && profile.ReframeEveryNthEvent > 0 && _rig.EventSerial % profile.ReframeEveryNthEvent != 0)
                 return;
 
@@ -192,10 +208,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             TryRequest(CameraBeat.PropPlaced, force: false);
 
         public static void RequestPipelineStep(Transform focus) =>
-            TryRequest(CameraBeat.PipelineStep, force: true);
+            TryRequest(CameraBeat.PipelineStep, force: false);
 
         public static void RequestBuildArea() =>
-            TryRequest(CameraBeat.BuildArea, force: true);
+            TryRequest(CameraBeat.BuildArea, force: false);
 
         /// <summary>Hub zoom slider — apply immediately; do not wait for EditorPrefs poll.</summary>
         public static void NotifyLiveZoomChanged(float sliderValue)
@@ -211,31 +227,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 PulseLiveView(force: true);
         }
 
-        /// <summary>Force one accurate cinematic frame before Scene-view PNG capture (demo timelapse).</summary>
+        /// <summary>Force one stable documentary frame before Scene-view PNG capture (demo timelapse).</summary>
         public static void ApplyDemoCaptureFrame()
         {
             if (!CanOperate())
                 return;
 
+            var profile = ShotProfileFor(ShotRole.EstablishingWide);
             if (!TryResolveActiveBuildBounds(
-                    ShotProfileFor(ShotRole.DemoHero),
+                    profile,
                     out var bounds,
-                    out var pivot,
-                    allowWidePlacedBounds: !ShouldFrameLiveWorkTile()))
+                    out _,
+                    allowWidePlacedBounds: true))
                 return;
 
             var sv = SceneView.lastActiveSceneView ?? ResolveAnySceneView();
             if (sv == null)
                 return;
 
-            ApplyCinematicWideShot(
-                sv,
-                bounds,
-                pivot,
-                ShotProfileFor(ShotRole.DemoHero),
-                snapFraming: false,
-                resetOrbit: false);
-            sv.Repaint();
+            ApplyDocumentaryFrame(sv, bounds);
         }
 
         static int _lastSmoothFrame = -1;
@@ -263,6 +273,45 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return Mathf.Lerp(PivotSmoothTimeMin, PivotSmoothTimeMax, t);
         }
 
+        static bool IsRigFramingSettled()
+        {
+            if (_rig.Distance <= 0.01f)
+                return false;
+
+            var tileSpan = Mathf.Max(ResolveTypicalTileSpan(), 128f);
+            var pivotErr = Vector3.Distance(_rig.Pivot, _targets.Pivot) / tileSpan;
+            var distErr = Mathf.Abs(_rig.Distance - _targets.Distance) /
+                          Mathf.Max(_targets.Distance, 48f);
+            var pitchErr = Mathf.Abs(_rig.Pitch - _targets.Pitch) / 90f;
+            var sizeErr = Mathf.Abs(_rig.LookSize - _targets.LookSize) /
+                          Mathf.Max(_targets.LookSize, 24f);
+
+            return pivotErr < SettledPivotEpsilon &&
+                   distErr < SettledScalarEpsilon &&
+                   pitchErr < SettledScalarEpsilon &&
+                   sizeErr < SettledScalarEpsilon;
+        }
+
+        static bool IsCameraMotionBusy() =>
+            _orbitArcActive || !IsRigFramingSettled();
+
+        static void QueuePulseAfterSettle(CameraBeat beat, bool force)
+        {
+            _pendingPulseBeat = beat;
+            _pendingPulseForce = force;
+            _pendingPulseAfterSettle = true;
+        }
+
+        static void TryFlushPendingPulse()
+        {
+            if (!_pendingPulseAfterSettle || IsCameraMotionBusy())
+                return;
+
+            _pendingPulseAfterSettle = false;
+            _pendingBeat = _pendingPulseBeat;
+            PulseLiveView(force: _pendingPulseForce);
+        }
+
         static void AdvanceRigSmoothing(float dt, ShotProfile profile, double now, bool snapInstant)
         {
             if (snapInstant || _rig.Distance <= 0.01f)
@@ -271,7 +320,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _rig.Distance = _targets.Distance;
                 _rig.Pitch = _targets.Pitch;
                 _rig.LookSize = _targets.LookSize;
-                _rig.Yaw = SampleProfessionalOrbitYaw(now, profile);
+                _rig.Yaw = SampleProfessionalOrbitYaw(now, profile, driveArc: true);
                 _pivotVelocity = Vector3.zero;
                 _distanceVelocity = 0f;
                 _pitchVelocity = 0f;
@@ -282,43 +331,54 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             var pivotSmooth = ResolvePivotSmoothTime();
+            var framingScale = _orbitArcActive ? 0.22f : 1f;
             _rig.Pivot = Vector3.SmoothDamp(
                 _rig.Pivot,
                 _targets.Pivot,
                 ref _pivotVelocity,
-                pivotSmooth,
-                PivotMaxSpeed,
+                pivotSmooth / Mathf.Max(0.15f, framingScale),
+                PivotMaxSpeed * framingScale,
                 dt);
             _rig.Distance = Mathf.SmoothDamp(
                 _rig.Distance,
                 _targets.Distance,
                 ref _distanceVelocity,
-                DistanceSmoothTime,
+                DistanceSmoothTime / Mathf.Max(0.15f, framingScale),
                 Mathf.Infinity,
                 dt);
             _rig.Pitch = Mathf.SmoothDamp(
                 _rig.Pitch,
                 _targets.Pitch,
                 ref _pitchVelocity,
-                PitchSmoothTime,
+                PitchSmoothTime / Mathf.Max(0.15f, framingScale),
                 Mathf.Infinity,
                 dt);
             _rig.LookSize = Mathf.SmoothDamp(
                 _rig.LookSize,
                 _targets.LookSize,
                 ref _lookSizeVelocity,
-                LookSizeSmoothTime,
+                LookSizeSmoothTime / Mathf.Max(0.15f, framingScale),
                 Mathf.Infinity,
                 dt);
 
-            var orbitYaw = SampleProfessionalOrbitYaw(now, profile);
-            _rig.Yaw = Mathf.SmoothDampAngle(
-                _rig.Yaw,
-                orbitYaw,
-                ref _yawVelocity,
-                YawSmoothTime,
-                YawMaxSpeed,
-                dt);
+            if (_orbitArcActive)
+            {
+                _rig.Yaw = SampleProfessionalOrbitYaw(now, profile, driveArc: true);
+                _yawVelocity = 0f;
+            }
+            else
+            {
+                var orbitYaw = SampleProfessionalOrbitYaw(now, profile, driveArc: false);
+                _rig.Yaw = Mathf.SmoothDampAngle(
+                    _rig.Yaw,
+                    orbitYaw,
+                    ref _yawVelocity,
+                    YawSettleSmoothTime,
+                    YawMaxSpeed,
+                    dt);
+            }
+
+            TryFlushPendingPulse();
         }
 
         static void TryRequest(CameraBeat beat, bool force)
@@ -334,6 +394,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             if (!force && UserCameraOverrideActive())
                 return;
+
+            if (!force && IsCameraMotionBusy())
+            {
+                QueuePulseAfterSettle(_pendingBeat, force);
+                return;
+            }
 
             var role = ShotRoleFor(_pendingBeat);
             var profile = ShotProfileFor(role);
@@ -355,13 +421,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             ApplyWideShot(bounds, pivot, profile, snapFraming: _forceInstantSnapOnce, resetOrbit: resetOrbit);
         }
 
-        /// <summary>Demo timelapse + active sculpt tile — orbit the tile being worked, not the whole grid.</summary>
+        /// <summary>Live sculpt tile — orbit the tile being worked, not the whole grid (never during recap capture).</summary>
         static bool ShouldFrameLiveWorkTile()
         {
+            if (_demoRecordingDepth > 0)
+                return false;
             if (SurfaceTerrainTileExpansion.LiveFocusTerrain == null)
                 return false;
-            if (_demoRecordingDepth > 0)
-                return true;
             if (!_sessionActive)
                 return false;
 
@@ -534,22 +600,48 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             bounds = new Bounds(center, new Vector3(maxSpan, bounds.size.y, maxSpan));
         }
 
-        static void ApplyWideShot(Bounds bounds, Vector3 pivot, ShotProfile profile, bool snapFraming, bool resetOrbit = true)
+        static void ApplyWideShot(
+            Bounds bounds,
+            Vector3 pivot,
+            ShotProfile profile,
+            bool snapFraming,
+            bool resetOrbit = true,
+            bool allowRetarget = true)
         {
             var sv = SceneView.lastActiveSceneView ?? ResolveAnySceneView();
             if (sv == null)
                 return;
 
-            if (_cinematicEnabled || _demoRecordingDepth > 0)
-                ApplyCinematicWideShot(sv, bounds, pivot, profile, snapFraming, resetOrbit);
+            if (_demoRecordingDepth > 0)
+                ApplyDocumentaryFrame(sv, bounds);
+            else if (_cinematicEnabled)
+                ApplyCinematicWideShot(sv, bounds, pivot, profile, snapFraming, resetOrbit, allowRetarget);
             else
                 ApplyDocumentaryFrame(sv, bounds);
         }
 
+        static void EnsureMinimumDocumentaryBounds(ref Bounds bounds)
+        {
+            var tileSpan = ResolveTypicalTileSpan();
+            var minHorizontal = tileSpan * 0.65f * ZoomCoverageScale();
+            var current = Mathf.Max(bounds.size.x, bounds.size.z);
+            if (current >= minHorizontal)
+                return;
+
+            var center = bounds.center;
+            bounds = new Bounds(
+                center,
+                new Vector3(minHorizontal, Mathf.Max(bounds.size.y, 64f), minHorizontal));
+        }
+
         static void ApplyDocumentaryFrame(SceneView sv, Bounds bounds)
         {
-            var padded = bounds;
-            padded.Expand(bounds.size * BasePaddingFraction * ZoomCoverageScale());
+            var work = bounds;
+            if (_demoRecordingDepth > 0)
+                EnsureMinimumDocumentaryBounds(ref work);
+
+            var padded = work;
+            padded.Expand(work.size * BasePaddingFraction * ZoomCoverageScale());
             sv.Frame(padded, false);
             sv.Repaint();
         }
@@ -560,7 +652,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Vector3 pivot,
             ShotProfile profile,
             bool snapFraming,
-            bool resetOrbit = true)
+            bool resetOrbit = true,
+            bool allowRetarget = true)
         {
             var horizontalSpan = Mathf.Max(bounds.size.x, bounds.size.z);
             var verticalSpan = Mathf.Max(bounds.size.y, 96f);
@@ -571,13 +664,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var targetDistance = ComputeFramingDistance(coverageSpan, profile.DistanceScale) * dolly;
             var lookSize = ComputeLookAtSize(coverageSpan, profile.DistanceScale) * dolly;
 
-            _targets.Pivot = pivot;
-            _targets.Pitch = profile.Pitch + pitchWobble;
-            _targets.Distance = targetDistance;
-            _targets.LookSize = lookSize;
-            _appliedZoomOutMultiplier = _zoomOutMultiplier;
+            if (allowRetarget && (!_orbitArcActive || snapFraming))
+            {
+                _targets.Pivot = pivot;
+                _targets.Pitch = profile.Pitch + pitchWobble;
+                _targets.Distance = targetDistance;
+                _targets.LookSize = lookSize;
+                _appliedZoomOutMultiplier = _zoomOutMultiplier;
+            }
 
-            if (resetOrbit && snapFraming)
+            if (resetOrbit && snapFraming && allowRetarget)
                 BeginOrbitHold(now, profile, snapYaw: _rig.Yaw);
 
             var dt = SampleDeltaTime();
@@ -663,7 +759,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _orbitArcActive = true;
             _orbitArcStart = now;
             _orbitArcEnd = now + profile.OrbitArcSec;
-            _orbitYawFrom = _orbitRestYaw;
+            _orbitYawFrom = _rig.Yaw;
+            _orbitRestYaw = _rig.Yaw;
             var arcDegrees = profile.OrbitArcDegrees;
             if (_demoRecordingDepth > 0)
                 arcDegrees *= 1f + 0.15f * ((_rig.EventSerial % 3) - 1);
@@ -694,24 +791,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return Mathf.Sin((float)now * 0.17f) * 3.5f;
         }
 
-        static float SampleProfessionalOrbitYaw(double now, ShotProfile profile)
+        static float EaseInOutQuint(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t < 0.5f
+                ? 16f * t * t * t * t * t
+                : 1f - Mathf.Pow(-2f * t + 2f, 5f) * 0.5f;
+        }
+
+        static float SampleProfessionalOrbitYaw(double now, ShotProfile profile, bool driveArc)
         {
             if (_orbitArcActive)
             {
                 var span = Mathf.Max(0.001f, (float)(_orbitArcEnd - _orbitArcStart));
                 var t = Mathf.Clamp01((float)((now - _orbitArcStart) / span));
-                t = t * t * (3f - 2f * t);
+                t = EaseInOutQuint(t);
                 if (t >= 0.999f)
                 {
                     _orbitArcActive = false;
                     _orbitRestYaw = _orbitYawTo;
                     _orbitDwellUntil = now + profile.OrbitDwellSec;
+                    _yawVelocity = 0f;
                 }
 
                 return Mathf.LerpAngle(_orbitYawFrom, _orbitYawTo, t);
             }
 
-            if (now >= _orbitDwellUntil)
+            if (driveArc && now >= _orbitDwellUntil && IsRigFramingSettled())
                 BeginOrbitArc(now, profile);
 
             return _orbitRestYaw;
@@ -720,7 +826,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static ShotRole ShotRoleFor(CameraBeat beat)
         {
             if (_demoRecordingDepth > 0)
-                return ShotRole.DemoHero;
+                return ShotRole.EstablishingWide;
 
             switch (beat)
             {
@@ -735,7 +841,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 case CameraBeat.PropPlaced:
                     return ShotRole.MediumCoverage;
                 case CameraBeat.DemoRecording:
-                    return ShotRole.DemoHero;
+                    return ShotRole.EstablishingWide;
                 default:
                     return ShotRole.MasterCoverage;
             }
@@ -748,15 +854,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 case ShotRole.EstablishingWide:
                     return new ShotProfile
                     {
-                        PaddingFraction = 0.22f,
-                        DistanceScale = 1.45f,
-                        Pitch = 50f,
-                        FocusPivotBlend = 0.12f,
+                        PaddingFraction = 0.2f,
+                        DistanceScale = 1.52f,
+                        Pitch = 52f,
+                        FocusPivotBlend = 0.1f,
                         ReframeEveryNthEvent = 1,
-                        HoldSeconds = 2.5,
-                        OrbitDwellSec = 5.0,
-                        OrbitArcSec = 32.0,
-                        OrbitArcDegrees = 26f,
+                        HoldSeconds = 4.2,
+                        OrbitDwellSec = 8.5,
+                        OrbitArcSec = 52.0,
+                        OrbitArcDegrees = 28f,
                     };
                 case ShotRole.MasterCoverage:
                     return new ShotProfile
@@ -765,11 +871,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         DistanceScale = 1.05f,
                         Pitch = 48f,
                         FocusPivotBlend = 0.28f,
-                        ReframeEveryNthEvent = 6,
-                        HoldSeconds = 1.2,
-                        OrbitDwellSec = 4.5,
-                        OrbitArcSec = 26.0,
-                        OrbitArcDegrees = 22f,
+                        ReframeEveryNthEvent = 8,
+                        HoldSeconds = 2.4,
+                        OrbitDwellSec = 5.5,
+                        OrbitArcSec = 36.0,
+                        OrbitArcDegrees = 20f,
                     };
                 case ShotRole.MediumCoverage:
                     return new ShotProfile
@@ -779,24 +885,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         Pitch = 46f,
                         FocusPivotBlend = 0.42f,
                         ReframeEveryNthEvent = 1,
-                        HoldSeconds = 1.0,
-                        OrbitDwellSec = 3.5,
-                        OrbitArcSec = 20.0,
-                        OrbitArcDegrees = 18f,
+                        HoldSeconds = 1.8,
+                        OrbitDwellSec = 4.5,
+                        OrbitArcSec = 28.0,
+                        OrbitArcDegrees = 16f,
                     };
                 case ShotRole.DemoHero:
                 default:
                     return new ShotProfile
                     {
-                        PaddingFraction = 0.12f,
-                        DistanceScale = 0.78f,
-                        Pitch = 44f,
-                        FocusPivotBlend = 0.95f,
+                        PaddingFraction = 0.1f,
+                        DistanceScale = 0.72f,
+                        Pitch = 42f,
+                        FocusPivotBlend = 0.98f,
                         ReframeEveryNthEvent = 1,
-                        HoldSeconds = 0.25,
-                        OrbitDwellSec = 1.4,
-                        OrbitArcSec = 11.0,
-                        OrbitArcDegrees = 42f,
+                        HoldSeconds = 0.45,
+                        OrbitDwellSec = 3.4,
+                        OrbitArcSec = 26.0,
+                        OrbitArcDegrees = 38f,
                     };
             }
         }
@@ -846,7 +952,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var s = CaveBuildCursorSettings.LoadOrCreate();
             s.LoadFromPrefs();
-            _cinematicEnabled = s.cinematicSceneCamera || _demoRecordingDepth > 0;
+            _cinematicEnabled = s.cinematicSceneCamera;
             _allowHijack = s.cinematicSceneCamera ||
                            s.showLiveScenePlacement ||
                            !s.stabilizationMode ||
@@ -859,13 +965,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!CanOperate() || UserCameraOverrideActive())
                 return;
 
-            var role = _demoRecordingDepth > 0 ? ShotRole.DemoHero : ShotRoleFor(_rig.LastBeat);
+            var role = _demoRecordingDepth > 0 ? ShotRole.EstablishingWide : ShotRoleFor(_rig.LastBeat);
             var profile = ShotProfileFor(role);
-            var allowWide = (_sessionActive || PreferWideBuildBounds()) && !ShouldFrameLiveWorkTile();
+            var allowWide = _demoRecordingDepth > 0 ||
+                            ((_sessionActive || PreferWideBuildBounds()) && !ShouldFrameLiveWorkTile());
             if (!TryResolveActiveBuildBounds(profile, out var bounds, out var pivot, allowWidePlacedBounds: allowWide))
                 return;
 
-            ApplyWideShot(bounds, pivot, profile, snapFraming: false);
+            var allowRetarget = !_orbitArcActive && IsRigFramingSettled();
+            ApplyWideShot(bounds, pivot, profile, snapFraming: false, resetOrbit: false, allowRetarget: allowRetarget);
+            TryFlushPendingPulse();
         }
 
         static SceneView ResolveAnySceneView()

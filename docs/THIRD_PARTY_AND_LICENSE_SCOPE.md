@@ -14,7 +14,7 @@ The kit and this repo’s original documentation are **not** public domain and *
 | Use | Allowed? |
 |-----|----------|
 | **Educational / personal non-commercial** learning, teaching, evaluation | **Yes — free** |
-| **Commercial use** — selling access, paid products/services built on the kit, paid training whose primary materials are the kit, paid client work where the deliverable is substantially this tooling | **No — unless you have a separate commercial license or purchase from the copyright holder (Jacob)** |
+| **Commercial use** — selling access, paid products/services built on the kit, paid training whose primary materials are the kit, paid client work where the deliverable is substantially this tooling | **No — unless you have a separate commercial license or purchase from the copyright holder (JacobForges)** |
 | **Monetary gain / public commercial sale** without permission | **Requires approval or a commercial license from the author** |
 
 The author may offer paid licenses, support, or sponsorship at their discretion. Contact the repository owner for commercial terms.

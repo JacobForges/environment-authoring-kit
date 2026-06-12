@@ -67,9 +67,8 @@ namespace EnvironmentAuthoringKit.Editor.World
             Debug.Log($"[WorldItemCatalog] Built {catalog.entries.Count} definitions → {CatalogAssetPath}.");
         }
 
-        const int CatalogSliceBatchSize = 12;
-
-        public static int CatalogSliceBatchSizePublic => CatalogSliceBatchSize;
+        public static int CatalogSliceBatchSizePublic =>
+            CaveBuildLoadAwareBatching.Clamp(2);
 
         public static bool TryGetManifestItemCount(out int count, out string error)
         {

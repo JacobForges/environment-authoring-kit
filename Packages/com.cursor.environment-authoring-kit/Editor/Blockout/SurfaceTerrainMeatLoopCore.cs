@@ -240,6 +240,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     state.Surface,
                     ref meat.VegCatalog);
                 UpsertStage(meat.Report, stage);
+
+                if (cfg.LoopKind == Kind.Geo &&
+                    CaveBuildPlannerFidelityGate.IsPlannerGateActive(state.Request) &&
+                    CaveBuildPlannerFidelityGate.ShouldGateRung(def.Id))
+                {
+                    state.Surface ??= SurfaceTerrainAiPhases.ResolveSurfaceRootPublic(state);
+                    CaveBuildPlannerFidelityGate.TryGateAfterRung(
+                        def.Id,
+                        state.Ground,
+                        state.Surface,
+                        state.Request,
+                        _ =>
+                        {
+                            meat.GradeRungIndex++;
+                            CaveBuildActionPacing.ScheduleBuildStep(
+                                () => RunGradePhase(meat),
+                                CaveBuildPipelineDomains.QueueLabel(
+                                    $"{cfg.LogPrefix} grade {meat.GradeRungIndex}/{rungTotal}"),
+                                CaveBuildActionPacing.ActionWeight.Light);
+                        });
+                    return;
+                }
+
                 meat.GradeRungIndex++;
                 CaveBuildActionPacing.ScheduleBuildStep(
                     () => RunGradePhase(meat),
@@ -377,18 +400,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     {
                         if (!string.IsNullOrEmpty(msg))
                             Debug.LogWarning(cfg.LogPrefix + " helpers: " + msg);
-                        TerrainBuildRungPromptExporter.WriteTailoredFixPrompt(
-                            rung,
-                            meat.Report,
-                            state.Request?.Seed ?? 0,
-                            meat.FixRound,
-                            cfg.WorkflowEnv,
-                            cfg.PhaseId);
-                        meat.Phase = Phase.ApplyFix;
-                        ScheduleStep(meat);
+                        FinishExportFixPrompt(meat);
                     });
                 return;
             }
+
+            FinishExportFixPrompt(meat);
+        }
+
+        static void FinishExportFixPrompt(MeatState meat)
+        {
+            var state = meat.TerrainState;
+            var cfg = meat.Config;
+            var rung = meat.ActiveRung;
 
             TerrainBuildRungPromptExporter.WriteTailoredFixPrompt(
                 rung,
@@ -397,6 +421,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 meat.FixRound,
                 cfg.WorkflowEnv,
                 cfg.PhaseId);
+            TryInvokeCursorAfterPrompt(meat);
             meat.Phase = Phase.ApplyFix;
             ScheduleStep(meat);
         }
@@ -406,8 +431,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var state = meat.TerrainState;
             var cfg = meat.Config;
             var rung = meat.ActiveRung;
-
-            TryInvokeCursor(rung, meat.Report, cfg);
 
             if (cfg.LoopKind == Kind.Geo && rung == "heightfield_no_craters")
             {
@@ -445,23 +468,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 });
         }
 
-        static void TryInvokeCursor(string rung, SurfaceTerrainLadderReport report, Config cfg)
+        static void TryInvokeCursorAfterPrompt(MeatState meat)
         {
-            var settings = CaveBuildCursorSettings.LoadOrCreate();
-            settings.LoadFromPrefs();
-            if (settings.suppressMeatLoopCursorInvokes)
-                return;
-
-            if (!settings.autoInvokeEachMeatLoopPass && !settings.autoInvokeTerrainAfterSurfaceBuild)
-                return;
-
-            if (!CaveBuildCursorAgentBridge.HasApiKey || CaveBuildCursorAgentBridge.IsAgentRunning)
-                return;
-
-            System.Environment.SetEnvironmentVariable("CAVE_WORKFLOW", cfg.WorkflowEnv);
-            TerrainBuildRungPromptExporter.PrepareAgentInvokeFromReport(rung, report, out _);
-            if (TerrainBuildCursorAgentBridge.TryInvokeGradeAndFixBackground(out var msg, rung))
+            var cfg = meat.Config;
+            if (TerrainBuildCursorAgentBridge.TryInvokeAfterPromptExported(
+                    meat.ActiveRung,
+                    meat.Report,
+                    cfg.WorkflowEnv,
+                    meat.SameRungStreak,
+                    out var msg))
+            {
+                CaveBuildEditorLog.LogSurface(
+                    cfg.LogPrefix + " Cursor invoked after prompt export — local fix runs next.",
+                    forceUnityConsole: true);
                 CaveBuildEditorLog.LogSurface(cfg.LogPrefix + " Cursor: " + msg, forceUnityConsole: true);
+            }
         }
     }
 }

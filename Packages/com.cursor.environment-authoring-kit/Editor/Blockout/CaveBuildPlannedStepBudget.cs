@@ -38,6 +38,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return Compute(SurfaceBuildScope.FullWorld, 289, extendedGrid: true);
 
             var tileCount = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+                return ComputeFloatingIslands(tileCount, request);
+
             var extended = request.SurfaceScope == SurfaceBuildScope.FullWorld &&
                            request.UseExtendedOpenWorldGrid &&
                            tileCount > 81;
@@ -55,7 +58,49 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (request.ForceNineTileSquareGrid && tileCount >= 9)
                 total += 36;
 
+            total += EstimateSurfaceTerrainSculptMicroSteps(tileCount, request);
+
             return Mathf.Max(480, total);
+        }
+
+        static int ComputeFloatingIslands(int tileCount, WorldGenerationRequest request)
+        {
+            tileCount = Mathf.Max(tileCount, SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount);
+            var passes = SurfaceTerrainCenteredAuthor.ResolvePassCount(request?.SurfaceTerrainBuildPasses ?? 4);
+            var sculpt = EstimateSurfaceTerrainSculptMicroSteps(tileCount, passes);
+            var total =
+                ComputePreGridSteps() +
+                ComputeCoreGridSteps(tileCount) +
+                sculpt +
+                ComputePostGridSteps(tileCount, includeTitan: false, lightweightSeams: true) +
+                ComputeCavePacedSteps(fullValidate: true);
+
+            if (!request.UseTrue3DCaveSystem)
+                total -= ComputeCavePacedSteps(fullValidate: true) - 90;
+
+            if (CaveBuildSessionConfig.SkipTerrainHelperScripts(request))
+                total -= 280;
+
+            return Mathf.Max(900, total);
+        }
+
+        /// <summary>Micro sculpt queue: load bands + 1 paced step per heightmap row × pass × tile.</summary>
+        public static int EstimateSurfaceTerrainSculptMicroSteps(int tileCount, WorldGenerationRequest request)
+        {
+            var passes = SurfaceTerrainCenteredAuthor.ResolvePassCount(request?.SurfaceTerrainBuildPasses ?? 4);
+            return EstimateSurfaceTerrainSculptMicroSteps(tileCount, passes);
+        }
+
+        public static int EstimateSurfaceTerrainSculptMicroSteps(int tileCount, int passCount)
+        {
+            tileCount = Mathf.Max(1, tileCount);
+            passCount = Mathf.Max(1, passCount);
+            const int res = DefaultHeightmapResolution;
+            const int loadBand = 2;
+            var loadSteps = (res + loadBand - 1) / loadBand;
+            var sculptStepsPerPass = res;
+            var perTile = loadSteps + passCount * sculptStepsPerPass + 3;
+            return tileCount * perTile;
         }
 
         public static int ComputeExtendedFullWorld(int tileCount) =>
@@ -66,7 +111,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static int ComputeCoreFullWorld(int tileCount)
         {
-            var tiles = Mathf.Max(tileCount, SurfaceTerrainTileExpansion.FullWorldTerrainTileCount);
+            var tiles = Mathf.Max(tileCount, 9);
             return ComputePreGridSteps() +
                    ComputeCoreGridSteps(tiles) +
                    ComputePostGridSteps(tiles, includeTitan: false) +
@@ -104,9 +149,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return 8 + place + snap + weld + 36 + terraform;
         }
 
-        static int ComputePostGridSteps(int tileCount, bool includeTitan)
+        static int ComputePostGridSteps(int tileCount, bool includeTitan, bool lightweightSeams = false)
         {
-            var seam = IndexedBatchSteps(tileCount, CaveBuildMicroProcessQueue.WorkKind.SurfaceSeam);
+            var seam = lightweightSeams
+                ? Mathf.Max(12, tileCount * 6)
+                : IndexedBatchSteps(tileCount, CaveBuildMicroProcessQueue.WorkKind.SurfaceSeam);
             var snap = IndexedBatchSteps(tileCount, CaveBuildMicroProcessQueue.WorkKind.SurfaceGridSnap);
             var surfaceFinish =
                 SurfaceTerrainAiPhases.PhaseCount * 14 +

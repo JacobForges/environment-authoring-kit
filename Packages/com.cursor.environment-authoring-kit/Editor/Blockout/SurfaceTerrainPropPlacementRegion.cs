@@ -153,43 +153,110 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         /// <summary>Contract target per terrain tile (× tile count for world total).</summary>
-        public static int TargetPerTile(SurfacePropCategory category) =>
-            category switch
+        public static int TargetPerTile(SurfacePropCategory category, WorldGenerationRequest request = null) =>
+            TargetPerTileCore(category, request);
+
+        static int TargetPerTileCore(SurfacePropCategory category, WorldGenerationRequest request)
+        {
+            var denseDemo = request != null &&
+                            (CaveBuildSpeedDemoPolicy.IsActive(request) ||
+                             (CaveBuildSessionConfig.IsSessionRequest(request) &&
+                              CaveBuildSessionConfig.ShouldScatterBiomeProps()));
+
+            return category switch
             {
-                SurfacePropCategory.Trees => 78,
-                SurfacePropCategory.Grass => 320,
-                SurfacePropCategory.Bushes => 195,
-                SurfacePropCategory.GroundCover => 228,
+                SurfacePropCategory.Trees => denseDemo ? 92 : 78,
+                SurfacePropCategory.Grass => denseDemo ? 440 : 320,
+                SurfacePropCategory.Bushes => denseDemo ? 230 : 195,
+                SurfacePropCategory.GroundCover => denseDemo ? 270 : 228,
                 SurfacePropCategory.Rocks => 34,
-                _ => 36,
+                _ => denseDemo ? 44 : 36,
             };
+        }
+
+        /// <summary>Never accept a tile below this fraction of its category target (user floor: 65%).</summary>
+        public const float MinTileCoverageFraction = 0.65f;
+
+        /// <summary>Placement loop aims for this fraction on each tile (majority of tiles: 80–90%).</summary>
+        public const float TargetTileCoverageFraction = 0.85f;
 
         /// <summary>Hard minimum placements on each locked tile before the pass is acceptable.</summary>
         public static int MinPlacementsPerTile(SurfacePropCategory category) =>
-            category switch
+            CoverageCountForTile(category, MinTileCoverageFraction);
+
+        /// <summary>Per-tile count the spread pass works toward before moving on.</summary>
+        public static int DesiredPlacementsPerTile(SurfacePropCategory category) =>
+            CoverageCountForTile(category, TargetTileCoverageFraction);
+
+        static int CoverageCountForTile(SurfacePropCategory category, float fraction)
+        {
+            var request = CaveBuildAaaSessionPolicy.ActiveRequest;
+            var target = TargetPerTile(category, request);
+            var count = Mathf.RoundToInt(target * fraction);
+            return category switch
             {
-                SurfacePropCategory.Trees => 52,
-                SurfacePropCategory.Grass => 210,
-                SurfacePropCategory.Bushes => 138,
-                SurfacePropCategory.GroundCover => 158,
-                SurfacePropCategory.Rocks => 18,
-                _ => 28,
+                SurfacePropCategory.Trees => Mathf.Max(28, count),
+                SurfacePropCategory.Grass => Mathf.Max(80, count),
+                SurfacePropCategory.Bushes => Mathf.Max(60, count),
+                SurfacePropCategory.GroundCover => Mathf.Max(70, count),
+                SurfacePropCategory.Rocks => Mathf.Max(12, count),
+                _ => Mathf.Max(16, count),
             };
+        }
 
-        public static int TargetCountForCategory(SurfacePropCategory category, int terrainTileCount) =>
-            TargetPerTile(category) * Mathf.Max(1, terrainTileCount);
+        static int CombinedVegetationTargetPerTile(WorldGenerationRequest request = null)
+        {
+            return TargetPerTile(SurfacePropCategory.Trees, request) +
+                   TargetPerTile(SurfacePropCategory.Grass, request) +
+                   TargetPerTile(SurfacePropCategory.Bushes, request) +
+                   TargetPerTile(SurfacePropCategory.GroundCover, request);
+        }
 
-        /// <summary>Full-map vegetation spread uses 2× base grid spacing (Horizon-style coverage on all locked tiles).</summary>
-        public const float UnifiedFullMapSpreadSpacingMultiplier = 2f;
+        public static int TargetCountForCategory(
+            SurfacePropCategory category,
+            int terrainTileCount,
+            WorldGenerationRequest request = null) =>
+            TargetPerTile(category, request) * Mathf.Max(1, terrainTileCount);
+
+        /// <summary>Base spread multiplier for full-map builds (was 2× — left tiles ~⅓ filled).</summary>
+        public const float UnifiedFullMapSpreadSpacingMultiplier = 1.28f;
+
+        /// <summary>Play-disk / planner demos need tighter spacing so tiles are not half-empty.</summary>
+        public static float ResolveSpreadSpacingMultiplier(WorldGenerationRequest request)
+        {
+            if (request != null &&
+                (CaveBuildSpeedDemoPolicy.IsActive(request) ||
+                 (CaveBuildSessionConfig.IsSessionRequest(request) &&
+                  CaveBuildSessionConfig.ShouldScatterBiomeProps())))
+                return 1.08f;
+
+            return UnifiedFullMapSpreadSpacingMultiplier;
+        }
+
+        /// <summary>Category-tuned spread: wider trees, denser understory.</summary>
+        public static float SpreadSpacingMultiplierForCategory(
+            SurfacePropCategory category,
+            WorldGenerationRequest request = null)
+        {
+            var baseMul = ResolveSpreadSpacingMultiplier(request);
+            return category switch
+            {
+                SurfacePropCategory.Trees => baseMul * 1.14f,
+                SurfacePropCategory.Grass => baseMul * 0.76f,
+                SurfacePropCategory.GroundCover => baseMul * 0.76f,
+                SurfacePropCategory.Bushes => baseMul * 0.82f,
+                _ => baseMul,
+            };
+        }
 
         /// <summary>Grid spacing inside each terrain tile (not diluted by tile count).</summary>
         public static float PerTileGridSpacing(SurfacePropCategory category) =>
             category switch
             {
-                SurfacePropCategory.Trees => 8.2f,
-                SurfacePropCategory.Grass => 3.1f,
-                SurfacePropCategory.Bushes => 4.4f,
-                SurfacePropCategory.GroundCover => 3.9f,
+                SurfacePropCategory.Trees => 10.2f,
+                SurfacePropCategory.Grass => 2.75f,
+                SurfacePropCategory.Bushes => 3.6f,
+                SurfacePropCategory.GroundCover => 3.15f,
                 SurfacePropCategory.Rocks => 11f,
                 _ => 6.8f,
             };
@@ -200,17 +267,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return PerTileGridSpacing(category) / Mathf.Sqrt(tiles);
         }
 
-        /// <summary>Minimum total vegetation instances for a full 9-tile world (all categories combined).</summary>
+        /// <summary>Minimum total vegetation instances for a full world (all categories combined).</summary>
         public static int MinimumSceneVegetationInstances(int terrainTileCount) =>
-            Mathf.Max(1, terrainTileCount) * 55;
+            Mathf.Max(1, terrainTileCount) * MinimumInstancesPerTerrainTile(terrainTileCount);
 
-        /// <summary>Minimum instances on one terrain tile (any category) for spread audit.</summary>
-        public static int MinimumInstancesPerTerrainTile(int terrainTileCount) =>
-            terrainTileCount >= 9 ? 42 : 28;
+        /// <summary>Minimum combined vegetation instances on one terrain tile for spread audit.</summary>
+        public static int MinimumInstancesPerTerrainTile(int terrainTileCount)
+        {
+            var combined = CombinedVegetationTargetPerTile(CaveBuildAaaSessionPolicy.ActiveRequest);
+            var minTotal = Mathf.RoundToInt(combined * MinTileCoverageFraction);
+            return terrainTileCount >= 9 ? Mathf.Max(320, minTotal) : Mathf.Max(180, minTotal);
+        }
 
         /// <summary>
-        /// Single spread pass per category: 2× grid spacing + interstitial offset on every locked terrain tile.
-        /// Replaces separate primary + wide-spread pipeline passes.
+        /// Single spread pass per category: category-tuned grid spacing + interstitial offsets on every locked terrain tile.
         /// </summary>
         public static void CollectUnifiedSpreadPlacementSlotsForCategory(
             Terrain mainTerrain,
@@ -243,6 +313,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 seed,
                 category);
 
+            var spreadMul = SpreadSpacingMultiplierForCategory(category, CaveBuildAaaSessionPolicy.ActiveRequest);
+
             AppendTerrainGridSlots(
                 slots,
                 mainTerrain,
@@ -251,7 +323,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 seed,
                 category,
                 vegPass,
-                spacingMultiplier: UnifiedFullMapSpreadSpacingMultiplier,
+                spacingMultiplier: spreadMul,
                 gridPhaseOffset: 0f);
             AppendTerrainGridSlots(
                 slots,
@@ -261,8 +333,32 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 seed + 55103,
                 category,
                 vegPass,
-                spacingMultiplier: UnifiedFullMapSpreadSpacingMultiplier,
+                spacingMultiplier: spreadMul,
                 gridPhaseOffset: 0.5f);
+
+            if (category is SurfacePropCategory.Grass or SurfacePropCategory.GroundCover or SurfacePropCategory.Bushes)
+            {
+                AppendTerrainGridSlots(
+                    slots,
+                    mainTerrain,
+                    playCenter,
+                    extentMeters,
+                    seed + 90210,
+                    category,
+                    vegPass,
+                    spacingMultiplier: spreadMul * 0.72f,
+                    gridPhaseOffset: 0.25f);
+                AppendTerrainGridSlots(
+                    slots,
+                    mainTerrain,
+                    playCenter,
+                    extentMeters,
+                    seed + 77119,
+                    category,
+                    vegPass,
+                    spacingMultiplier: spreadMul * 0.68f,
+                    gridPhaseOffset: 0.75f);
+            }
 
             if (category != SurfacePropCategory.Rocks)
             {
@@ -281,12 +377,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     maxTrailOnlySlots: Mathf.Max(8, TargetCountForCategory(category, tileCount) / 22));
             }
 
-            var dedupeFactor = category is SurfacePropCategory.Grass or SurfacePropCategory.GroundCover
-                ? 0.14f
-                : 0.18f;
+            var dedupeFactor = category switch
+            {
+                SurfacePropCategory.Trees => 0.22f,
+                SurfacePropCategory.Grass or SurfacePropCategory.GroundCover => 0.11f,
+                _ => 0.14f,
+            };
             SurfaceIntelligentPropPlacer.DedupeSlotsPreferGrid(
                 slots,
-                minSeparationMeters: PerTileGridSpacing(category) * UnifiedFullMapSpreadSpacingMultiplier * dedupeFactor);
+                minSeparationMeters: PerTileGridSpacing(category) * spreadMul * dedupeFactor);
         }
 
         public static void CollectPlacementSlotsForCategory(
@@ -522,8 +621,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var spacing = PerTileGridSpacing(category) * Mathf.Max(0.75f, spacingMultiplier);
             var rng = new System.Random(seed + (int)category * 7919 + 17);
             const int maxSlotsPerCategory = 8000;
-            var perTileTarget = TargetPerTile(category);
-            var maxSlotsPerTile = Mathf.Max(perTileTarget * 2, 180);
+            var perTileTarget = TargetPerTile(category, CaveBuildAaaSessionPolicy.ActiveRequest);
+            var slotCapMul = category switch
+            {
+                SurfacePropCategory.Trees => 2.4f,
+                SurfacePropCategory.Grass or SurfacePropCategory.GroundCover => 3.2f,
+                _ => 2.8f,
+            };
+            var maxSlotsPerTile = Mathf.Max(Mathf.RoundToInt(perTileTarget * slotCapMul), 220);
 
             foreach (var terrain in terrains)
             {

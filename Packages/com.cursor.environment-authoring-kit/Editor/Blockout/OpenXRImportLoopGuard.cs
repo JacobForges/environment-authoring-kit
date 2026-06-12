@@ -164,7 +164,36 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             IsUnitySearchDbLockNoise(condition, stackTrace) ||
             IsUnityConnectPackageManagerNoise(condition, stackTrace) ||
             IsTerrainResourceIdNoise(condition, stackTrace) ||
+            IsNgoPlayModeShutdownNoise(condition, stackTrace) ||
+            IsVivoxProvisionPendingNoise(condition) ||
             Cc0ImportWarningSuppressor.ShouldSuppress(condition, stackTrace);
+
+        /// <summary>Package spams this while Hub auto-retries Vivox provisioning in the background.</summary>
+        internal static bool IsVivoxProvisionPendingNoise(string condition)
+        {
+            if (string.IsNullOrEmpty(condition))
+                return false;
+
+            return condition.Contains("[Vivox]", StringComparison.Ordinal) &&
+                   condition.Contains("Failed to pull Credentials", StringComparison.Ordinal);
+        }
+
+        /// <summary>Benign NGO double-ShutdownInternal NRE when exiting Play Mode without hosting.</summary>
+        internal static bool IsNgoPlayModeShutdownNoise(string condition, string stackTrace)
+        {
+            if (string.IsNullOrEmpty(stackTrace) || string.IsNullOrEmpty(condition))
+                return false;
+
+            if (!condition.Contains("NullReferenceException", StringComparison.Ordinal))
+                return false;
+
+            if (!stackTrace.Contains("Unity.Netcode.NetworkManager.OnDestroy", StringComparison.Ordinal) &&
+                !stackTrace.Contains("Unity.Netcode.NetworkManager.OnApplicationQuit", StringComparison.Ordinal))
+                return false;
+
+            return stackTrace.Contains("NetworkSceneManager.Dispose", StringComparison.Ordinal) ||
+                   stackTrace.Contains("NetworkTimeSystem.Shutdown", StringComparison.Ordinal);
+        }
 
         internal static bool IsInputManagerDeprecationNoise(string condition)
         {

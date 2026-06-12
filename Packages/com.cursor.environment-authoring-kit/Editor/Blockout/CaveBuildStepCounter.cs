@@ -27,9 +27,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static int _plannedTotal;
         static bool _plannedTotalLocked;
         static int _scheduledLifetime;
+        static bool _plannedTotalFrozen;
         static double _sessionStart;
         static double _lastAdvanceAt;
         static double _emaStepsPerSecond;
+        static double _emaWeightedSecondsPerStep = 0.12;
         static bool _sessionActive;
 
         static BuildSegment _segment = BuildSegment.General;
@@ -37,6 +39,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static int _segmentBudgetSteps;
         static float _segmentProgress01;
         static float _surfaceWeightedProgress01;
+        static float _terrainSculptProgress01;
 
         public static int Current => _current;
 
@@ -45,7 +48,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Fixed step budget shown in Hub (current / planned).</summary>
         public static int PlannedTotal => _plannedTotal > 0 ? _plannedTotal : _estimatedTotal;
 
-        /// <summary>Live denominator — never below current or scheduled queue depth.</summary>
+        /// <summary>Hub denominator — locked at session configure unless current exceeds budget.</summary>
         public static int EffectivePlannedTotal
         {
             get
@@ -53,16 +56,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (!_sessionActive)
                     return PlannedTotal;
 
-                var baseline = PlannedTotal;
-                var live = Mathf.Max(baseline, _scheduledLifetime, _current);
-                if (CaveBuildActionPacing.HasQueuedWork)
-                    live = Mathf.Max(live, _current + CaveBuildActionPacing.QueuedCount);
-
-                return live;
+                return Mathf.Max(PlannedTotal, _current);
             }
         }
 
-        /// <summary>0–1 for Hub progress bars when current can exceed the initial estimate.</summary>
+        /// <summary>0–1 for Hub progress bars — blends paced steps with surface/sculpt segment progress.</summary>
         public static float Progress01
         {
             get
@@ -70,7 +68,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (!_sessionActive || EffectivePlannedTotal <= 0)
                     return 0f;
 
-                return Mathf.Clamp01(_current / (float)EffectivePlannedTotal);
+                return CompositeProgress01();
             }
         }
 
@@ -87,6 +85,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             _current = 0;
             _plannedTotalLocked = false;
+            _plannedTotalFrozen = false;
             _plannedTotal = 0;
             _scheduledLifetime = 0;
             _estimatedTotal = estimatedTotal > 0 ? estimatedTotal : EstimateInitialTotal();
@@ -94,11 +93,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _sessionStart = EditorApplication.timeSinceStartup;
             _lastAdvanceAt = _sessionStart;
             _emaStepsPerSecond = 0;
+            _emaWeightedSecondsPerStep = 0.12;
             _segment = BuildSegment.General;
             _segmentLabel = string.Empty;
             _segmentBudgetSteps = 0;
             _segmentProgress01 = 0f;
             _surfaceWeightedProgress01 = 0f;
+            _terrainSculptProgress01 = 0f;
             _sessionActive = true;
             CaveBuildHardwareMonitor.EnsureSampling();
         }
@@ -170,7 +171,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             SetPlannedTotal(total, replace: true);
         }
 
-        /// <summary>One editor-queue step was scheduled (mirrors Advance at execution time).</summary>
+        /// <summary>Tracks queue depth for diagnostics — does not inflate the locked Hub denominator.</summary>
         public static void RegisterScheduledStep(int count = 1)
         {
             if (count <= 0)
@@ -180,7 +181,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 BeginSession();
 
             _scheduledLifetime += count;
-            ReconcilePlannedTotal();
         }
 
         public static void SetSegment(BuildSegment segment, int budgetSteps, float progress01, string label)
@@ -285,26 +285,82 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void SyncSurfaceWeightedProgress(float progress01) =>
             _surfaceWeightedProgress01 = Mathf.Clamp01(progress01);
 
+        /// <summary>Fractional sculpt progress (pass/row) for ETC when micro steps outrun macro budget.</summary>
+        public static void NotifyTerrainSculptMicroProgress(
+            int passIndex,
+            int passCount,
+            int row,
+            int resolution)
+        {
+            if (passCount <= 0 || resolution <= 0)
+                return;
+
+            var passFrac = (passIndex + row / (float)resolution) / passCount;
+            _terrainSculptProgress01 = Mathf.Clamp01(passFrac);
+            _segmentProgress01 = Mathf.Max(_segmentProgress01, _terrainSculptProgress01 * 0.92f);
+        }
+
         public static void Advance(string label = null)
         {
             if (!_sessionActive)
                 BeginSession();
 
             _current++;
-            ReconcilePlannedTotal();
             CaveBuildLateBuildPerformance.NotifyStepAdvanced(_current);
             CaveBuildPacedStepPersistence.OnPacedStepCompleted(_current, label);
             var now = EditorApplication.timeSinceStartup;
             var dt = (float)Math.Max(0.001, now - _lastAdvanceAt);
             _lastAdvanceAt = now;
-            var instant = 1f / dt;
-            _emaStepsPerSecond = _emaStepsPerSecond <= 0 ? instant : _emaStepsPerSecond * 0.9f + instant * 0.1f;
+            var weight = StepTimeWeight(label);
+            var weightedDt = dt / Mathf.Max(0.15f, weight);
+            var instant = 1f / weightedDt;
+            _emaStepsPerSecond = _emaStepsPerSecond <= 0 ? instant : _emaStepsPerSecond * 0.88f + instant * 0.12f;
+            _emaWeightedSecondsPerStep = _emaWeightedSecondsPerStep <= 0
+                ? weightedDt
+                : _emaWeightedSecondsPerStep * 0.88 + weightedDt * 0.12;
 
             if (!string.IsNullOrEmpty(label))
                 CaveBuildRunStatusPublisher.RecordActivity("step", label);
         }
 
-        public static void SyncLiveTotals() => ReconcilePlannedTotal();
+        public static void SyncLiveTotals()
+        {
+            if (!_sessionActive || _plannedTotalFrozen)
+                return;
+
+            ReconcilePlannedTotal();
+        }
+
+        static float StepTimeWeight(string label)
+        {
+            if (string.IsNullOrEmpty(label))
+                return 1f;
+
+            if (label.IndexOf("terrain sculpt micro", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 0.28f;
+            if (label.IndexOf("planner brief", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 0.35f;
+            if (label.IndexOf("prop", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("vegetation", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 0.55f;
+            if (label.IndexOf("CC0", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("import", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 1.35f;
+            if (label.IndexOf("validate", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                label.IndexOf("navmesh", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 1.2f;
+
+            return 1f;
+        }
+
+        static float CompositeProgress01()
+        {
+            if (!_sessionActive || EffectivePlannedTotal <= 0)
+                return 0f;
+
+            var stepProgress = _current / (float)EffectivePlannedTotal;
+            return Mathf.Clamp01(Mathf.Max(stepProgress, _surfaceWeightedProgress01, _segmentProgress01, _terrainSculptProgress01));
+        }
 
         public static string FormatHubStepCurrent() =>
             _sessionActive ? $"{_current:N0}" : "0";
@@ -322,14 +378,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void ReconcilePlannedTotal()
         {
-            if (!_sessionActive)
+            if (!_sessionActive || _plannedTotalFrozen)
                 return;
 
-            var live = EffectivePlannedTotal;
-            if (live > _plannedTotal)
+            if (_current > _plannedTotal)
             {
-                _plannedTotal = live;
-                _estimatedTotal = live;
+                _plannedTotal = _current;
+                _estimatedTotal = _current;
             }
         }
 
@@ -343,6 +398,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _plannedTotal = total;
                 _plannedTotalLocked = true;
                 _estimatedTotal = total;
+                if (replace)
+                    _plannedTotalFrozen = true;
             }
         }
 
@@ -388,38 +445,46 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (_emaStepsPerSecond <= 0.04 && elapsed < 12)
                 return "…";
 
-            var effectiveTotal = EffectivePlannedTotal;
-            var remainingSteps = effectiveTotal - _current;
+            var composite = CompositeProgress01();
+            double sec;
 
-            if (remainingSteps <= 0)
+            if (composite > 0.06f && elapsed > 2.5)
             {
-                if (CaveBuildActionPacing.HasQueuedWork)
-                    remainingSteps = Mathf.Max(CaveBuildActionPacing.QueuedCount, 24);
-                else if (_segmentProgress01 > 0.02f && _segmentProgress01 < 0.985f)
-                    remainingSteps = Mathf.Max(16, (int)((1f - _segmentProgress01) / _segmentProgress01 * _current));
-                else if (_sessionActive && _current > 40)
-                    remainingSteps = Mathf.Max(32, (int)(elapsed / Math.Max(_current, 1) * 48));
-                else
-                    return "…";
+                sec = elapsed / composite * (1.0 - composite);
+            }
+            else
+            {
+                var effectiveTotal = EffectivePlannedTotal;
+                var remainingSteps = Mathf.Max(0, effectiveTotal - _current);
+                if (remainingSteps <= 0 && CaveBuildActionPacing.HasQueuedWork)
+                    remainingSteps = Mathf.Max(CaveBuildActionPacing.QueuedCount, 48);
+
+                sec = remainingSteps * Math.Max(_emaWeightedSecondsPerStep, 0.06);
             }
 
-            var globalSec = remainingSteps / Math.Max(_emaStepsPerSecond, 0.08);
-
-            var segmentSec = globalSec;
-            if (_segmentBudgetSteps > 0 && _segmentProgress01 < 0.995f)
+            if (_terrainSculptProgress01 > 0.02f && _terrainSculptProgress01 < 0.98f)
             {
-                var segRemaining = (1f - _segmentProgress01) * _segmentBudgetSteps;
-                segmentSec = segRemaining / Math.Max(_emaStepsPerSecond, 0.08);
+                var sculptSec = elapsed / Math.Max(_terrainSculptProgress01, 0.04) * (1.0 - _terrainSculptProgress01);
+                sec = sec * 0.35 + sculptSec * 0.65;
+            }
+            else if (_surfaceWeightedProgress01 > 0.04f && _surfaceWeightedProgress01 < 0.98f)
+            {
+                var surfaceSec = elapsed / _surfaceWeightedProgress01 * (1.0 - _surfaceWeightedProgress01);
+                sec = sec * 0.4 + surfaceSec * 0.6;
             }
 
-            var trustSegment = _segmentProgress01 > 0.03f && _segmentProgress01 < 0.99f ? 0.62f : 0.2f;
-            var sec = segmentSec * trustSegment + globalSec * (1f - trustSegment);
-
-            if (_current > 20 && effectiveTotal > 0 && elapsed > 1)
+            if (_current > 20 && EffectivePlannedTotal > 0 && elapsed > 1)
             {
-                var pace = _current / elapsed;
-                var needed = remainingSteps / Math.Max(pace, 0.01);
-                sec = sec * 0.45 + needed * 0.55;
+                var paceSec = (EffectivePlannedTotal - _current) * (_emaWeightedSecondsPerStep > 0
+                    ? _emaWeightedSecondsPerStep
+                    : elapsed / Math.Max(_current, 1));
+                sec = sec * 0.5 + paceSec * 0.5;
+            }
+
+            if (CaveBuildActionPacing.HasQueuedWork)
+            {
+                var queueSec = CaveBuildActionPacing.QueuedCount * Math.Max(_emaWeightedSecondsPerStep, 0.05);
+                sec = Math.Max(sec, queueSec * 0.55);
             }
 
             if (sec < 0.5)

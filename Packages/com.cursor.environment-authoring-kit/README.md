@@ -1,5 +1,7 @@
 # Environment Authoring Kit
 
+**Author:** [JacobForges](https://github.com/JacobForges) — sole author and copyright holder.
+
 **`com.cursor.environment-authoring-kit`** — Unity Editor package for **procedural Florida karst surface + lava-tube cave worlds**, quality grading, and optional **Cursor SDK** automation.
 
 Built for **Unity 6 (6000.x)** and **URP**. XR = **optimization profile + Unity XR packages** in the consumer project — **not** a bundled VITURE SDK or glasses-ready demo.
@@ -14,7 +16,7 @@ Built for **Unity 6 (6000.x)** and **URP**. XR = **optimization profile + Unity 
 | **FullWorld concepts** | Hub layouts **0–9** + random on build — [docs/FULLWORLD_GENERATION_PRESETS.md](docs/FULLWORLD_GENERATION_PRESETS.md) |
 | **Build progress** | Hub **Step** counter — every paced queue action (`CaveBuildStepCounter`; 122-index schedule is internal only) |
 | **Node** | 18+ + `npm install` in `Tools/cave-grader` |
-| **Version** | **0.3.3** — see `package.json` |
+| **Version** | **0.3.4** — see `package.json` |
 | **License** | [LICENSE.md](LICENSE.md) |
 
 ---
@@ -47,7 +49,7 @@ Open the project in Unity and let scripts compile.
 2. **Node 18+**.
 3. **Window → Environment Kit → Hub** → **Build Complete Cave**.
 
-Procedural FullWorld with no API keys — watch **Step** climb in Hub. Enable a provider in Hub → Settings for AI grading when steps need it.
+Procedural FullWorld with no API keys — watch **Step** climb in Hub. **Planner:** optional AI wizard (`npm run build-wizard`) or **non-AI** brief JSON — [PLANNER_SESSION.md](../../docs/PLANNER_SESSION.md). Enable a provider in Hub → Settings for agent grading when needed.
 
 See [consumer README](../../README.md#first-build-after-clone).
 

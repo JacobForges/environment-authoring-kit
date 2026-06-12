@@ -15,7 +15,6 @@ namespace EnvironmentAuthoringKit.World
             if (!Application.isPlaying)
                 return;
 
-            WireScenePlayer();
             SchedulePostStartRewire();
         }
 
@@ -28,6 +27,9 @@ namespace EnvironmentAuthoringKit.World
 
         public static bool WireScenePlayer()
         {
+            if (WorldUiBootstrapGate.SuppressDuringTitleMenu)
+                return false;
+
             SanitizeMisTaggedPlayers();
 
             var player = ResolvePlayerRoot();
@@ -127,7 +129,9 @@ namespace EnvironmentAuthoringKit.World
 
             go.AddComponent<PlayerController>();
             EnsurePlayerTag(go);
-            PlayerGroundSnap.SnapTransform(go.transform, pos);
+            var grounded = PlayerSpawnHeightUtility.ResolveSpawnMarkerPosition(pos, cc);
+            go.transform.position = grounded;
+            PlayerGroundSnap.SnapTransform(go.transform, grounded);
 
             Debug.Log("[World] Created play character at surface spawn.", go);
             return go;
@@ -173,6 +177,9 @@ namespace EnvironmentAuthoringKit.World
             if (go == null)
                 return false;
 
+            if (IsCompetitionAgent(go))
+                return false;
+
             if (go.GetComponent<CavePlaytestBotMarker>() != null)
                 return false;
             if (go.GetComponent<HollowTitanPatrolAgent>() != null)
@@ -188,6 +195,24 @@ namespace EnvironmentAuthoringKit.World
 
             return true;
         }
+
+        static bool IsCompetitionAgent(GameObject go)
+        {
+            if (go.name == "CompetitionAgentPawn")
+                return true;
+
+            foreach (var mb in go.GetComponents<MonoBehaviour>())
+            {
+                if (mb == null)
+                    continue;
+
+                var typeName = mb.GetType().Name;
+                if (typeName is "CompetitionAgentPawn" or "CompetitionAgentMarker")
+                    return true;
+            }
+
+            return false;
+        }
     }
 
     /// <summary>Re-wires the play character after scene Start() so runtime spawns cannot steal Player tag.</summary>
@@ -195,11 +220,15 @@ namespace EnvironmentAuthoringKit.World
     {
         void Start()
         {
-            WorldPlayerSetupRuntime.WireScenePlayer();
+            if (!WorldUiBootstrapGate.SuppressDuringTitleMenu)
+                WorldPlayerSetupRuntime.WireScenePlayer();
 
             var player = WorldPlayerSetupRuntime.ResolvePlayerRoot();
             if (player != null)
+            {
+                PlayerGroundSnap.SnapTransform(player.transform, player.transform.position);
                 CavePlayerMovementGuard.UnlockMovement(player.transform);
+            }
 
             Destroy(gameObject);
         }

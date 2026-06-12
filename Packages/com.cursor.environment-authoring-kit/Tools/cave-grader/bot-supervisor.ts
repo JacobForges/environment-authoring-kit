@@ -5,8 +5,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadBotProductionConfig, resolveMaxIterations, type BotProductionConfig } from "./bot-production-config.js";
-import { formatPlaybookBlock, pickPlaybookFromSession } from "./bot-playbooks/index.js";
+import { formatPlaybookBlock, listPlaybooks, pickPlaybookFromSession } from "./bot-playbooks/index.js";
 import { formatHubBotSetupBlock } from "./bot-hub-setup.js";
+import {
+  formatPipelineAuditBlock,
+  runPipelineAudit,
+  topPlaybookFromAudit,
+} from "./bot-pipeline-audit.js";
 import { loadCheckpoint, recordStall, saveCheckpoint } from "./bot-session-checkpoint.js";
 import {
   demoWorldGatePassed,
@@ -94,10 +99,15 @@ export function resolveIterationCap(hubRoot: string): number {
 
 export function preSessionPromptAugment(hubRoot: string): string {
   const issue = loadFailingIssueText(hubRoot);
-  const pb = pickPlaybookFromSession(hubRoot, issue);
+  const audit = runPipelineAudit(hubRoot, { mergeUnity: true });
+  const auditPlaybook = topPlaybookFromAudit(hubRoot);
+  const pb =
+    pickPlaybookFromSession(hubRoot, issue) ??
+    (auditPlaybook ? listPlaybooks().find((p) => p.id === auditPlaybook) ?? null : null);
   const cp = loadCheckpoint(hubRoot);
   const blocks: string[] = [formatHubBotSetupBlock(hubRoot)];
-  if (pb) blocks.push(formatPlaybookBlock(hubRoot, issue));
+  blocks.push(formatPipelineAuditBlock(audit));
+  if (pb) blocks.push(formatPlaybookBlock(hubRoot, issue || auditPlaybook || ""));
   if (cp.lastPlaybookId && cp.lastPlaybookId !== pb?.id) {
     blocks.push(`Previous playbook ${cp.lastPlaybookId} did not clear — try deep repair or adjacent rung.`);
   }
@@ -180,6 +190,25 @@ export function writeSessionDashboard(hubRoot: string, summary: SessionSummary):
     formatMissionPhaseLine(hubRoot),
     "",
   ];
+  const auditPath = join(hubRoot, "Assets/EnvironmentKit/Generated/HubBotPipelineAudit.json");
+  if (existsSync(auditPath)) {
+    try {
+      const audit = JSON.parse(readFileSync(auditPath, "utf8")) as {
+        pass?: boolean;
+        failCount?: number;
+        warnCount?: number;
+      };
+      lines.push(
+        "",
+        "## Pipeline audit",
+        `- pass=${audit.pass === true} fail=${audit.failCount ?? "?"} warn=${audit.warnCount ?? "?"}`,
+        ""
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
   writeFileSync(mdPath, lines.join("\n"), "utf8");
 }
 

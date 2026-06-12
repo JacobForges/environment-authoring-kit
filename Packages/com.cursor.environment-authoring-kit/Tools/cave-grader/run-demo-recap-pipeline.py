@@ -100,7 +100,9 @@ def load_hub_ai_env(hub: Path) -> None:
         os.environ.setdefault("CAVE_ACTIVE_API_KEY", "ollama")
     os.environ.setdefault("HUB_ROOT", str(hub))
     os.environ.setdefault("TSX_DISABLE_IPC", "1")
-    os.environ.setdefault("CAVE_RECAP_CONCURRENCY", "4")
+    os.environ.setdefault("CAVE_RECAP_CONCURRENCY", "1")
+    os.environ.setdefault("CAVE_RECAP_PACE_MS", "1500")
+    os.environ.setdefault("CAVE_RECAP_REUSE_IMAGE", "1")
 
 
 def milestone_png(frames: list[Path], m: dict) -> str:
@@ -264,7 +266,7 @@ def main() -> int:
             director_in["critique"] = critique
             director_in["iteration"] = it
             req.write_text(json.dumps(director_in, indent=2))
-            conc = os.environ.get("CAVE_RECAP_CONCURRENCY", "4")
+            conc = os.environ.get("CAVE_RECAP_CONCURRENCY", "1")
             print(
                 f"AI pass {it}/{max_iter} — Cursor parallel ×{conc} "
                 f"(captions + vision per milestone PNG)…"

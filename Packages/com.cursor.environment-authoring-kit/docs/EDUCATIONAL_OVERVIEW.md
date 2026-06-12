@@ -2,7 +2,7 @@
 
 **Repository:** public GitHub project `environment-authoring-kit` (clone URL in root `README.md`)  
 **Package:** `com.cursor.environment-authoring-kit` · Unity 6 · URP 17+  
-**Written by:** me (the maintainer) — for classmates who have not opened the project.
+**Author:** [JacobForges](https://github.com/JacobForges) — sole author. For classmates who have not opened the project.
 
 This is not a sales page. It is what I wish someone had told me before treating a **Prototype-tier** build like a shipped game.
 
@@ -22,7 +22,7 @@ Everything below is grounded in an **audit of my actual Unity project** on this 
 | Root docs, `.github/workflows/` | `Assets/EnvironmentKit/ResearchCache/` — run sync locally |
 | `Tools/cave-grader/.env.example` only | Real `.env` API keys, `node_modules/` |
 
-**Out of the box (no AI keys):** you can run **Build Complete Cave (120)** — deterministic C# pipeline: multi-tile surface, vegetation contracts, 120 paced cave steps, JSON grading. You get geometry and reports. You do **not** get my art quality, my research library, or my iterative agent loops unless you add them.
+**Out of the box (no AI keys):** you can run **Build Complete Cave (122)** — deterministic C# pipeline: multi-tile surface, vegetation contracts, 122 paced cave steps, JSON grading. You can also use a **non-AI planner** (brief JSON only) — see Hub [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md). You do **not** get iterative agent loops unless you add API keys.
 
 ### What I run on my personal machine (reference ceiling)
 
@@ -74,11 +74,11 @@ This overview teaches **L2 + L3**. **L4 is aspirational.**
 | Piece | In this kit |
 |-------|-------------|
 | **Hypothesis** | Recipe + seed + catalog → walkable surface → mouth → cave route |
-| **Procedure** | `FullWorld`: surface phases → optional pre-build gate → cave queue (120 steps) |
+| **Procedure** | `FullWorld`: surface phases → optional pre-build gate → cave queue (122 steps) |
 | **Measurement** | `CaveBuildQualityReport.json`, stage scores, `dudReasons[]`, `shipBlockers[]` |
 | **Confounders** | Wrong prefab catalog, missing NavMesh, agent editing unrelated files |
 
-**Critical distinction:** build progress **122/122** is **queue completion**, not quality. A **58/100** gate score is the **rubric**, not “58% done.” (Some UI labels still say 120.)
+**Critical distinction:** build progress **122/122** is **queue completion**, not quality. A **58/100** gate score is the **rubric**, not “58% done.”
 
 ### DAG mental model
 
@@ -117,7 +117,7 @@ probes + commercial rubric (20+ stages)
 ### One-click procedural build
 
 1. **Window → Environment Kit → Hub**  
-2. **Build Complete Cave (120)**  
+2. **Build Complete Cave (122)**  
 3. Watch **Environment Kit Hub → Build** (activity feed + sub-action); optional **Pipeline Console** pop-out; Unity Console stays **errors-only** during long builds by default  
 4. Open `Assets/EnvironmentKit/Generated/CaveBuildQualityReport.json`
 
@@ -127,7 +127,7 @@ probes + commercial rubric (20+ stages)
 |-------|---------|--------|
 | Surface | `SurfaceTerrainAiPhases`, `SurfaceWorldGenerator`, `SurfaceIntelligentPropPlacer` | 9 tiles, trails, vegetation instances |
 | Pre-build | `CaveBuildPreBuildLadder` | `CaveBuildPreBuildLadderReport.json` (can block build if enforced) |
-| Cave | `CaveBuildActionPacing` — **120** editor steps | `UndergroundCaveSystem`, walk-in, atmosphere zone |
+| Cave | `CaveBuildActionPacing` — **122** queued indices | `UndergroundCaveSystem`, walk-in, atmosphere zone |
 | QC | Route probes, shell audit, commercial grader | JSON + Hub / Generated reports |
 
 **No API key required** for any of the above. Grading, prompt **export**, and probe JSON are also procedural — exporting `CaveBuildAgentPrompt.md` does not call a model until you invoke the grader.
@@ -326,7 +326,7 @@ Env: `CAVE_WORKFLOW=pre_build` on `grade-and-fix.ts`.
 
 ### 7.2 Full build (deterministic core)
 
-**120 steps** — `CaveBuildQueuedPipelineSchedule.Total`. Step index **63** is **meat-loop entry**, not “a 63-step pipeline.”
+**122 steps** — `CaveBuildQueuedPipelineSchedule.Total`. Geo block = steps **1–15**. **Meat-loop entry = step 65** (not 63). See [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md).
 
 Surface walk-in stack: `CaveUndergroundEntranceEnforcer`, `CaveEntranceVolumeBuilder`, `SurfaceTrailCaveMouthConnector`.
 
@@ -414,7 +414,7 @@ References: [Far Cry 5 procedural worlds](https://tools.engineer/gdc2018-procedu
 
 1. Clone the repo · open in Unity 6 + URP  
 2. Add a scene + Ground · assign prefabs in catalog  
-3. Hub → **Build Complete Cave (120)**  
+3. Hub → **Build Complete Cave (122)**  
 4. Read `CaveBuildQualityReport.json` — expect **Prototype** until you fix listed stages  
 
 ### Full (match my laptop — AI-assisted)
@@ -434,7 +434,7 @@ References: [Far Cry 5 procedural worlds](https://tools.engineer/gdc2018-procedu
 |------|---------|
 | **HUB_ROOT** | Absolute path to Unity project root in `.env` |
 | **Rung** | One ladder step (`visual_shell`, `navmesh`, …) |
-| **120 steps** | Cave queue length |
+| **122 steps** | Cave queue length |
 | **Meat loop** | Quality-driven fix cycle |
 | **Dud** | Hard failure — critical stage below floor |
 | **Channel A/B/C** | Cursor SDK vs cloud HTTP vs local HTTP |

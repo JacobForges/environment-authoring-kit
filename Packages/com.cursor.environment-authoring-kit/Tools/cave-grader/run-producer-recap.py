@@ -435,7 +435,7 @@ def main() -> int:
                 "timelapseEncodeFps": 30,
                 "videoPlaybackFactor": 1.0,
                 "videoEnhance": True,
-                "sceneUpscale": 1.25,
+                "sceneUpscale": 1.0,
                 "framesPerSource": 1,
                 "showAnnotations": False,
                 "narrationSyncMode": "speech_first",

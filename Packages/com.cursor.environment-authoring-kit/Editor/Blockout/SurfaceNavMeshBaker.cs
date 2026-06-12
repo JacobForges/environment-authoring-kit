@@ -362,7 +362,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (go.GetComponent<SurfaceCaveOpeningMarker>() != null)
                 return false;
 
-            return n.StartsWith("Trail") || n.StartsWith("Road") || n.Contains("Walk");
+            return n.StartsWith("Trail") || n.StartsWith("Road") || n.Contains("Walk") ||
+                   n.StartsWith("WalkBridge") || n.StartsWith("WalkHopPad") || n.StartsWith("PlannerWalk");
         }
     }
 }

@@ -1,12 +1,12 @@
 # Surface world build (open sky)
 
-Radial and multi-tile landscape generation from your **Ground**-tagged anchor. FullWorld runs **81-tile surface + terrain ladder before** the **122-step** cave queue (`CaveBuildStartupCoordinator`). Monitor in **Environment Kit Hub** — [FULLWORLD_TERRAIN_AND_HUB.md](FULLWORLD_TERRAIN_AND_HUB.md).
+Radial and multi-tile landscape generation from your **Ground**-tagged anchor. FullWorld runs **~289-tile surface grid** (81-tile mountain core inside; planner may scope to 13/81) + terrain ladder **before** the **122-step** cave queue (`CaveBuildStartupCoordinator`). Monitor in **Environment Kit Hub** — [FULLWORLD_TERRAIN_AND_HUB.md](FULLWORLD_TERRAIN_AND_HUB.md). **Planner path:** [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md).
 
 ## Menus
 
 | Menu | Scope | Behavior |
 |------|--------|----------|
-| **Build Complete Cave Level** | `FullWorld` | 81-tile surface (flat grid → terraform → mountain phases) → terrain ladder → **then** cave validate + geo + polish … **122/122** |
+| **Build Complete Cave Level** | `FullWorld` | ~289-tile surface (81-tile core; flat grid → terraform → mountain phases) → terrain ladder → **then** cave validate + geo 1–15 + polish … **122/122** |
 | **Build Surface World Only** | `SurfaceOnly` | Trails, roads, water, mountains, openings, vegetation — **no** underground geometry |
 | **Build Cave Only — Align to Surface** | `CaveOnly` | Underground only; mouth aligns to `GeneratedSurfaceWorld/CaveOpenings` |
 

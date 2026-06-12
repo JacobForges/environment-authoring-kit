@@ -59,7 +59,7 @@
 | 17 | Epic — *World Building Guide* | https://dev.epicgames.com/community/learning/knowledge-base/r6wl/unreal-engine-world-building-guide | Data layers, OFPA, spatial load flags — design vocabulary for kit “enhancement phases.” |
 | 18 | Toxigon — *UE5 World Partition optimization* | https://toxigon.com/ue5-world-partition-optimization | Cell size vs foliage density (200–300 m); biome-specific streaming distances; HLOD pre-bake. |
 
-**Kit implication:** **Phase 1 wow** = Horizon-like streaming + GPU/CPU scatter per loaded chunk. **Not** one-shot 120-step bake of entire world.
+**Kit implication:** **Phase 1 wow** = Horizon-like streaming + GPU/CPU scatter per loaded chunk. **Not** one-shot 122-step bake of entire world.
 
 ---
 

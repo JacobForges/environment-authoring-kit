@@ -26,7 +26,7 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 | Document | Content |
 |----------|---------|
 | [WORLD-GENERATION-PIPELINE-LADDER.md](WORLD-GENERATION-PIPELINE-LADDER.md) | Global rung order, invalidation, Far Cry / UE PCG principles |
-| [PHASE_CONTRACTS.md](PHASE_CONTRACTS.md) | Rung I/O table + queued step mapping (120 steps) |
+| [PHASE_CONTRACTS.md](PHASE_CONTRACTS.md) | Rung I/O table + queued step mapping (122 steps) |
 | [SURFACE-WORLD-BUILD.md](SURFACE-WORLD-BUILD.md) | Surface menus, scopes, generated hierarchy |
 | [AAA-PROCEDURAL-CAVE-PIPELINE.md](AAA-PROCEDURAL-CAVE-PIPELINE.md) | Autonomous Unity + Cursor design |
 | [CAVE-BUILD-WORKFLOW-HARMONY.md](CAVE-BUILD-WORKFLOW-HARMONY.md) | Coordinator rules (nav, ground lock, meat loop) |
@@ -39,8 +39,12 @@ Package **`com.cursor.environment-authoring-kit`** — start at the [package REA
 | Document | Content |
 |----------|---------|
 | [CaveGradingAndCursor.md](CaveGradingAndCursor.md) | JSON outputs, API setup, pre/post workflows |
-| [FLOW-AUDIT-2026-05-27.md](FLOW-AUDIT-2026-05-27.md) | Hub/provider flow audit; 63→120 doc drift closed 2026-05-28 |
+| [FLOW-AUDIT-2026-05-27.md](FLOW-AUDIT-2026-05-27.md) | Hub/provider flow audit; step-count doc drift closed (122 current) |
 | [PUBLIC_REPO_SCOPE.md](../../../../docs/PUBLIC_REPO_SCOPE.md) | What GitHub contains vs local-only |
+| [STORAGE_AND_DISK.md](../../../../docs/STORAGE_AND_DISK.md) | External drive migration, disk-full recovery |
+| [GLOSSARY.md](../../../../docs/GLOSSARY.md) | Hub vs EnvKit vs repo naming; author policy |
+| [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md) | Canonical 122-step mapping, geo 1–15, meat 65, tile scopes |
+| [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md) | Layout-first builds — AI wizard optional |
 | [COMMERCIAL-PRODUCTION-GRADING.md](COMMERCIAL-PRODUCTION-GRADING.md) | Ship / Beta / Alpha tiers |
 | [SURFACE_BUILD_RESPONSIVENESS.md](SURFACE_BUILD_RESPONSIVENESS.md) | Editor freeze avoidance on surface passes |
 

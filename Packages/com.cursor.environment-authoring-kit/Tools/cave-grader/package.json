@@ -12,6 +12,8 @@
     "gameplay-grade-and-fix": "node --import tsx grade-and-fix.ts --auto --workflow=gameplay",
     "gameplay-grade-and-fix:stream": "node --import tsx grade-and-fix.ts --auto --stream --workflow=gameplay",
     "mission-phase": "node --import tsx mission-phase.ts",
+    "audit-pipeline": "node --import tsx bot-pipeline-audit.ts",
+    "audit-pipeline:unity": "node --import tsx bot-pipeline-audit.ts --unity",
     "until-demo": "node --import tsx until-demo.ts",
     "until-demo:production": "CAVE_BOT_SUPERVISOR=1 node --import tsx until-demo.ts",
     "watch-grade": "node --import tsx watch-grade.ts",

@@ -133,6 +133,24 @@ const PLAYBOOKS: PlaybookEntry[] = [
     triggers: ["Lexar", "EnvironmentKit-Hub", "symlink", "Generated"],
     fixRecipe: "EnvironmentKitDataRoot on Lexar; never commit Generated/; JSON on disk is truth.",
   },
+  {
+    id: "SURFACE_ROUTE_FAIL",
+    title: "Surface route probe — trails to cave mouth",
+    triggers: ["surface_route", "surface route", "ReachedCaveMouth", "probe.surface_route"],
+    fixRecipe: "Surface trail connector + mouth alignment; read CaveBuildSurfaceRouteProbe.json — no full cave rebuild.",
+  },
+  {
+    id: "GAMEPLAY_SMOKE_FAIL",
+    title: "Hub demo Play Mode smoke",
+    triggers: ["HubDemoSmoke", "acceptancePass", "G8_demo_smoke", "gameplay.smoke"],
+    fixRecipe: "Fix G8 milestone in Assets/Scripts; run Play Mode; HubDemoSmokePlayReport.json → acceptancePass.",
+  },
+  {
+    id: "COMPETITION_SMOKE_FAIL",
+    title: "Competition layer smoke (ONNX + streaming)",
+    triggers: ["CompetitionSmoke", "competition.smoke", "competition_setup.onnx"],
+    fixRecipe: "Tools/competition-models/run-hub-smoke.sh; ensure ONNX in StreamingAssets/Resources.",
+  },
 ];
 
 export function pickPlaybook(issueText: string): PlaybookEntry | null {

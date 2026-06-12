@@ -43,25 +43,23 @@ namespace EnvironmentAuthoringKit.Editor.World
             if (root.GetComponent<WorldWeatherDirector>() == null)
                 root.AddComponent<WorldWeatherDirector>();
 
-            var sky = root.GetComponent<WorldSkyCycleController>() ?? root.AddComponent<WorldSkyCycleController>();
-
             var sun = EnsureDirectionalLight("WorldSun", new Color(1f, 0.96f, 0.88f), 1.1f, true);
             var moon = EnsureDirectionalLight("WorldMoon", new Color(0.72f, 0.78f, 0.95f), 0.25f, false);
             moon.enabled = false;
 
             sun.transform.SetParent(root.transform, false);
             moon.transform.SetParent(root.transform, false);
+
+            var sky = root.GetComponent<WorldSkyCycleController>() ?? root.AddComponent<WorldSkyCycleController>();
             sky.BindLights(sun, moon);
         }
 
         static Light EnsureDirectionalLight(string name, Color color, float intensity, bool castShadows)
         {
-            var go = GameObject.Find(name);
-            if (go == null)
-                go = new GameObject(name);
+            var light = WorldDirectionalLightUtility.Ensure(name);
+            if (light == null)
+                return null;
 
-            var light = go.GetComponent<Light>() ?? go.AddComponent<Light>();
-            light.type = LightType.Directional;
             light.color = color;
             light.intensity = intensity;
             light.shadows = castShadows ? LightShadows.Soft : LightShadows.None;

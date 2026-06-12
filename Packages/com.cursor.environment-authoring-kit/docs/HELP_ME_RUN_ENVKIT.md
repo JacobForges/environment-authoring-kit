@@ -1,5 +1,7 @@
 # Help Me Run Environment Kit
 
+**Pipeline truth:** [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md) · **Planner (AI optional):** [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md)
+
 This guide is intentionally split into two tones:
 
 - **Casual quick start** (fast, plain-English)
@@ -8,6 +10,13 @@ This guide is intentionally split into two tones:
 ---
 
 ## Casual Quick Start
+
+### Path A — Planner layout (fastest demo, no API keys required)
+
+1. `npm run build-wizard` in `Tools/cave-grader` **or** hand-edit `Generated/CaveBuildPlannerBrief.json` + `CaveBuildActiveSessionConfig.json`.
+2. Open **Window → Environment Kit → Hub** → **Build**.
+
+### Path B — Classic FullWorld
 
 If you just want to run it without babysitting:
 

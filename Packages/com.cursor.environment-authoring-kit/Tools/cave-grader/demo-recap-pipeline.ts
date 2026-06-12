@@ -8,8 +8,16 @@
  *   node --import tsx demo-recap-pipeline.ts grade <director.json> > DemoRecapQuality.json
  *   node --import tsx demo-recap-pipeline.ts narration <request.json> > DemoRecapFullNarration.json
  *
- * Env: CAVE_RECAP_CONCURRENCY (default 4, max 8) — parallel Cursor agent calls
+ * Env: CAVE_RECAP_CONCURRENCY (default 1, max 8) — parallel Cursor agent calls
+ *      CAVE_RECAP_RETRIES (default 3) — retry ECONNRESET / transient API drops
+ *      CAVE_RECAP_PACE_MS (default 1500) — pause between agent calls (rate-limit guard)
+ *      CAVE_RECAP_REUSE_IMAGE (default 1) — reuse vision regions per unique PNG path
+ *      CAVE_RECAP_DRAIN_MS (default 3000) — pause after each Cursor agent (HTTP/2 drain)
+ *      CAVE_RECAP_CHECKPOINT (0 to disable) — default: <request>.milestones.checkpoint.json
+ *
+ * Loads Tools/cave-grader/.env automatically (CURSOR_API_KEY, CAVE_CURSOR_MODEL, HUB_ROOT).
  */
+import "./planner-load-dotenv.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { Agent } from "@cursor/sdk";
 
@@ -61,6 +69,81 @@ type QualityReport = {
 
 type ProviderRunResult = { status: string; result?: string };
 
+function isRetryableProviderError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code?: unknown }).code)
+      : "";
+  return (
+    /ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|aborted|rate limit|429|503|502/i.test(
+      msg
+    ) || code === "10"
+  );
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let streamGuardDepth = 0;
+
+/** @connectrpc/connect-node can throw ECONNRESET on HTTP/2 streams outside await — swallow during agent calls. */
+function installStreamGuard(): () => void {
+  streamGuardDepth += 1;
+  const handler = (reason: unknown) => {
+    if (streamGuardDepth <= 0 || !isRetryableProviderError(reason)) return;
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    process.stderr.write(`[cursor] swallowed stray stream error: ${msg.slice(0, 140)}\n`);
+  };
+  process.on("unhandledRejection", handler);
+  return () => {
+    streamGuardDepth = Math.max(0, streamGuardDepth - 1);
+    process.off("unhandledRejection", handler);
+  };
+}
+
+function recapDrainMs(): number {
+  const n = Number(process.env.CAVE_RECAP_DRAIN_MS ?? "3000");
+  return Math.min(30_000, Math.max(0, Number.isFinite(n) ? n : 3000));
+}
+
+function milestoneCheckpointPath(requestPath?: string): string | null {
+  if ((process.env.CAVE_RECAP_CHECKPOINT ?? "").trim() === "0") return null;
+  const override = process.env.CAVE_RECAP_CHECKPOINT?.trim();
+  if (override) return override;
+  if (!requestPath) return null;
+  return requestPath.replace(/\.json$/i, ".milestones.checkpoint.json");
+}
+
+function loadMilestoneCheckpoint(path: string | null): Map<number, MilestoneOut> {
+  const out = new Map<number, MilestoneOut>();
+  if (!path) return out;
+  try {
+    const raw = readFileSync(path, "utf8");
+    const parsed = JSON.parse(raw) as { milestones?: MilestoneOut[] };
+    for (const m of parsed.milestones ?? []) {
+      if (typeof m.i === "number") out.set(m.i, m);
+    }
+    if (out.size) {
+      process.stderr.write(`[milestones] resumed ${out.size} beat(s) from checkpoint\n`);
+    }
+  } catch {
+    /* fresh run */
+  }
+  return out;
+}
+
+function saveMilestoneCheckpoint(path: string | null, milestones: MilestoneOut[]): void {
+  if (!path) return;
+  try {
+    writeFileSync(path, JSON.stringify({ milestones }, null, 2) + "\n", "utf8");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[milestones] checkpoint write failed: ${msg}\n`);
+  }
+}
+
 async function invokeOpenAiCompatible(args: {
   prompt: string;
   modelId: string;
@@ -98,24 +181,49 @@ async function invokeOpenAiCompatible(args: {
 async function invokeCursor(prompt: string, modelId: string, apiKey: string): Promise<ProviderRunResult> {
   const hubRoot = process.env.HUB_ROOT?.trim() || process.cwd();
   if (!apiKey) return { status: "error", result: "missing API key" };
+  const maxAttempts = Math.min(5, Math.max(1, Number(process.env.CAVE_RECAP_RETRIES ?? "3") || 3));
+  const drainMs = recapDrainMs();
+  let lastMsg = "unknown cursor error";
+  const releaseGuard = installStreamGuard();
   try {
-    const agent = await Agent.create({
-      apiKey,
-      local: { cwd: hubRoot, settingSources: [] },
-      model: { id: modelId || "auto" },
-    });
-    const run = await agent.send(prompt);
-    const result = await run.wait();
-    if (result.status === "error" || result.status === "cancelled") {
-      return { status: "error", result: result.error ?? result.status };
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const agent = await Agent.create({
+          apiKey,
+          local: { cwd: hubRoot, settingSources: [] },
+          model: { id: modelId || "auto" },
+        });
+        const run = await agent.send(prompt);
+        const result = await run.wait();
+        if (result.status === "error" || result.status === "cancelled") {
+          lastMsg = result.error ?? result.status;
+          if (attempt < maxAttempts && isRetryableProviderError(lastMsg)) {
+            await sleep(1200 * attempt);
+            continue;
+          }
+          return { status: "error", result: lastMsg };
+        }
+        const text =
+          typeof result.result === "string"
+            ? result.result
+            : result.messages?.map((m) => ("text" in m ? m.text : "")).join("\n").trim() ?? "";
+        if (drainMs > 0) await sleep(drainMs);
+        return { status: "ok", result: text };
+      } catch (err) {
+        lastMsg = err instanceof Error ? err.message : String(err);
+        if (attempt < maxAttempts && isRetryableProviderError(err)) {
+          process.stderr.write(
+            `[cursor] attempt ${attempt}/${maxAttempts} failed (${lastMsg}) — retrying…\n`
+          );
+          await sleep(1500 * attempt);
+          continue;
+        }
+        return { status: "error", result: lastMsg };
+      }
     }
-    const text =
-      typeof result.result === "string"
-        ? result.result
-        : result.messages?.map((m) => ("text" in m ? m.text : "")).join("\n").trim() ?? "";
-    return { status: "ok", result: text };
-  } catch (err) {
-    return { status: "error", result: err instanceof Error ? err.message : String(err) };
+    return { status: "error", result: lastMsg };
+  } finally {
+    releaseGuard();
   }
 }
 
@@ -133,8 +241,34 @@ async function invokeProvider(prompt: string): Promise<ProviderRunResult> {
 }
 
 function recapConcurrency(): number {
-  const n = Number(process.env.CAVE_RECAP_CONCURRENCY ?? "4");
-  return Math.min(8, Math.max(1, Number.isFinite(n) ? n : 4));
+  const n = Number(process.env.CAVE_RECAP_CONCURRENCY ?? "1");
+  return Math.min(8, Math.max(1, Number.isFinite(n) ? n : 1));
+}
+
+function recapPaceMs(): number {
+  const n = Number(process.env.CAVE_RECAP_PACE_MS ?? "1500");
+  return Math.min(30_000, Math.max(0, Number.isFinite(n) ? n : 1500));
+}
+
+function recapReuseImage(): boolean {
+  const raw = (process.env.CAVE_RECAP_REUSE_IMAGE ?? "1").trim().toLowerCase();
+  return raw !== "0" && raw !== "false" && raw !== "no";
+}
+
+function defaultRegions(): Region[] {
+  return [{ kind: "ellipse", box: [0.28, 0.18, 0.72, 0.62], label: "Scene focus" }];
+}
+
+function milestoneFromDraft(m: MilestoneIn, regions: Region[], tag: string): MilestoneOut {
+  return {
+    ...m,
+    line1: String(m.line1 ?? m.chapter ?? "Build progress").slice(0, m.beatKind === "subbeat" ? 72 : 88),
+    line2: String(m.line2 ?? "").slice(0, m.beatKind === "subbeat" ? 120 : 155),
+    line3: String(m.line3 ?? "").slice(0, 100),
+    chapter: String(m.chapter ?? "Build").slice(0, 40),
+    teachingFocus: tag,
+    regions: sanitizeRegions(regions),
+  };
 }
 
 /** Run async work on items with a fixed concurrency cap (order preserved). */
@@ -467,30 +601,130 @@ Return ONLY JSON:
 `;
 }
 
-async function runMilestonesUnified(body: DirectorBody): Promise<{ milestones: MilestoneOut[] }> {
+async function runMilestonesUnified(
+  body: DirectorBody,
+  requestPath?: string
+): Promise<{ milestones: MilestoneOut[] }> {
   const withImages = body.milestones.filter((m) => m.imagePath?.trim());
   if (!withImages.length) return runDirector(body);
 
   const limit = recapConcurrency();
+  const paceMs = recapPaceMs();
+  const reuseImage = recapReuseImage();
+  const uniqueImages = new Set(withImages.map((m) => m.imagePath!.trim())).size;
   const total = withImages.length;
-  process.stderr.write(`[milestones] parallel ×${limit} captions+vision for ${total} PNGs\n`);
+  const checkpointPath = milestoneCheckpointPath(requestPath);
+  const checkpoint = loadMilestoneCheckpoint(checkpointPath);
+  process.stderr.write(
+    `[milestones] parallel ×${limit} captions+vision for ${total} beats (${uniqueImages} unique PNGs; reuse=${reuseImage ? "on" : "off"}; pace=${paceMs}ms; drain=${recapDrainMs()}ms)\n`
+  );
 
-  const rows = await mapPool(withImages, limit, async (m, idx) => {
-    const prompt = buildUnifiedMilestonePrompt(body, m);
-    const run = await invokeProvider(prompt);
-    process.stderr.write(`[milestones] ${idx + 1}/${total} i=${m.i} ${run.status}\n`);
-    if (run.status !== "ok" || !run.result) return null;
-    try {
-      const parsed = extractJson(run.result) as MilestoneOut;
-      return mergeDirectorChunk([m], [parsed])[0] ?? null;
-    } catch {
-      return null;
+  const visionByImage = new Map<string, Region[]>();
+  for (const m of checkpoint.values()) {
+    const key = m.imagePath?.trim() ?? "";
+    if (key && m.regions?.length) visionByImage.set(key, m.regions);
+  }
+  let consecutiveErrors = 0;
+  let lastPaceAt = 0;
+  const completed = new Map<number, MilestoneOut>(checkpoint);
+
+  const pace = async () => {
+    if (paceMs <= 0) return;
+    const wait = Math.max(0, paceMs - (Date.now() - lastPaceAt));
+    if (wait > 0) await sleep(wait);
+    lastPaceAt = Date.now();
+  };
+
+  const processOne = async (m: MilestoneIn, idx: number, pass: string): Promise<MilestoneOut | null> => {
+    const cached = checkpoint.get(m.i);
+    if (cached && pass !== "retry") {
+      process.stderr.write(`[milestones] ${idx + 1}/${total} i=${m.i} checkpoint-skip\n`);
+      return cached;
     }
-  });
+
+    const imageKey = m.imagePath?.trim() ?? "";
+    if (reuseImage && imageKey && visionByImage.has(imageKey) && (m.line1?.trim() || m.line2?.trim())) {
+      process.stderr.write(
+        `[milestones] ${idx + 1}/${total} i=${m.i} cached-image${pass ? ` (${pass})` : ""}\n`
+      );
+      return milestoneFromDraft(m, visionByImage.get(imageKey)!, "cached_image");
+    }
+
+    if (consecutiveErrors >= 4) {
+      const coolMs = Math.min(120_000, 15_000 * consecutiveErrors);
+      process.stderr.write(`[milestones] rate-limit cooldown ${coolMs}ms after ${consecutiveErrors} errors…\n`);
+      await sleep(coolMs);
+      consecutiveErrors = 0;
+    }
+
+    await pace();
+    try {
+      const prompt = buildUnifiedMilestonePrompt(body, m);
+      const run = await invokeProvider(prompt);
+      if (run.status !== "ok" || !run.result) {
+        consecutiveErrors += 1;
+        const detail = String(run.result ?? "no result").replace(/\s+/g, " ").slice(0, 160);
+        process.stderr.write(
+          `[milestones] ${idx + 1}/${total} i=${m.i} error${pass ? ` (${pass})` : ""}: ${detail}\n`
+        );
+        if (imageKey && visionByImage.has(imageKey)) {
+          return milestoneFromDraft(m, visionByImage.get(imageKey)!, "draft_fallback");
+        }
+        return milestoneFromDraft(m, defaultRegions(), "draft_fallback");
+      }
+      consecutiveErrors = 0;
+      const parsed = extractJson(run.result) as MilestoneOut;
+      const merged = mergeDirectorChunk([m], [parsed])[0] ?? null;
+      if (merged && imageKey) visionByImage.set(imageKey, merged.regions);
+      process.stderr.write(`[milestones] ${idx + 1}/${total} i=${m.i} ok${pass ? ` (${pass})` : ""}\n`);
+      if (merged) {
+        completed.set(m.i, merged);
+        saveMilestoneCheckpoint(
+          checkpointPath,
+          [...completed.values()].sort((a, b) => a.i - b.i)
+        );
+      }
+      return merged;
+    } catch (err) {
+      consecutiveErrors += 1;
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        `[milestones] ${idx + 1}/${total} i=${m.i} parse-error${pass ? ` (${pass})` : ""}: ${msg}\n`
+      );
+      if (imageKey && visionByImage.has(imageKey)) {
+        return milestoneFromDraft(m, visionByImage.get(imageKey)!, "draft_fallback");
+      }
+      return milestoneFromDraft(m, defaultRegions(), "draft_fallback");
+    }
+  };
+
+  const rows: Array<MilestoneOut | null> = new Array(withImages.length).fill(null);
+  if (limit <= 1) {
+    for (let idx = 0; idx < withImages.length; idx += 1) {
+      rows[idx] = await processOne(withImages[idx], idx, "");
+    }
+  } else {
+    const pooled = await mapPool(withImages, limit, async (m, idx) => processOne(m, idx, ""));
+    for (let i = 0; i < pooled.length; i += 1) rows[i] = pooled[i];
+  }
+
+  const missing = withImages.filter((m, idx) => rows[idx] == null);
+  if (missing.length) {
+    process.stderr.write(`[milestones] retrying ${missing.length} failed milestone(s) sequentially…\n`);
+    for (const m of missing) {
+      const idx = withImages.findIndex((x) => x.i === m.i);
+      const recovered = await processOne(m, idx, "retry");
+      if (recovered) rows[idx] = recovered;
+    }
+  }
 
   const merged = rows.filter((r): r is MilestoneOut => r != null);
   merged.sort((a, b) => a.i - b.i);
   if (!merged.length) throw new Error("milestones pass produced no results");
+  const draftCount = merged.filter((m) => m.teachingFocus?.includes("draft") || m.teachingFocus === "cached_image").length;
+  if (draftCount) {
+    process.stderr.write(`[milestones] note: ${draftCount}/${merged.length} used draft/cached captions (API limits or duplicates)\n`);
+  }
   return { milestones: merged };
 }
 
@@ -682,7 +916,29 @@ async function runFullNarration(body: NarrationOutlineIn): Promise<{ script: str
   return { script, wordCount };
 }
 
+function logRecapEnv(): void {
+  const provider = (
+    process.env.CAVE_AI_PROVIDER ??
+    (process.env.CURSOR_API_KEY ? "Cursor" : "OpenAICompatible")
+  ).toLowerCase();
+  const hasKey = Boolean(
+    process.env.CURSOR_API_KEY?.trim() ||
+      process.env.CAVE_ACTIVE_API_KEY?.trim() ||
+      process.env.OPENAI_API_KEY?.trim()
+  );
+  const model = process.env.CAVE_ACTIVE_MODEL ?? process.env.CAVE_CURSOR_MODEL ?? "auto";
+  process.stderr.write(
+    `[recap] env loaded — provider=${provider} model=${model} apiKey=${hasKey ? "set" : "MISSING"} hub=${process.env.HUB_ROOT ?? "(cwd)"}\n`
+  );
+  if (!hasKey) {
+    process.stderr.write(
+      "[recap] Set CURSOR_API_KEY in Packages/.../Tools/cave-grader/.env (or export before running).\n"
+    );
+  }
+}
+
 async function main() {
+  logRecapEnv();
   const mode = process.argv[2];
   const path = process.argv[3];
   if (!mode || !path) {
@@ -700,7 +956,7 @@ async function main() {
   }
   if (mode === "milestones") {
     const body = JSON.parse(raw) as DirectorBody;
-    const out = await runMilestonesUnified(body);
+    const out = await runMilestonesUnified(body, path);
     process.stdout.write(JSON.stringify(out, null, 2));
     return;
   }
@@ -725,6 +981,16 @@ async function main() {
   console.error("unknown mode");
   process.exit(1);
 }
+
+process.on("uncaughtException", (err) => {
+  if (!isRetryableProviderError(err)) {
+    console.error(err);
+    process.exit(1);
+  }
+  process.stderr.write(
+    `[recap] uncaught stream error (ignored): ${err instanceof Error ? err.message : String(err)}\n`
+  );
+});
 
 main().catch((err) => {
   console.error(err instanceof Error ? err.message : String(err));

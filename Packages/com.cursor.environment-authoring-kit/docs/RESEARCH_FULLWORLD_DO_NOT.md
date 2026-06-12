@@ -26,7 +26,7 @@
 
 | # | Anti-pattern | Why it fails | Correct approach |
 |---|--------------|--------------|------------------|
-| 7 | **FullWorld 120 before a clean surface-only pass** | Intersecting shells, bad ground, and wasted GPU time; you get modular plates + half-finished DEM instead of a locked play disk. | Surface-only once → fix 9-tile seams → then FullWorld with outer ring. |
+| 7 | **FullWorld 122 before a clean surface-only pass** | Intersecting shells, bad ground, and wasted GPU time; you get modular plates + half-finished DEM instead of a locked play disk. | Surface-only once → fix 9-tile seams → then FullWorld with outer ring. |
 | 8 | **Missing Florida hillshades / georef for seed** | Flat, repetitive height; “Florida LiDAR rows” in the log but no real karst relief on play tiles. | `npm run sync-florida-hillshades` + verify `SurfaceDemGeorefStatus.json` before trusting DEM. |
 | 9 | **Deleting or replacing all of `GeneratedSurfaceWorld` mid-build** | Wipes foothill/peak tiles and manifest progress; next pass restarts on Grid anchor again. | Targeted ladder fixes per rung; never purge surface root during mountain pipeline. |
 | 10 | **Re-sculpting or procedural height pass on play disk after authoritative DEM + nine-tile lock** | Flattens LiDAR, breaks inner merge, mountains stitch to wrong baseline. | Outer ring sculpt only; inner 9 tiles = DEM + seam stitch + trails/mouth, not new macro noise. |

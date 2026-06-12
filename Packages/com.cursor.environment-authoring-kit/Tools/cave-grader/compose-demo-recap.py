@@ -236,9 +236,9 @@ def render_captioned_frame(
     header = Image.new("RGBA", (W, HEADER), (8, 12, 20, 175))
     img.paste(header, (0, 0), header)
     draw = ImageDraw.Draw(img)
-    draw.text((24, 8), "JACOB ADKINS'S BOT · BUILD RECAP", fill=(170, 188, 210), font=load_font(14, bold=True))
-    sub = "On-screen study guide · voice script is separate" if lecture_mode else "AI-narrated checkpoints"
-    draw.text((24, 26), sub, fill=(230, 236, 245), font=load_font(11))
+    draw.text((24, 9), "ENVIRONMENT KIT", fill=(210, 218, 230), font=load_font(13, bold=True))
+    sub = "On-screen study guide" if lecture_mode else "World build documentary"
+    draw.text((24, 27), sub, fill=(130, 145, 168), font=load_font(10))
 
     pill = chapter[:52]
     pw = int(draw.textlength(pill, font=load_font(12))) + 22
@@ -371,21 +371,17 @@ def render_captioned_frame(
                 ty3 += CAPTION_MIN_PT + 2
                 y = ty3
     else:
-        why_w = 44
-        draw.rounded_rectangle([x, y + 1, x + why_w, y + 19], radius=4, fill=accent)
-        draw.text((x + 9, y + 2), "WHY", fill=(255, 255, 255), font=load_font(9, bold=True))
-        tx = x + why_w + 8
-        for line in wrap(draw, line2 or "", load_font(CAPTION_MIN_PT), caption_max_w - (tx - x)):
-            draw.text((tx, y), line, fill=(236, 240, 248), font=load_font(CAPTION_MIN_PT))
-            y += CAPTION_MIN_PT + 2
+        body_font = load_font(CAPTION_MIN_PT)
+        for line in wrap(draw, line2 or "", body_font, caption_max_w):
+            draw.text((x, y), line, fill=(232, 236, 244), font=body_font)
+            y += CAPTION_MIN_PT + 3
         if line3:
-            y += 4
-            draw.rounded_rectangle([x, y + 1, x + 52, y + 17], radius=3, fill=(55, 65, 80))
-            draw.text((x + 8, y + 2), "NOTE", fill=(200, 208, 220), font=load_font(9, bold=True))
-            nx = x + 60
-            for line in wrap(draw, line3, load_font(CAPTION_MIN_PT), caption_max_w - (nx - x) - 8):
-                draw.text((nx, y), line, fill=(188, 196, 208), font=load_font(CAPTION_MIN_PT))
-                y += CAPTION_MIN_PT + 2
+            y += 5
+            kicker_font = load_font(10)
+            kicker = f"— {line3}"
+            for line in wrap(draw, kicker, kicker_font, caption_max_w):
+                draw.text((x, y), line, fill=(128, 142, 162), font=kicker_font)
+                y += 12
 
     if javafx_effects and jfx_mod:
         spec_jfx = {**(javafx_spec or {}), "javafxEffects": True, "captionBarRatio": BAR / H}

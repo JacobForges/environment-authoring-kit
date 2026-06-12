@@ -11,12 +11,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public enum QueuedMeatPhase
         {
             Purge = 0,
-            GradeBatch0 = 1,
-            GradeBatch1 = 2,
-            GradeBatch2 = 3,
-            GradeBatch3 = 4,
-            GradeFinalize = 5,
-            Fix = 6,
+            Grading = 1,
+            GradeFinalize = 2,
+            Fix = 3,
         }
 
         public sealed class QueuedMeatState
@@ -125,13 +122,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     }
 
                     state.GradeBatch = 0;
-                    state.Phase = QueuedMeatPhase.GradeBatch0;
+                    state.Phase = QueuedMeatPhase.Grading;
                     return false;
 
-                case QueuedMeatPhase.GradeBatch0:
-                case QueuedMeatPhase.GradeBatch1:
-                case QueuedMeatPhase.GradeBatch2:
-                case QueuedMeatPhase.GradeBatch3:
+                case QueuedMeatPhase.Grading:
                     if (state.Quality == null)
                         state.Quality = CaveBuildQualityGrader.BeginMeatLoopGradeReport(
                             state.CaveRoot, state.Ground, state.Request);
@@ -152,7 +146,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         return false;
                     }
 
-                    state.GradeBatch = (int)state.Phase - (int)QueuedMeatPhase.GradeBatch0;
                     onStep?.Invoke(
                         state.Pass,
                         $"Grade batch {state.GradeBatch + 1}/{CaveBuildQualityGrader.MeatLoopGradeBatchCount}");
@@ -165,9 +158,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         state.Request,
                         state.BuildReport,
                         state.GradeBatch);
-                    state.Phase = state.GradeBatch >= CaveBuildQualityGrader.MeatLoopGradeBatchCount - 1
+                    state.GradeBatch++;
+                    state.Phase = state.GradeBatch >= CaveBuildQualityGrader.MeatLoopGradeBatchCount
                         ? QueuedMeatPhase.GradeFinalize
-                        : (QueuedMeatPhase)((int)state.Phase + 1);
+                        : QueuedMeatPhase.Grading;
                     return false;
 
                 case QueuedMeatPhase.GradeFinalize:

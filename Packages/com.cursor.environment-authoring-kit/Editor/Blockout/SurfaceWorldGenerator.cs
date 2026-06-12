@@ -104,6 +104,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 OnComplete = onComplete,
             };
 
+            CaveBuildPlannerTerrainGuide.TryBindSession(request, ground);
+
             var fullWorldFlatGrid = session.Request.SurfaceScope == SurfaceBuildScope.FullWorld &&
                 session.Request.UseOuterRingMountains &&
                 SurfaceTerrainTileExpansion.UsesFixedNineTileSquare(session.Request, fullWorld: true);
@@ -130,6 +132,52 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
+            var demCenter = session.Request.SurfaceScope == SurfaceBuildScope.FullWorld
+                ? SurfaceTerrainPlayRegion.TerrainTileCenter(session.Terrain)
+                : session.Center;
+            var demExtent = SurfaceTerrainPlayRegion.ResolveUnifiedSurfaceExtent(
+                session.Terrain,
+                demCenter,
+                session.Extent);
+
+            if (CaveBuildPlannerTerrainGuide.UsesPlannerTerrainGenerator(session.Request))
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[Surface] Planner terrain — LiDAR carve/rise sculpt (no heightmap stamp)…",
+                    forceUnityConsole: true);
+                SurfaceTerrainSculptPromptBridge.ExportBeforeSculpt(
+                    session.Request,
+                    session.Ground,
+                    session.Seed,
+                    session.Center,
+                    session.Extent);
+                LogSurfacePhase(2);
+                CaveBuildLiveSceneFeedback.NotifySurfacePhase(
+                    "Planner LiDAR sculpt + brief height targets…");
+                SurfaceWorldLayoutPrePlanner.QueueWritePlan(
+                    session.Ground,
+                    session.Request,
+                    session.Center,
+                    session.Extent,
+                    () =>
+                        CaveBuildPlannerTerrainGuide.QueueMainTerrainPipeline(
+                            session.Terrain,
+                            session.Ground,
+                            session.Request,
+                            demCenter,
+                            demExtent,
+                            session.TerrainPasses,
+                            () =>
+                            {
+                                EditorUtility.ClearProgressBar();
+                                var next = session.Request.SurfaceScope == SurfaceBuildScope.FullWorld
+                                    ? SurfaceFinishStep.NeighborTiles
+                                    : SurfaceFinishStep.NormalizePeak;
+                                QueueFinishSurfaceBuild(session, next);
+                            }));
+                return;
+            }
+
             CaveBuildEditorLog.LogSurface(
                 "[Surface] Florida LiDAR — research-informed carve/rise sculpt (character-scale relief)…",
                 forceUnityConsole: true);
@@ -144,14 +192,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             LogSurfacePhase(2);
             CaveBuildLiveSceneFeedback.NotifySurfacePhase(
                 "Florida LiDAR guide — sculpting playable terrain…");
-
-            var demCenter = session.Request.SurfaceScope == SurfaceBuildScope.FullWorld
-                ? SurfaceTerrainPlayRegion.TerrainTileCenter(session.Terrain)
-                : session.Center;
-            var demExtent = SurfaceTerrainPlayRegion.ResolveUnifiedSurfaceExtent(
-                session.Terrain,
-                demCenter,
-                session.Extent);
 
             SurfaceWorldLayoutPrePlanner.QueueWritePlan(
                 session.Ground,
@@ -613,8 +653,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     var fullWorldFlatGrid = request.SurfaceScope == SurfaceBuildScope.FullWorld &&
                         request.UseOuterRingMountains &&
                         SurfaceTerrainTileExpansion.UsesFixedNineTileSquare(request, fullWorld: true);
+                    var floatingIslandsGrid = CaveBuildSessionConfig.IsFloatingIslandsDemo(request);
 
-                    if (fullWorldFlatGrid)
+                    if (fullWorldFlatGrid || floatingIslandsGrid)
                     {
                         SurfaceTerrainTileExpansion.QueueFullWorldDirectionalPipeline(
                             terrain,

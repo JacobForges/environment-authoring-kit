@@ -1,8 +1,8 @@
 # Hub cave project — requirements
 
 **Status:** Living document  
-**Last updated:** 2026-05-28  
-**Owners:** Hub / Environment Authoring Kit team  
+**Last updated:** 2026-06-09  
+**Author:** [JacobForges](https://github.com/JacobForges)  
 
 Package-level detail: [Packages/com.cursor.environment-authoring-kit/docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit/docs/REQUIREMENTS.md).
 
@@ -12,7 +12,7 @@ When you change scope or acceptance criteria, update this file in the same PR or
 
 ## 1. Product vision
 
-Build a **repeatable, graded, partially automated** pipeline that produces **playable underground cave levels** for **Unity 6 + URP** projects that *may* target **XR headsets** (OpenXR / vendor SDKs configured by you). Levels should feel like classic dungeon exploration (RO / Zelda lineage): connected rooms and corridors, readable navigation, combat spaces, and interactable mining — not layered “onion” shells or layout-only prototypes shipped as final content.
+Build a **repeatable, graded, partially automated** pipeline that produces **playable worlds** for **Unity 6 + URP**: Florida karst **surface** (multi-tile terrain, trails, NavMesh) plus **lava-tube caves** (maze, block tunnel, walk-in mouth). Supports **layout-first planner sessions** (AI wizard optional; non-AI JSON path) and classic **FullWorld preset** builds. Phase 2 adds a **playable demo** game layer (`Assets/Scripts/`). XR = optimization profiles in-editor, not a shipped glasses product.
 
 **Public repo:** kit + presets/recipes only — not a glasses-ready game. See [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md).
 
@@ -32,9 +32,9 @@ Build a **repeatable, graded, partially automated** pipeline that produces **pla
 | F-06 | **Mob / prop spawns** along route where adventure features are enabled. | Should |
 | F-07 | **Single underground atmosphere** (no duplicate sky/atmosphere stacks). | Must |
 | F-08 | Entrance anchored to **`PortalFive`** when present; build fails clearly if portal/ground missing when required. | Must |
-| F-09 | **FullWorld** builds surface + 9-tile terrain + vegetation **before** queued cave geometry (terrain-first startup). | Must |
+| F-09 | **FullWorld** builds surface grid (**~289 tiles** default; 81-tile mountain core; planner may scope to 13/81) + vegetation **before** queued cave geometry (terrain-first startup). | Must |
 | F-10 | Cave geometry = block tunnel **or** full shell (floor + ceiling) **or** spline tube — not ramp-only partial from terrain fixes. | Must |
-| F-11 | Queued pipeline completes **122 paced steps** (validate → geo 1–13 → … → finalize). | Must |
+| F-11 | Queued pipeline completes **122 paced steps** (validate → geo **1–15** → … → meat at **65** → finalize). See [docs/PIPELINE_TRUTH.md](docs/PIPELINE_TRUTH.md). | Must |
 
 ### 2.2 Surface world & vegetation (FullWorld)
 
@@ -48,7 +48,20 @@ Build a **repeatable, graded, partially automated** pipeline that produces **pla
 
 See package [docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit/docs/REQUIREMENTS.md) §2.2 for numeric table.
 
-### 2.3 Portals and scene anchors
+### 2.3 Planner session (layout-first — AI optional)
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| PL-01 | **Build Wizard** (`npm run build-wizard`) or hand-edited JSON produces `CaveBuildPlannerBrief.json` + `CaveBuildActiveSessionConfig.json`. | Must |
+| PL-02 | **Non-AI path:** Unity builds from brief JSON with **no LLM** at build time (`agentInvokes: false` supported). | Must |
+| PL-03 | Finalized planner drives terrain (`CaveBuildPlannerTerrainGuide`), mesh landscape, trails, markers, content authors. | Must |
+| PL-04 | **Concept PNG optional** — without it, marker plan sculpts terrain; with it, 75% concept / 25% marker weight. | Must |
+| PL-05 | `tileCount`, `use3DCaveSystem`, `floatingTiles`, `agentInvokes` in session config are **scope truth** (81 / 13 / 289 tiles). | Must |
+| PL-06 | Fidelity gate retries when concept bound and similarity &lt; 89%. | Should |
+
+See [docs/PLANNER_SESSION.md](docs/PLANNER_SESSION.md).
+
+### 2.4 Portals and scene anchors
 
 | ID | Requirement | Notes |
 |----|-------------|-------|
@@ -56,7 +69,7 @@ See package [docs/REQUIREMENTS.md](Packages/com.cursor.environment-authoring-kit
 | P-02 | Ground / anchor from **SceneGroundInfo** (user ground mesh or detected surface). | |
 | P-03 | Menu **Rebuild Complete Cave (MainScene)** opens `MainScene` **if that scene exists in your project** — no sample `.unity` is committed on GitHub. | |
 
-### 2.4 Quality grading
+### 2.5 Quality grading
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -167,6 +180,7 @@ A cave build is **acceptable for playtest** when all are true:
 | Date | Summary |
 |------|---------|
 | 2026-05-28 | Public repo doc accuracy pass; PUBLIC_REPO_SCOPE; XR honesty. |
-| 2026-05-27 | FullWorld terrain-first; 9-tile vegetation; 120-step queue (v0.3.0); Hub. |
+| 2026-06-09 | Planner session requirements (PL-01–PL-06); 122-step queue; storage/disk; JacobForges sole author. |
+| 2026-05-27 | FullWorld terrain-first; 9-tile vegetation; queued cave pipeline (expanded to 122 steps in v0.3.x); Hub. |
 | 2026-05-21 | Florida panhandle LiDAR + Floridan aquifer research cache; attribution doc; ground_placement integration. |
 | 2026-05-21 | Initial requirements doc; documents portal rules, grading, Cursor flows, stability NFRs. |

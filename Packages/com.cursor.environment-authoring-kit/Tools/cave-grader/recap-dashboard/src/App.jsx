@@ -614,7 +614,7 @@ export default function App() {
                 onClick={() => regenerateNarrationScript(true)}
                 disabled={busy || narrationGenerating || !capture}
               >
-                Regenerate with Cursor AI
+                Regenerate with AI Assistant
               </button>
             ) : null}
             <button

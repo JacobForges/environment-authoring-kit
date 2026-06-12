@@ -5,10 +5,12 @@ Unity 6 project for **Environment Authoring Kit**: procedural Florida karst surf
 ## Read first (mandatory)
 
 1. [docs/PUBLIC_REPO_SCOPE.md](docs/PUBLIC_REPO_SCOPE.md) — what is committed vs local-only.
-2. [docs/CURSOR_BOT_PHASED_MISSION.md](docs/CURSOR_BOT_PHASED_MISSION.md) — which phase is active.
-3. `Assets/EnvironmentKit/Generated/CaveBuildGeneratedJsonManifest.json` — then reports it lists.
-4. `Assets/EnvironmentKit/Generated/CaveBuildDoNotPrompt.md` and `CaveBuildNextStepsPrompt.md` — hard constraints (Phase 1).
-5. [docs/CURSOR_BOT_BACKLOG.md](docs/CURSOR_BOT_BACKLOG.md) — prioritized work streams.
+2. [docs/PIPELINE_TRUTH.md](docs/PIPELINE_TRUTH.md) — canonical step counts and tile scopes (when docs disagree).
+3. [docs/PLANNER_SESSION.md](docs/PLANNER_SESSION.md) — planner brief + session config (AI optional).
+4. [docs/CURSOR_BOT_PHASED_MISSION.md](docs/CURSOR_BOT_PHASED_MISSION.md) — which phase is active.
+5. `Assets/EnvironmentKit/Generated/CaveBuildGeneratedJsonManifest.json` — then reports it lists.
+6. `Assets/EnvironmentKit/Generated/CaveBuildDoNotPrompt.md` and `CaveBuildNextStepsPrompt.md` — hard constraints (Phase 1).
+7. [docs/CURSOR_BOT_BACKLOG.md](docs/CURSOR_BOT_BACKLOG.md) — prioritized work streams.
 
 ## Golden rules
 
@@ -29,11 +31,27 @@ Unity 6 project for **Environment Authoring Kit**: procedural Florida karst surf
 | `Packages/.../Tools/cave-grader/` | Cursor SDK grader |
 | `Tools/cursor-bot/` | Phased mission orchestration |
 
-## How to run one agent pass
+## Two bots
+
+| Bot | Command | Scope |
+|-----|---------|-------|
+| **World** | `./Tools/cursor-bot/run-session.sh --stream` | EnvKit pipeline, grades, cave/surface |
+| **Code** | `./Tools/code-bot/run-session.sh --stream` | `Assets/Scripts/` wiring — competition, challenge, demo |
+
+Progress: world → `CaveBuildQualityReport.json` · code → `Assets/Scripts/HubCodeProgress.json`
+
+## How to run one agent pass (world bot)
 
 ```bash
 cd /Users/jacob/Hub
 ./Tools/cursor-bot/run-session.sh --stream
+```
+
+**Code bot** (finish gameplay wiring):
+
+```bash
+./Tools/code-bot/run-session.sh --stream
+./Tools/code-bot/run-until-complete.sh --stream   # loop until codeReady
 ```
 
 **Run until playable demo** (production loop — multi-fix post-pass, stall detection, narrative milestones):

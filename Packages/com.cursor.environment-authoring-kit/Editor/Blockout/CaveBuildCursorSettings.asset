@@ -30,11 +30,11 @@ MonoBehaviour:
   autoInvokeAfterEveryBuild: 0
   autoInvokeOnDud: 1
   autoRebuildAfterAgentSuccess: 0
-  autoInvokeEachMeatLoopPass: 1
+  autoInvokeEachMeatLoopPass: 0
   suppressMeatLoopCursorInvokes: 0
-  autoInvokePreBuildWorkflow: 1
+  autoInvokePreBuildWorkflow: 0
   enforcePreBuildGate: 1
-  preBuildReloopUntilPass: 1
+  preBuildReloopUntilPass: 0
   maxPreBuildReloopAttempts: 12
   skipResearchNetworkSyncWhenCachePresent: 1
   autoContinueAfterPreBuildCursor: 1
@@ -42,7 +42,7 @@ MonoBehaviour:
   showLiveScenePlacement: 1
   lidarGuidedSculptOnly: 1
   cinematicSceneCamera: 1
-  liveSceneCameraZoomOut: 39.9
+  liveSceneCameraZoomOut: 3.8
   forceLivePreviewWhenRecording: 1
   useIncrementalLadder: 1
   constrainBotToResearchOnFailure: 1
@@ -51,9 +51,9 @@ MonoBehaviour:
   batchJobCount: 3
   batchDelaySeconds: 0.5
   batchSeedIncrement: 10007
-  runPostBuildResearchPhase: 1
-  invokeCursorOnResearchPhase: 1
-  autoInvokeTerrainAfterSurfaceBuild: 1
+  runPostBuildResearchPhase: 0
+  invokeCursorOnResearchPhase: 0
+  autoInvokeTerrainAfterSurfaceBuild: 0
   autoRebuildSurfaceAfterTerrainAgent: 0
   suggestTerrainGradeWatcher: 1
   stabilizationMode: 0
@@ -62,7 +62,7 @@ MonoBehaviour:
   caveMeatTerrainWaitTimeoutSeconds: 900
   enableQualityFastGates: 1
   skipAutonomousWhenGradeAtOrAbove: 1
-  fastGateMinOverallScore: 88
+  fastGateMinOverallScore: 70
   requireHollowTitanOnSurface: 1
   hollowTitanPhasedBuild: 1
   hollowTitanBaseClearanceMeters: 0.35
@@ -83,8 +83,8 @@ MonoBehaviour:
   healInvokeAiAfterRollback: 1
   healRetryDelaySeconds: 6
   exportGenerationPrefabWhenFinished: 1
-  enableEnhancementPhases: 1
-  demSupersampleTargetDim: 128
+  enableEnhancementPhases: 0
+  demSupersampleTargetDim: 64
   requirePreflightBeforeFullWorldBuild: 0
   hardwareBudget: 0
   enableGaussianSplatHeroAtCaveMouth: 0

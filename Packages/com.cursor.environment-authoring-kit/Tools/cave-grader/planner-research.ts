@@ -2,6 +2,7 @@
  * Cursor web research for AI Build Planner — uses Agent.create + web search tools.
  * Usage: npx tsx planner-research.ts <request.json>
  */
+import "./planner-load-dotenv.ts";
 import { readFileSync } from "node:fs";
 import { Agent } from "@cursor/sdk";
 

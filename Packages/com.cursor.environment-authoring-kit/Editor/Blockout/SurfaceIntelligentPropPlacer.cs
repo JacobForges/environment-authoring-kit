@@ -34,7 +34,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             { "rock", "boulder", "stone", "rubble", "debris", "cliff", "granite", "pebble" };
         static readonly string[] ExcludeKeywords =
         {
-            "house", "building", "wall", "door", "window", "fence", "lamp", "street", "sign", "crate_ui",
+            "house", "home", "building", "bridge", "hut", "cabin", "shack", "wall", "door", "window",
+            "fence", "lamp", "street", "sign", "crate_ui", "platform", "pl01", "pl02", "pl03",
+            "m01", "m02", "m03", "landmark",
             "portal", "teleport", "warp",
         };
 
@@ -477,15 +479,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var slots = session.OrderedSlots;
             var rng = new System.Random(seed + (int)category * 509 + session.Placed);
+            var desiredPerTile = SurfaceTerrainPropPlacementRegion.DesiredPlacementsPerTile(category);
             var minPerTile = SurfaceTerrainPropPlacementRegion.MinPlacementsPerTile(category);
             var budget = maxPlacementsThisChunk < 1 ? int.MaxValue : maxPlacementsThisChunk;
 
             while (placedThisChunk < budget && session.Placed < session.MaxCount && session.Cursor < slots.Count)
             {
-                if (!AllTilesMeetMinimum(session.PerTileCounts, minPerTile))
+                if (!AllTilesMeetMinimum(session.PerTileCounts, desiredPerTile))
                 {
                     if (TryPlaceNextMinimumTileSlot(
-                            terrain, vegRoot, slots, pool, rng, category, session, minPerTile))
+                            terrain, vegRoot, slots, pool, rng, category, session, desiredPerTile))
                     {
                         placedThisChunk++;
                         continue;
@@ -532,12 +535,28 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     pool,
                     rng,
                     category,
-                    minPerTile,
+                    desiredPerTile,
                     session.PerTileCounts,
                     session.UsedSlotIndices,
                     session.PlanEntries,
                     session.Placed,
                     session.MaxCount);
+                if (!AllTilesMeetMinimum(session.PerTileCounts, minPerTile))
+                {
+                    session.Placed += EnforcePerTileMinimum(
+                        terrain,
+                        vegRoot,
+                        slots,
+                        pool,
+                        rng,
+                        category,
+                        minPerTile,
+                        session.PerTileCounts,
+                        session.UsedSlotIndices,
+                        session.PlanEntries,
+                        session.Placed,
+                        session.MaxCount);
+                }
             }
 
             return placedThisChunk > 0 || !session.IsComplete;
@@ -640,16 +659,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             session.Finalized = true;
             var minPerTile = SurfaceTerrainPropPlacementRegion.MinPlacementsPerTile(category);
+            var desiredPerTile = SurfaceTerrainPropPlacementRegion.DesiredPlacementsPerTile(category);
+            var tilesAtDesired = 0;
             var tilesAtMin = 0;
             foreach (var count in session.PerTileCounts.Values)
             {
+                if (count >= desiredPerTile)
+                    tilesAtDesired++;
                 if (count >= minPerTile)
                     tilesAtMin++;
             }
 
             message =
                 $"Placed {session.Placed}/{session.MaxCount} {category} on {session.TileCount} terrain(s) " +
-                $"({tilesAtMin}/{session.PerTileCounts.Count} tiles at ≥{minPerTile} each)" +
+                $"({tilesAtDesired}/{session.PerTileCounts.Count} tiles at ≥{desiredPerTile} target, " +
+                $"{tilesAtMin}/{session.PerTileCounts.Count} at ≥{minPerTile} floor)" +
                 (gapFilled > 0 ? $", gap-fill +{gapFilled}." : ".");
             CaveBuildLiveSceneFlushUtility.FlushWorldView(terrain);
             return session.Placed > 0;
@@ -711,7 +735,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var tileCount = lockFile?.terrainTileCount ??
                               SurfaceTerrainPlayRegion.CollectSurfaceTerrains(terrain).Count;
             var maxCount = SurfaceTerrainPropPlacementRegion.TargetCountForCategory(category, tileCount);
-            var target = Mathf.CeilToInt(maxCount * 0.98f);
+            var target = Mathf.CeilToInt(maxCount * SurfaceTerrainPropPlacementRegion.TargetTileCoverageFraction);
             var existing = CountPlacedForCategory(vegRoot, category);
             if (existing >= target)
             {
@@ -822,7 +846,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var minSep = category switch
             {
-                SurfacePropCategory.Trees => 4.2f,
+                SurfacePropCategory.Trees => 5.6f,
                 SurfacePropCategory.Bushes => 2.8f,
                 SurfacePropCategory.Grass => 1.6f,
                 _ => 2.2f,
@@ -896,7 +920,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (session == null || terrain == null || vegRoot == null || pool == null || pool.Count == 0)
                 return 0;
 
-            var minPerTile = SurfaceTerrainPropPlacementRegion.MinPlacementsPerTile(category);
+            var desiredPerTile = SurfaceTerrainPropPlacementRegion.DesiredPlacementsPerTile(category);
             var filled = 0;
 
             foreach (var slot in session.OrderedSlots)
@@ -909,7 +933,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 var tileKey = slot.TerrainName;
                 if (string.IsNullOrEmpty(tileKey))
                     continue;
-                if (session.PerTileCounts.TryGetValue(tileKey, out var count) && count >= minPerTile)
+                if (session.PerTileCounts.TryGetValue(tileKey, out var count) && count >= desiredPerTile)
                     continue;
 
                 var slotIndex = session.OrderedSlots.IndexOf(slot);
@@ -1111,11 +1135,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return false;
 
             terrainName = onTerrain != null ? onTerrain.name : slot.TerrainName;
-            var local = vegRoot.InverseTransformPoint(world);
+            var displayScale = ResolveDisplayScale(prefab, category, slot.Scale);
+            if (displayScale <= 0.01f)
+                return false;
+
+            var parent = onTerrain != null ? onTerrain.transform : vegRoot;
+            var local = parent.InverseTransformPoint(world);
             var rot = Quaternion.Euler(0f, slot.YawDeg, 0f);
-            var scale = Vector3.one * slot.Scale;
+            var scale = Vector3.one * displayScale;
             var tag = $"Surface_{category}_{prefab.name}";
-            if (!CavePrefabScatter.PlaceModule(vegRoot, prefab, local, rot, scale, tag, false))
+            if (!CavePrefabScatter.PlaceModule(parent, prefab, local, rot, scale, tag, false))
                 return false;
 
             planEntries.Add(new PlacementPlanEntry
@@ -1451,15 +1480,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (prefab == null)
                     continue;
 
-                if (!TryPlacementOnSurfaceTerrain(terrain, slot.Position, out var world, out _))
+                if (!TryPlacementOnSurfaceTerrain(terrain, slot.Position, out var world, out var onTerrain))
                     continue;
 
-                var local = vegRoot.InverseTransformPoint(world);
-                var rot = Quaternion.Euler(0f, slot.YawDeg, 0f);
-                var scale = Vector3.one * slot.Scale;
                 var ladderCat = LadderCategoryForSlot(slot.Category);
+                var displayScale = ResolveDisplayScale(prefab, ladderCat, slot.Scale);
+                if (displayScale <= 0.01f)
+                    continue;
+
+                var parent = onTerrain != null ? onTerrain.transform : vegRoot;
+                var local = parent.InverseTransformPoint(world);
+                var rot = Quaternion.Euler(0f, slot.YawDeg, 0f);
+                var scale = Vector3.one * displayScale;
                 var tag = $"Surface_{ladderCat}_{prefab.name}";
-                if (!CavePrefabScatter.PlaceModule(vegRoot, prefab, local, rot, scale, tag, false))
+                if (!CavePrefabScatter.PlaceModule(parent, prefab, local, rot, scale, tag, false))
                     continue;
 
                 placed++;
@@ -1962,6 +1996,34 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
         }
 
+        /// <summary>CC0 FBX import at 0.35 global scale needs a display multiplier on surface.</summary>
+        internal static float ResolveDisplayScale(GameObject prefab, SurfacePropCategory category, float slotScale)
+        {
+            if (prefab == null)
+                return slotScale;
+
+            var id = prefab.name;
+            if (id.Length >= 3 && id[0] == 'L' && char.IsDigit(id[1]))
+                return 0f;
+
+            var isCc0 = id.StartsWith("G-", StringComparison.Ordinal) ||
+                        id.StartsWith("B-", StringComparison.Ordinal) ||
+                        id.StartsWith("K-", StringComparison.Ordinal);
+            if (!isCc0)
+                return slotScale;
+
+            var mul = category switch
+            {
+                SurfacePropCategory.Grass => 3.2f,
+                SurfacePropCategory.GroundCover => 2.8f,
+                SurfacePropCategory.Bushes => 2.5f,
+                SurfacePropCategory.Trees => 2.2f,
+                SurfacePropCategory.Rocks => 2.4f,
+                _ => 2.2f,
+            };
+            return slotScale * mul;
+        }
+
         static GameObject PickPrefab(
             SurfaceVegetationCatalog catalog,
             PlacementSlot slot,
@@ -2180,8 +2242,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     TryCc0(cat.Rocks, $"K{k:D2}");
                 for (var b = 1; b <= 15; b++)
                     TryCc0(cat.Bushes, $"B{b:D2}");
-                for (var l = 1; l <= 10; l++)
-                    TryCc0(cat.Trees, $"L{l:D2}");
+                // L01–L10 are world landmarks (structures), not surface vegetation scatter.
             }
 
             static void TryCc0(List<GameObject> pool, string id)

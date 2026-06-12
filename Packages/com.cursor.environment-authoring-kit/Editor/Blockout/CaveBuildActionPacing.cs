@@ -18,7 +18,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public const float CooldownLightSeconds = LightDelaySeconds;
         public const float CooldownNormalSeconds = LightDelaySeconds * 3f;
         public const float CooldownHeavySeconds = LightDelaySeconds * 8f;
-        public const int DefaultBatchSize = 5;
+        public const int DefaultBatchSize = 2;
         public const int MaxQueueDepth = 4096;
 
         public enum ActionWeight
@@ -276,16 +276,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             get
             {
-                if (CaveBuildEditorResponsiveness.IsLongBuildActive)
-                    return 1;
-
-                if (CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive)
-                    return 1;
-
                 var configured = CaveBuildCursorSettings.ResolveQueuePacing().batchSize;
-                return CaveBuildPipelineScope.CaveOnlyContinuation
-                    ? 1
-                    : configured;
+                return CaveBuildLoadAwareBatching.Clamp(
+                    CaveBuildPipelineScope.CaveOnlyContinuation ? 1 : configured);
             }
         }
 

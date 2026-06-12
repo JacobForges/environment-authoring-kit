@@ -77,7 +77,9 @@ def load_hub_ai_env(hub: Path) -> None:
             os.environ.setdefault("CAVE_ACTIVE_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
     os.environ.setdefault("HUB_ROOT", str(hub))
     os.environ.setdefault("TSX_DISABLE_IPC", "1")
-    os.environ.setdefault("CAVE_RECAP_CONCURRENCY", os.environ.get("CAVE_RECAP_CONCURRENCY", "4"))
+    os.environ.setdefault("CAVE_RECAP_CONCURRENCY", os.environ.get("CAVE_RECAP_CONCURRENCY", "1"))
+    os.environ.setdefault("CAVE_RECAP_PACE_MS", "1500")
+    os.environ.setdefault("CAVE_RECAP_REUSE_IMAGE", "1")
 
 
 def has_cursor_api_key() -> bool:
@@ -172,7 +174,7 @@ def apply_cursor_milestones_director(
         encoding="utf-8",
     )
     provider = os.environ.get("CAVE_AI_PROVIDER", "Cursor")
-    conc = os.environ.get("CAVE_RECAP_CONCURRENCY", "4")
+    conc = os.environ.get("CAVE_RECAP_CONCURRENCY", "1")
     print(f"Director: Cursor API ({provider}) — {len(rows)} milestones ×{conc} (PNG vision + captions)…")
     out = run_tsx(hub, "milestones", req)
     (run / "DemoRecapCursorDirector.json").write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")

@@ -48,6 +48,8 @@ NARRATION_APPROVAL_FILE = "NarrationVoiceApproval.json"
 NARRATION_GUIDE_FILE = "NarrationVoiceGuide.md"
 DEFAULT_PORT = 8765
 COMPOSE_JOBS: dict[str, dict] = {}
+COMPOSE_SPAWN_LOCKS: dict[str, threading.Lock] = {}
+COMPOSE_SPAWN_LOCK_META = threading.Lock()
 COMPOSE_GATES: dict[str, dict] = {}
 COMPOSE_SERVER_LOG = Path.home() / "Library" / "EnvironmentKit" / "recap-dashboard-server.log"
 
@@ -198,6 +200,13 @@ def set_gate_assets_verified(capture: Path) -> dict:
     gate["verifiedAt"] = time.time()
     COMPOSE_GATES[key] = gate
     return get_gate(capture)
+
+
+def _compose_spawn_lock(key: str) -> threading.Lock:
+    with COMPOSE_SPAWN_LOCK_META:
+        if key not in COMPOSE_SPAWN_LOCKS:
+            COMPOSE_SPAWN_LOCKS[key] = threading.Lock()
+        return COMPOSE_SPAWN_LOCKS[key]
 
 
 def mark_compose_started(capture: Path) -> None:
@@ -909,10 +918,6 @@ def spawn_compose(
             "error": "Compose blocked — verify approved cards and click Proceed in the recap dashboard.",
             "composeGate": gate,
         }
-    reconcile_compose_job(capture)
-    if COMPOSE_JOBS.get(key, {}).get("running"):
-        return {"ok": False, "error": "compose already running for this capture"}
-
     if narration_only:
         presentation = capture / "DemoRecapPresentation.mp4"
         work = capture / "_presentation_compose" / "_final_video.mp4"
@@ -974,6 +979,18 @@ def spawn_compose(
         no_narrator_flag=no_narrator,
     )
 
+    with _compose_spawn_lock(key):
+        reconcile_compose_job(capture)
+        if COMPOSE_JOBS.get(key, {}).get("running"):
+            return {"ok": False, "error": "compose already running for this capture"}
+        COMPOSE_JOBS[key] = {
+            "running": True,
+            "started": time.time(),
+            "cmd": cmd,
+            "pid": None,
+        }
+        mark_compose_started(capture)
+
     env = os.environ.copy()
     env.setdefault("ENVIRONMENT_KIT_DATA_ROOT", str(resolve_envkit_root()))
     env["PYTHONUNBUFFERED"] = "1"
@@ -1015,14 +1032,12 @@ def spawn_compose(
         subprocess.run(args, cwd=str(_TOOLS), env=env, check=False)
 
     def run() -> None:
-        mark_compose_started(capture)
         try:
             compose_live_log_path(capture).write_text(
                 f"{time.strftime('%H:%M:%S')} Compose started (python={py})\n", encoding="utf-8"
             )
         except OSError:
             pass
-        COMPOSE_JOBS[key] = {"running": True, "started": time.time(), "cmd": cmd, "pid": None}
         try:
             if narration_only:
                 append_compose_live(capture, "Personal Voice narration (headless, no Terminal)…")

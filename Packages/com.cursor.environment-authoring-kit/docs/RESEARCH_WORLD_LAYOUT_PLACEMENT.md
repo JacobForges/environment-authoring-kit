@@ -176,7 +176,7 @@
 | 9 | Run **Terrain Build Grader**; fix failing surface ladder rungs only. | 20 min |
 | 10 | Lock **seed** in Hub; export `CaveBuildLadderContext.json`. | 2 min |
 | 11 | **Pre-Build Ladder** until ≥88 / build acceptable. | 10 min |
-| 12 | **FullWorld 120** — do not interrupt; runner Mac only if CodeQL Sunday. | ~60 min |
+| 12 | **FullWorld 122** — do not interrupt; runner Mac only if CodeQL Sunday. | ~60 min |
 | 13 | After surface props: confirm post-prop crater stabilization ran (log line). | 2 min |
 | 14 | After cave geo: `CaveSceneMaterialRepair` if pink; ignore UI/TMP shader warnings. | 5 min |
 | 15 | Run **Cave Build Grader**; open `CaveBuildQualityReport.json`. | 10 min |

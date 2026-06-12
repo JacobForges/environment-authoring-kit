@@ -11,8 +11,8 @@ using Debug = UnityEngine.Debug;
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
     /// <summary>
-    /// Opens recap dashboard after recording stops and gates producer compose until the user proceeds
-    /// (dashboard UI, Hub skip toggle, or optional auto-proceed timeout).
+    /// Opens AI Director after recording stops and gates producer compose until the user proceeds
+    /// (Director UI, Hub skip toggle, or optional auto-proceed timeout).
     /// </summary>
     static class CaveBuildRecapDashboardGate
     {
@@ -20,11 +20,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const string PrefSkipReview = "EnvironmentKit_RecapDashboard_SkipReview";
         const string PrefAutoProceedMinutes = "EnvironmentKit_RecapDashboard_AutoProceedMinutes";
         const string PrefPendingGateFolder = "EnvironmentKit_RecapDashboard_PendingGateFolder";
-        const string EnsureScript = "ensure-recap-dashboard.py";
-        const string LauncherScript = "start-recap-dashboard.sh";
-        const int DefaultApiPort = 8765;
-        const int VitePort = 5173;
-        const string PortFileRelative = "recap-dashboard-port.txt";
+        const string EnsureScript = "ensure-ai-director.py";
+        const string LauncherScript = "start-ai-director.sh";
+        const int DefaultApiPort = 8767;
+        const int VitePort = 5174;
+        const string PortFileRelative = "ai-director-port.txt";
 
         static string _waitingRunFolder;
         static double _gateStartedAt;
@@ -80,7 +80,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!TryEnsureDashboardReady(runFolder, out var dashboardUrl))
             {
                 Debug.LogWarning(
-                    "[DemoRecorder] Recap dashboard not ready yet — will retry ensure-recap-dashboard.py on gate poll.");
+                    "[DemoRecorder] AI Director not ready yet — will retry ensure-ai-director.py on gate poll.");
             }
             else
             {
@@ -94,7 +94,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 : 0;
 
             Debug.Log(
-                "[DemoRecorder] Recap review gate active — verify cards in dashboard, then click Proceed.");
+                "[DemoRecorder] AI Director gate active — verify cards, then start silent compose.");
 
             void OnProceed()
             {

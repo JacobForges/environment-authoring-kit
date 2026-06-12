@@ -30,7 +30,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Terrain mainTerrain,
             Transform surfaceRoot,
             int seed,
-            Action onComplete)
+            Action onComplete,
+            bool floatingIslandEdges = false)
         {
             if (mainTerrain == null)
             {
@@ -38,7 +39,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            var tiles = CollectDressableTiles(mainTerrain);
+            var tiles = CollectDressableTiles(mainTerrain, floatingIslandEdges);
             if (tiles.Count == 0)
             {
                 onComplete?.Invoke();
@@ -48,19 +49,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var prefabs = LoadDressingPrefabs();
             if (prefabs.Count == 0)
             {
+                CaveBuildEditorLog.LogSurfaceWarning(
+                    "[Surface] Seam dressing skipped — no rock prefabs found (rock01–05 / BackRock).",
+                    forceUnityConsole: true);
                 onComplete?.Invoke();
                 return;
             }
 
-            var slots = BuildSeamSlots(mainTerrain, tiles, seed);
+            var slots = BuildSeamSlots(mainTerrain, tiles, seed, floatingIslandEdges);
             if (slots.Count == 0)
             {
                 onComplete?.Invoke();
                 return;
             }
 
+            var modeLabel = floatingIslandEdges ? "3D cover (floating islands)" : "peak/foothill";
             CaveBuildEditorLog.LogSurface(
-                $"[Surface] Seam dressing — {slots.Count} prop slot(s) on {tiles.Count} tile edge(s), " +
+                $"[Surface] Seam dressing — {modeLabel}: {slots.Count} prop slot(s) on {tiles.Count} tile edge(s), " +
                 $"{prefabs.Count} prefab(s).",
                 forceUnityConsole: true);
 
@@ -85,15 +90,46 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             SpawnDressingProp(root, prefab, slot, rng);
                         PlaceNext();
                     },
-                    CaveBuildPipelineDomains.QueueLabel($"seam dress {index}/{slots.Count}"));
+                    CaveBuildPipelineDomains.QueueLabel(
+                        floatingIslandEdges
+                            ? $"3D seam cover {index}/{slots.Count}"
+                            : $"seam dress {index}/{slots.Count}"));
             }
 
             PlaceNext();
         }
 
-        static List<Terrain> CollectDressableTiles(Terrain mainTerrain)
+        /// <summary>Lightweight builds: rock skirts along all shared tile edges (no heightmap seam blend).</summary>
+        public static void QueueDressFloatingIslandSeamCover(
+            Terrain mainTerrain,
+            Transform surfaceRoot,
+            int seed,
+            Action onComplete) =>
+            QueueDressSeamEdges(mainTerrain, surfaceRoot, seed, onComplete, floatingIslandEdges: true);
+
+        static List<Terrain> CollectDressableTiles(Terrain mainTerrain, bool floatingIslandEdges)
         {
             var list = new List<Terrain>();
+            if (floatingIslandEdges)
+            {
+                if (mainTerrain?.terrainData != null)
+                    list.Add(mainTerrain);
+
+                foreach (var t in SurfaceTerrainTileExpansion.CollectGameplayTiles(mainTerrain))
+                {
+                    if (t?.terrainData != null && !list.Contains(t))
+                        list.Add(t);
+                }
+
+                foreach (var t in SurfaceTerrainTileExpansion.CollectMountainWildernessTiles(mainTerrain))
+                {
+                    if (t?.terrainData != null && !list.Contains(t))
+                        list.Add(t);
+                }
+
+                return list;
+            }
+
             foreach (var t in SurfaceTerrainTileExpansion.CollectMountainFoothillTiles(mainTerrain))
             {
                 if (t?.terrainData != null)
@@ -118,11 +154,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return list;
         }
 
-        static List<SeamDressSlot> BuildSeamSlots(Terrain mainTerrain, List<Terrain> tiles, int seed)
+        static List<SeamDressSlot> BuildSeamSlots(
+            Terrain mainTerrain,
+            List<Terrain> tiles,
+            int seed,
+            bool floatingIslandEdges)
         {
             var slots = new List<SeamDressSlot>();
             var rng = new System.Random(seed + 991);
             var seen = new HashSet<long>();
+            var spacing = floatingIslandEdges ? 22f : SeamSampleSpacingMeters;
+            var propsMax = floatingIslandEdges ? 4 : PropsPerEdgeMax;
+            var minSlope = floatingIslandEdges ? 0.02f : MinSlopeForSkirt;
 
             for (var i = 0; i < tiles.Count; i++)
             {
@@ -140,13 +183,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     if (!TryFindTileAtOffset(mainTerrain, neighborOff, out var neighbor) || neighbor == null)
                         continue;
 
-                    var isPeakFoothill =
-                        IsPeakFoothillPair(tile, neighbor);
-                    if (!isPeakFoothill && !IsOpenWorldEdge(tile, neighbor))
+                    var isPeakFoothill = IsPeakFoothillPair(tile, neighbor);
+                    if (!floatingIslandEdges &&
+                        !isPeakFoothill &&
+                        !IsOpenWorldEdge(tile, neighbor))
                         continue;
 
                     var edgeLen = delta.x != 0 ? size.z : size.x;
-                    var count = Mathf.Min(PropsPerEdgeMax, Mathf.Max(2, Mathf.RoundToInt(edgeLen / SeamSampleSpacingMeters)));
+                    var count = Mathf.Min(propsMax, Mathf.Max(2, Mathf.RoundToInt(edgeLen / spacing)));
                     var alongStart = EdgeInsetMeters;
                     var alongEnd = (delta.x != 0 ? size.z : size.x) - EdgeInsetMeters;
                     var span = alongEnd - alongStart;
@@ -164,7 +208,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             continue;
 
                         var slope = SampleSlope(tile, wx, wz);
-                        if (slope < MinSlopeForSkirt && !isPeakFoothill)
+                        var heightGap = Mathf.Abs(
+                            tile.SampleHeight(new Vector3(wx, 0f, wz)) + origin.y -
+                            (neighbor.SampleHeight(new Vector3(wx, 0f, wz)) + neighbor.transform.position.y));
+                        if (slope < minSlope && !isPeakFoothill && !(floatingIslandEdges && heightGap > 0.35f))
                             continue;
 
                         slots.Add(new SeamDressSlot
@@ -172,7 +219,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                             Position = new Vector3(wx, wy, wz),
                             Normal = EstimateEdgeNormal(tile, neighbor, delta),
                             Slope = slope,
-                            PeakFoothill = isPeakFoothill,
+                            PeakFoothill = isPeakFoothill || (floatingIslandEdges && heightGap > 1.2f),
                         });
                     }
                 }

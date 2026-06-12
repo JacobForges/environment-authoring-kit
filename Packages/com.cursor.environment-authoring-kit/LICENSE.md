@@ -1,6 +1,6 @@
 # Environment Authoring Kit License
 
-Copyright (c) Jacob
+Copyright (c) JacobForges
 
 ## Educational use (free)
 
@@ -25,7 +25,7 @@ Commercial use includes, without limitation:
 
 **Any monetary gain or public commercial use without a written license or purchase from the author is not permitted.**
 
-The author **reserves the right** to approve commercial use, offer paid licenses, support, and sponsorship at their sole discretion. Contact the repository owner (Jacob) to request permission or purchase a commercial license.
+The author **reserves the right** to approve commercial use, offer paid licenses, support, and sponsorship at their sole discretion. Contact the repository owner ([JacobForges](https://github.com/JacobForges)) to request permission or purchase a commercial license.
 
 ## No warranty
 

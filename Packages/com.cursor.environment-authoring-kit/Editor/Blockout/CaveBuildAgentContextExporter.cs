@@ -451,10 +451,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "OK");
         }
 
-        public static void ResetForNewBuildSession(string sceneName)
+        public static bool StaleFilesClearedThisBuildClick { get; private set; }
+
+        internal static void ResetStaleFilesFlagForBuildClick() =>
+            StaleFilesClearedThisBuildClick = false;
+
+        public static void ClearStaleFilesForBuildClick(string hub, List<string> clearedOut)
         {
-            var hub = CaveBuildCursorSettings.ResolveHubRoot();
-            var cleared = new List<string>();
+            var cleared = clearedOut ?? new List<string>();
             PurgeLegacyPerPhaseMarkdown(hub, cleared);
             foreach (var rel in StaleFilesToDeleteOnBuildStart)
             {
@@ -473,10 +477,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             ResetMeatLoopHistory(hub);
+            StaleFilesClearedThisBuildClick = true;
+        }
+
+        public static void ResetForNewBuildSession(string sceneName)
+        {
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            var cleared = new List<string>();
+            if (!StaleFilesClearedThisBuildClick)
+                ClearStaleFilesForBuildClick(hub, cleared);
+            else
+                PurgeLegacyPerPhaseMarkdown(hub, cleared);
+
             WriteSessionManifest(hub, sceneName, "build_start", cleared);
             Debug.Log(
                 $"{CaveBuildPipelineDomains.Cave} Agent artifacts cleared ({cleared.Count} files). Fresh JSON this cave run. " +
                 $"Session → {SessionManifestPath}");
+            StaleFilesClearedThisBuildClick = false;
         }
 
         public static void ResetPromptsBeforeCursorInvoke(string sceneName, string rung, int meatLoopPass)

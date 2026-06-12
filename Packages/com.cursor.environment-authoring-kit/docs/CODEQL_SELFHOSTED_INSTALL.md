@@ -23,7 +23,7 @@ Files in this zip are part of **Environment Authoring Kit** and the **Hub** repo
 
 - **Your code in this repo:** see `LICENSE` at Hub root and `Packages/com.cursor.environment-authoring-kit/LICENSE.md`.
 - **Educational / personal non-commercial use:** allowed under that license.
-- **Commercial use:** requires written permission or a commercial license from the copyright holder (Jacob Adkins), as stated in those files.
+- **Commercial use:** requires written permission or a commercial license from the copyright holder (JacobForges), as stated in those files.
 - **This zip does not change those terms** — it only adds CI/scripts under the same project.
 
 You may commit and use these workflows in **your** Hub repo without extra permission beyond your existing repo license.

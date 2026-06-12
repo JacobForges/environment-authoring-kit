@@ -108,10 +108,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var skipNetworkResearchHelpers =
                 CaveBuildSessionPreset.AllowProceduralTerrainWithoutResearch &&
                 !CaveBuildResearchCacheBridge.HasUsableLocalResearchCache();
-            if (skipNetworkResearchHelpers)
+            var skipPlannerSurfaceHelpers =
+                CaveBuildSessionConfig.HasFinalizedActive &&
+                CaveBuildPlannerLayoutBridge.TryLoad(out _, out _);
+            if (skipNetworkResearchHelpers || skipPlannerSurfaceHelpers)
             {
                 CaveBuildEditorLog.LogSurface(
-                    "[Startup] No API / no ResearchCache — skipping tsx research sync; procedural terrain.",
+                    skipPlannerSurfaceHelpers
+                        ? "[Surface] Planner session — skipping tsx pre-placement helpers; Unity planner terrain pipeline owns sculpt."
+                        : "[Startup] No API / no ResearchCache — skipping tsx research sync; procedural terrain.",
                     forceUnityConsole: true);
                 QueueResearchThenBuild();
                 return;

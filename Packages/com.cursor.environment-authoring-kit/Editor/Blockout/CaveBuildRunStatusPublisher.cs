@@ -239,8 +239,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Publish(force: true);
         }
 
+        public static double LastSessionEndedAt { get; private set; }
+
         public static void EndSession()
         {
+            LastSessionEndedAt = EditorApplication.timeSinceStartup;
             StopHeartbeat();
             _phase = "idle";
             _queuedStep = -1;
@@ -250,6 +253,37 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Publish(force: true);
             _startedAt = 0;
             CaveBuildPostBuildFinalizeGate.OnRunStatusSessionEnded();
+        }
+
+        /// <summary>Idle live status and delete on-disk copies before a new build session.</summary>
+        public static void ResetForNewBuild()
+        {
+            if (HasActiveSession)
+                EndSession();
+
+            ClearActivityFeed();
+            _detail = string.Empty;
+            _researchNote = string.Empty;
+            _buildMode = string.Empty;
+
+            var hub = CaveBuildCursorSettings.ResolveHubRoot();
+            TryDeleteStatusFile(Path.Combine(hub, LiveStatusRel));
+            TryDeleteStatusFile(EnvironmentKitDataRoot.ResolvePath("CaveBuildLiveRunStatus.md"));
+        }
+
+        static void TryDeleteStatusFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CaveBuild] Could not delete live status {path}: {ex.Message}");
+            }
         }
 
         public static void BeginSession(string sceneName, int seed, bool additiveSurface)

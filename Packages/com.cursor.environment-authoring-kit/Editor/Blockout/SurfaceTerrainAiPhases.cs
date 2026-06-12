@@ -609,6 +609,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         internal static Transform ResolveSurfaceRootPublic(QueueState state) => ResolveSurfaceRoot(state);
 
+        static bool TryApplyPlannerLayoutFromBrief(QueueState state)
+        {
+            state.Surface ??= ResolveSurfaceRoot(state);
+            if (state.Ground?.Terrain == null || state.Surface == null)
+                return false;
+
+            if (!CaveBuildPlannerLayoutAuthor.TryApply(
+                    state.Ground,
+                    state.Surface,
+                    state.Request,
+                    out var plannerMsg))
+                return false;
+
+            CaveBuildEditorLog.LogSurface("[Planner] " + plannerMsg, forceUnityConsole: true);
+            return true;
+        }
+
         static Transform ResolveSurfaceRoot(QueueState state)
         {
             if (state.Surface != null)
@@ -633,6 +650,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             state.PropPolishPassDone = false;
             state.PropsCatalog = SurfaceIntelligentPropPlacer.LoadVegetationCatalog();
             state.BiomePropsCatalog = BiomePropCatalog.Load(state.Request);
+
+            if (TryApplyPlannerLayoutFromBrief(state))
+            {
+                CaveBuildEditorLog.LogSurface(
+                    "[Surface] Planner layout applied before generic props — terrain + 3D mesh layer, spawn.",
+                    forceUnityConsole: true);
+            }
+
+            if (CaveBuildPlannerMarkerPropScatter.UsesPlannerMarkerScatter(state.Request))
+            {
+                CaveBuildPlannerMarkerPropScatter.TryPlaceLockedVegetation(
+                    state.Ground,
+                    state.Surface,
+                    state.Request,
+                    out var scatterMsg);
+                CaveBuildEditorLog.LogSurface("[PlannerProps] " + scatterMsg, forceUnityConsole: true);
+            }
 
             if (!state.PropsCatalog.HasAny && !state.BiomePropsCatalog.HasAny)
             {
@@ -701,7 +735,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
 
             CaveBuildSurfaceProgress.CompletePropsSetup(
-                "Props plan ready — unified full-map spread (2× spacing, all categories)");
+                "Props plan ready — unified full-map spread (dense understory, wider trees)");
 
             CaveBuildActionPacing.ScheduleHeavyChain(
                 () => ScheduleSurfacePropCategory(state),
@@ -1113,6 +1147,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 $"[TerrainLadder] {def.Id} → {stage.Score} ({(stage.Passed ? "pass" : "fail")})",
                 forceUnityConsole: true);
             CaveBuildSurfaceProgress.CompleteLadderRung(def.Id, rungNum - 1, rungTotal);
+
+            if (CaveBuildPlannerFidelityGate.IsPlannerGateActive(state.Request) &&
+                CaveBuildPlannerFidelityGate.ShouldGateRung(def.Id))
+            {
+                state.Surface ??= ResolveSurfaceRoot(state);
+                CaveBuildPlannerFidelityGate.TryGateAfterRung(
+                    def.Id,
+                    state.Ground,
+                    state.Surface,
+                    state.Request,
+                    _ =>
+                    {
+                        state.LadderRungIndex++;
+                        ScheduleLadderGradeRung(state);
+                    });
+                return;
+            }
+
             state.LadderRungIndex++;
             ScheduleLadderGradeRung(state);
         }
@@ -1224,6 +1276,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                                 report,
                                 state.Request.Seed,
                                 state.LadderIteration);
+
+                            if (TerrainBuildCursorAgentBridge.TryInvokeAfterPromptExported(
+                                    fixRung,
+                                    report,
+                                    "terrain",
+                                    state.SameRungFixStreak,
+                                    out var cursorMsg))
+                            {
+                                CaveBuildEditorLog.LogSurface(
+                                    "[TerrainLadder] Cursor invoked after prompt export — local fix runs next.",
+                                    forceUnityConsole: true);
+                                CaveBuildEditorLog.LogSurface("[TerrainLadder] Cursor: " + cursorMsg, forceUnityConsole: true);
+                            }
 
                             SurfaceTerrainLadderFixer.QueueTryFix(
                                 fixRung,

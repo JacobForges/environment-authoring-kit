@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace EnvironmentAuthoringKit.Cave
 {
@@ -22,6 +23,7 @@ namespace EnvironmentAuthoringKit.Cave
         [Header("State (CavePlayerMovementGuard / cinematics)")]
         public bool introActive;
         public bool dialogActive;
+        public bool chatInputActive;
         public Transform cameraPivot;
 
         [Header("Combat")]
@@ -56,13 +58,31 @@ namespace EnvironmentAuthoringKit.Cave
             if (_controller == null || !_controller.enabled)
                 return;
 
-            HandleRespawnHotkey();
-            if (introActive || dialogActive)
+            if (introActive || dialogActive || chatInputActive || IsKeyboardCapturedByUi())
                 return;
 
-            CaptureCursorOnClick();
+            HandleRespawnHotkey();
             HandleLook();
             HandleMove();
+        }
+
+        static bool IsKeyboardCapturedByUi()
+        {
+            var es = EventSystem.current;
+            if (es == null || es.currentSelectedGameObject == null)
+                return false;
+
+            var selected = es.currentSelectedGameObject;
+            if (selected.GetComponentInParent<UnityEngine.UI.InputField>() != null)
+                return true;
+
+            foreach (var component in selected.GetComponentsInParent<Component>(true))
+            {
+                if (component != null && component.GetType().Name == "TMP_InputField")
+                    return true;
+            }
+
+            return false;
         }
 
         void HandleRespawnHotkey()
@@ -76,18 +96,9 @@ namespace EnvironmentAuthoringKit.Cave
                 UnlockMovement();
         }
 
-        void CaptureCursorOnClick()
-        {
-            if (!Input.GetMouseButtonDown(0))
-                return;
-
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-
         void HandleLook()
         {
-            if (_cameraRig == null || Cursor.lockState != CursorLockMode.Locked)
+            if (_cameraRig == null || chatInputActive || !Input.GetMouseButton(1))
                 return;
 
             var yaw = Input.GetAxis("Mouse X") * mouseSensitivity;
@@ -135,7 +146,7 @@ namespace EnvironmentAuthoringKit.Cave
             dialogActive = false;
             if (_controller != null && !_controller.enabled)
                 _controller.enabled = true;
-            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.lockState = CursorLockMode.Confined;
             Cursor.visible = false;
         }
     }

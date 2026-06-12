@@ -6,6 +6,25 @@ Format: **date** — short title — details.
 
 ---
 
+## 2026-06-09
+
+### Documentation accuracy pass
+
+- **Author:** sole credit **JacobForges** everywhere (no co-authors; removed stale “Jacob Adkins” / “Jacob Forges” variants).
+- **Pipeline:** bulk **120 → 122** in accuracy docs + key Hub UI strings; historical v0.3.0 changelog kept as “63→120 (122 in current code)”.
+- **Planner:** new [PLANNER_SESSION.md](PLANNER_SESSION.md) — non-AI JSON path, optional concept, session flags.
+- **Naming:** repo stays **environment-authoring-kit**; **Hub** = local project folder only.
+- **Storage:** new [STORAGE_AND_DISK.md](STORAGE_AND_DISK.md), [GLOSSARY.md](GLOSSARY.md); [PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md) covers Lexar migration + disk-safe JSON writes.
+- **Versions:** package **0.3.4** synced in READMEs and [PUBLISHING.md](../Packages/com.cursor.environment-authoring-kit/docs/PUBLISHING.md).
+- **LICENSE:** root [LICENSE](../LICENSE) and package [LICENSE.md](../Packages/com.cursor.environment-authoring-kit/LICENSE.md) — copyright **JacobForges**, not CC0.
+
+### Code (same session arc)
+
+- Planner terrain uses `CaveBuildActionPacing` + `CaveBuildMicroTerrainHeightmap` for heightmap work.
+- `EnvironmentKitDataRoot.TryWriteAllText` — ladder completion + paced checkpoints skip safely when disk is full.
+
+---
+
 ## 2026-06-02
 
 ### Surface terrain grid snap, fast seams, open-world expansion (0.3.3)
@@ -50,7 +69,7 @@ Format: **date** — short title — details.
 
 ### Documentation accuracy pass (public GitHub)
 
-- Added **[PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md)** — single source of truth for committed vs gitignored paths, XR honesty, 120-step pipeline, licenses.
+- Added **[PUBLIC_REPO_SCOPE.md](PUBLIC_REPO_SCOPE.md)** — single source of truth for committed vs gitignored paths, XR honesty, pipeline step docs, licenses.
 - Rewrote root **README**, package **README**, **REQUIREMENTS** (Hub + package), **Recipes README**, grader **research-workflow**, **PRODUCT_BOUNDARY**, **PUBLISHING**, **CaveGradingAndCursor** (ResearchCache note), **FLOW-AUDIT** closure for 63-step doc drift.
 - Clarified: **no sample `.unity` scenes** on GitHub; **MainScene** menu only if you add the scene locally; **VITURE SDK** not in repo; **ResearchCache/** and **Generated/** local-only.
 
@@ -58,9 +77,9 @@ Format: **date** — short title — details.
 
 ## 2026-05-27
 
-### Environment Authoring Kit v0.3.0 — 120-step queue + Hub
+### Environment Authoring Kit v0.3.0 — queued cave pipeline + Hub
 
-- Queued cave pipeline **63 → 120** steps (`CaveBuildQueuedPipelineSchedule`).
+- Queued cave pipeline **63 → 120** steps at release (`CaveBuildQueuedPipelineSchedule`; **122** in current code).
 - Environment Kit **Hub** window; multi-provider settings export; flow audit doc.
 
 ### Environment Authoring Kit v0.2.0 — FullWorld pipeline + 9-tile surface contract
@@ -70,7 +89,7 @@ Package release prep: documentation rewrite, `package.json` **0.2.0**.
 **Pipeline**
 
 - FullWorld **terrain-first** — surface world, terrain AI phases, terrain ladder (including props), then queued cave work (later expanded to **120** steps in v0.3.0).
-- **Strict cave geometry** — incremental ladder cannot skip geo 1–13 when scene only has ramp / partial floor; `InvalidateCaveGeometryLadderRungs` on FullWorld without full cave.
+- **Strict cave geometry** — incremental ladder cannot skip geo 1–15 when scene only has ramp / partial floor; `InvalidateCaveGeometryLadderRungs` on FullWorld without full cave.
 - Terrain mouth fixes require **RouteTerrainFloor** from geo — no `BuildFloorOnly` shortcut that replaced full cave generation.
 - Research gate does not block validation or geo steps on prompt-export waits.
 
@@ -149,7 +168,7 @@ Package release prep: documentation rewrite, `package.json` **0.2.0**.
 
 ### License
 
-- Added root **CC0 1.0** (`LICENSE`) — public domain; use original kit code and docs however you like.
+- ~~Added root **CC0 1.0** (`LICENSE`) — public domain~~ **Superseded 2026-05-28** — kit is **not** CC0; see [LICENSE.md](../Packages/com.cursor.environment-authoring-kit/LICENSE.md).
 - Added **docs/THIRD_PARTY_AND_LICENSE_SCOPE.md** (Unity, Assets, npm, Cursor SDK remain under their own terms).
 
 ### Unity editor — stack overflow crash fix

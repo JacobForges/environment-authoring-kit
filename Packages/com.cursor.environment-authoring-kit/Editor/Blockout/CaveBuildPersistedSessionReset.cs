@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using UnityEngine.SceneManagement;
+
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
     /// <summary>
@@ -16,6 +18,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildMemoryGuard.ClearMemoryPause();
             CaveBuildPauseController.ClearOnNewBuildSession();
             SurfaceTerrainTileExpansion.ResetHollowTitanTerrainGateForNewBuild();
+
+            var sceneName = SceneManager.GetActiveScene().name;
+            CaveBuildSessionScratchReset.ClearAll(reason, sceneName);
+
             CaveBuildEditorLog.LogSurface(
                 $"[Build] Cleared persisted resume/checkpoint state ({reason}).",
                 forceUnityConsole: false);

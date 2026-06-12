@@ -301,6 +301,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CaveBuildRunStatusPublisher.PulseSubOperation(
                 "terrain sculpt",
                 $"pass {passNum}/{state.PassCount} rows {state.PassRowStart}/{state.Res}");
+            CaveBuildStepCounter.NotifyTerrainSculptMicroProgress(
+                state.PassIndex,
+                state.PassCount,
+                state.PassRowStart,
+                state.Res);
             PulseSculptLiveScene(state, passNum);
             _sculptWatchdogPass = state.PassIndex;
             _sculptWatchdogRow = state.PassRowStart;
@@ -1121,7 +1126,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             bool roads,
             bool refinementAfterDem)
         {
-            var macroAmp = refinementAfterDem ? SculptMacroAmplitudeAfterDem : SculptMacroAmplitude;
+            var macroAmp = CaveBuildPlannerTerrainGuide.ActiveMacroAmplitude > 0f
+                ? CaveBuildPlannerTerrainGuide.ActiveMacroAmplitude
+                : refinementAfterDem
+                    ? SculptMacroAmplitudeAfterDem
+                    : SculptMacroAmplitude;
             var fbm = SampleWorldFbm(wx, wz, sculptSeed);
             var h = 0.5f + fbm * macroAmp * Mathf.Lerp(0.55f, 1f, radialMask);
 

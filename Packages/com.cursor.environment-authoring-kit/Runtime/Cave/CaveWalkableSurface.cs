@@ -53,6 +53,15 @@ namespace EnvironmentAuthoringKit.Cave
                 n.Contains("Ceiling") || n.StartsWith("Wall") || n.StartsWith("CaveBlock_"))
                 return false;
 
+            if (n.StartsWith("Walk", System.StringComparison.Ordinal) ||
+                n.Contains("HopPad", System.StringComparison.Ordinal) ||
+                n.Contains("BridgeRamp", System.StringComparison.Ordinal) ||
+                n.Contains("BridgePad", System.StringComparison.Ordinal))
+                return true;
+
+            if (collider is TerrainCollider)
+                return true;
+
             if (n.Contains("RouteTerrainFloor") || n.Contains("LayoutWalkFloor"))
                 return true;
 

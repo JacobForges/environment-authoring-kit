@@ -55,7 +55,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             sb.AppendLine($"  \"seed\": {seed},");
             sb.AppendLine($"  \"generationStyleId\": \"{request?.GenerationStyleId ?? string.Empty}\",");
             sb.AppendLine($"  \"surfaceScope\": \"{request?.SurfaceScope}\",");
-            if (request != null && request.ConceptLayoutIndex == 0 && fullWorld)
+            if (CaveBuildSessionConfig.HasFinalizedActive && CaveBuildSessionConfig.IsSessionRequest(request))
+            {
+                CaveBuildPlannerLayoutBridge.TryResolveConceptImagePath(out _, out var plannerConceptRel);
+                CaveBuildPlannerLayoutBridge.TryLoad(out var plannerBrief, out _);
+                var markerCount = plannerBrief?.layoutPlan?.markers?.Length ?? 0;
+                var trailCount = plannerBrief?.layoutPlan?.trails?.Length ?? 0;
+                sb.AppendLine("  \"idealLayoutTarget\": {");
+                sb.AppendLine("    \"source\": \"planner_session\",");
+                sb.AppendLine($"    \"conceptImageRel\": \"{plannerConceptRel ?? string.Empty}\",");
+                sb.AppendLine($"    \"conceptWeight\": {CaveBuildPlannerConceptGuide.DefaultConceptWeight:F2},");
+                sb.AppendLine($"    \"markerPlanWeight\": {CaveBuildPlannerConceptGuide.MarkerPlanWeight:F2},");
+                sb.AppendLine($"    \"fidelityPassPercent\": {CaveBuildPlannerConceptGuide.PassSimilarityPercent:F0},");
+                sb.AppendLine($"    \"layoutMarkerCount\": {markerCount},");
+                sb.AppendLine($"    \"trailLinkCount\": {trailCount},");
+                sb.AppendLine(
+                    "    \"similarityRule\": \"Scene must match planner concept PNG (75%) + marker plan (25%) — retry rungs below 89% similarity.\"");
+                sb.AppendLine("  },");
+            }
+            else if (request != null && request.ConceptLayoutIndex == 0 && fullWorld)
             {
                 var conceptRel = FullWorldConceptLayoutCatalog.GetConceptImageRel(0);
                 sb.AppendLine("  \"idealLayoutTarget\": {");

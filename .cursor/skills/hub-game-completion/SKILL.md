@@ -63,6 +63,8 @@ This phase produces a **graded procedural world**. Phase 2 adds the **playable d
 
 ## References
 
+- [PLANNER_SESSION.md](../../../docs/PLANNER_SESSION.md) — read `CaveBuildActiveSessionConfig.json` for scoped tiles/caves
+- [PIPELINE_TRUTH.md](../../../docs/PIPELINE_TRUTH.md) — 122 steps, geo 1–15, meat at 65
 - [CURSOR_BOT_PHASED_MISSION.md](../../../docs/CURSOR_BOT_PHASED_MISSION.md)
 - [AGENTS.md](../../../AGENTS.md)
 - [hub-gameplay-completion](../hub-gameplay-completion/SKILL.md) — Phase 2 after gate

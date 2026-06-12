@@ -62,39 +62,30 @@ namespace EnvironmentAuthoringKit.World
         {
             if (_sun == null)
             {
-                var sunGo = GameObject.Find("WorldSun");
-                if (sunGo == null)
-                {
-                    sunGo = new GameObject("WorldSun");
-                    sunGo.transform.SetParent(transform, false);
-                }
-
-                _sun = sunGo.GetComponent<Light>() ?? sunGo.AddComponent<Light>();
-                _sun.type = LightType.Directional;
-                _sun.shadows = LightShadows.Soft;
+                _sun = WorldDirectionalLightUtility.Ensure("WorldSun", transform);
+                if (_sun != null)
+                    _sun.shadows = LightShadows.Soft;
             }
 
             if (_moon == null)
             {
-                var moonGo = GameObject.Find("WorldMoon");
-                if (moonGo == null)
+                _moon = WorldDirectionalLightUtility.Ensure("WorldMoon", transform);
+                if (_moon != null)
                 {
-                    moonGo = new GameObject("WorldMoon");
-                    moonGo.transform.SetParent(transform, false);
+                    _moon.color = new Color(0.72f, 0.78f, 0.95f);
+                    _moon.shadows = LightShadows.None;
                 }
-
-                _moon = moonGo.GetComponent<Light>() ?? moonGo.AddComponent<Light>();
-                _moon.type = LightType.Directional;
-                _moon.color = new Color(0.72f, 0.78f, 0.95f);
-                _moon.shadows = LightShadows.None;
             }
 
-            RenderSettings.sun = _sun;
+            if (_sun != null)
+                RenderSettings.sun = _sun;
         }
 
         void ApplyLighting()
         {
             EnsureLights();
+            if (_sun == null || _moon == null)
+                return;
 
             var hours = timeOfDay01 * 24f;
             var sunPitch = SunPitchDegrees(hours);

@@ -26,6 +26,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         /// <summary>True when every queue step should touch at most one grid tile.</summary>
         public static bool PreferOneTilePerQueueStep =>
+            CaveBuildLivePlacementPolicy.Active ||
             CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid ||
             CaveBuildSurfaceCompletionGate.IsFullWorldGridPipelineActive;
 
@@ -43,24 +44,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
                 return kind switch
                 {
-                    WorkKind.SurfaceSeam => ramGb >= 18f ? 2 : 1,
+                    WorkKind.SurfaceSeam => CaveBuildLoadAwareBatching.Clamp(ramGb >= 18f ? 2 : 1),
                     WorkKind.SurfacePolish => 1,
                     _ => 1,
                 };
             }
 
             var pacing = CaveBuildCursorSettings.ResolveQueuePacing();
-            var configured = Mathf.Max(1, pacing.batchSize);
-            if (CaveBuildEditorResponsiveness.IsLongBuildActive && configured > 1)
-                configured = 1;
-
-            var ram = EnvironmentKitHardwareBudget.ResolveEditorRamBudgetGb();
+            var configured = CaveBuildLoadAwareBatching.Clamp(pacing.batchSize);
             return kind switch
             {
-                WorkKind.SurfaceGridWeld => ram >= 18f ? 8 : 4,
-                WorkKind.SurfaceGridSnap => ram >= 18f ? 12 : 8,
-                WorkKind.SurfaceSeam => Mathf.Min(4, configured),
-                WorkKind.SurfacePolish => configured,
+                WorkKind.SurfaceGridWeld => configured,
+                WorkKind.SurfaceGridSnap => configured,
+                WorkKind.SurfaceSeam => configured,
+                WorkKind.SurfacePolish => 1,
                 _ => configured,
             };
         }

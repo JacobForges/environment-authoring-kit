@@ -1,13 +1,13 @@
 {
-  "name": "hub",
+  "name": "environment-authoring-kit-hub",
   "version": "1.0.0",
-  "description": "",
+  "description": "Unity 6 reference project for Environment Authoring Kit (github.com/JacobForges/environment-authoring-kit). Local folder may be named Hub.",
   "main": "hello-node.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "JacobForges (https://github.com/JacobForges)",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {

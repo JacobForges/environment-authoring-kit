@@ -40,7 +40,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.skipAutonomousWhenGradeAtOrAbove = true;
             settings.fastGateMinOverallScore = 70;
             settings.skipResearchNetworkSyncWhenCachePresent = true;
-            settings.editorQueueBatchSize = Mathf.Max(settings.editorQueueBatchSize, 2);
+            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(
+                Mathf.Max(settings.editorQueueBatchSize, 2));
             settings.demSupersampleTargetDim = Mathf.Min(settings.demSupersampleTargetDim, 64);
             settings.mirrorPacedBuildLogsToConsole = false;
 

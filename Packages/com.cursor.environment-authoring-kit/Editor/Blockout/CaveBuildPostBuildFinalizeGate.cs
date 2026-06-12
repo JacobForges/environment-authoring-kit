@@ -224,6 +224,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     Debug.Log("[CaveBuild] Prefab export: " + prefabMsg);
                 }
 
+                CaveBuildWorldSessionManifestWriter.Write(
+                    ctx.SceneName,
+                    ctx.Roll?.Seed ?? 0,
+                    ctx.Quality,
+                    playthroughRecorded,
+                    playthroughRecorded ? "post_build_playthrough" : "post_build_skip_playthrough");
+
                 CaveBuildCompletionSummary.ShowFinished(
                     ctx.SceneName,
                     ctx.Report,

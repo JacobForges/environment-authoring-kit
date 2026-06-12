@@ -399,7 +399,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 0.12f,
                 0.25f,
                 0.1f,
-                Mathf.Clamp(s.editorQueueBatchSize, 1, 8));
+                CaveBuildLoadAwareBatching.Clamp(s.editorQueueBatchSize));
         }
 
         /// <summary>Idle normal delay (for log messages).</summary>
@@ -849,6 +849,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.LoadFromPrefs();
             return settings.aiProvider;
         }
+
+        /// <summary>User-facing Hub label — no vendor product names.</summary>
+        public static string ActiveProviderDisplayLabel() =>
+            ResolveActiveProvider() switch
+            {
+                EnvironmentKitAiProvider.Cursor => "Assistant",
+                EnvironmentKitAiProvider.GoogleGemini => "Gemini",
+                EnvironmentKitAiProvider.AnthropicClaude => "Claude",
+                EnvironmentKitAiProvider.OpenAICompatible => "OpenAI",
+                EnvironmentKitAiProvider.OpenRouter => "OpenRouter",
+                EnvironmentKitAiProvider.CustomEndpoint => "Custom API",
+                _ => "Assistant",
+            };
 
         public static bool ProviderNeedsApiKey(EnvironmentKitAiProvider provider) =>
             provider is EnvironmentKitAiProvider.Cursor or

@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 namespace EnvironmentAuthoringKit.Editor.Blockout
 {
-    /// <summary>Single source of truth for the paced FullWorld cave queue (Build X/120).</summary>
+    /// <summary>Single source of truth for the paced FullWorld cave queue (Build X/122).</summary>
     public static class CaveBuildQueuedPipelineSchedule
     {
         public const int Total = 122;

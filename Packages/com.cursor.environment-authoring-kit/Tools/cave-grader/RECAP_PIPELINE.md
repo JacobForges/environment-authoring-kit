@@ -1,6 +1,6 @@
 # Recap pipeline (restored flow)
 
-End-to-end producer recap with **Personal Voice (Jacob Adkins)** — reliable path as of 2026-06-06.
+End-to-end producer recap with **Personal Voice (JacobForges)** — reliable path as of 2026-06-06.
 
 ## Flow
 

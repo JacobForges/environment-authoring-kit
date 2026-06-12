@@ -33,6 +33,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         const double DefaultTimelapseIntervalSeconds = 2.0;
         const float DefaultTargetMinutes = 8f;
         const string CaptureFolderName = "DemoCapture";
+        const string CaptureSessionRel = "Assets/EnvironmentKit/Generated/DemoCaptureSession.json";
+        const string ChaptersFileName = "DemoRecapChapters.json";
 
         public sealed class FrameInfo
         {
@@ -83,6 +85,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static double _lastManualRenderAt;
         /// <summary>User clicked Stop recording — do not auto-start a new capture while this build runs.</summary>
         static bool _userFinalizedCapture;
+        /// <summary>Planner Q&amp;A — browser wizard frames only; Unity Scene timelapse starts when generation runs.</summary>
+        static bool _deferUnitySceneCapture;
+        static string _currentBuildModeLabel = "Hub build";
+        static readonly List<ChapterEntry> Chapters = new();
+
+        [Serializable]
+        sealed class ChapterEntry
+        {
+            public string id;
+            public string title;
+            public string phase;
+            public string source;
+            public string utc;
+        }
+
+        [Serializable]
+        sealed class ChaptersDoc
+        {
+            public int version = 1;
+            public ChapterEntry[] chapters;
+        }
 
         static CaveBuildDemoAutoRecorder()
         {
@@ -133,7 +156,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             get
             {
-                if (!_recording)
+                if (!_recording || _deferUnitySceneCapture)
                     return false;
 
                 var settings = CaveBuildCursorSettings.LoadOrCreate();
@@ -298,11 +321,99 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             _userFinalizedCapture = false;
             _hubBuildRecordingSession = true;
-            if (!_recording)
+            if (!string.IsNullOrEmpty(buildModeLabel))
+                _currentBuildModeLabel = buildModeLabel;
+
+            var isPlannerOpen = string.Equals(buildModeLabel, "AI build planner", StringComparison.OrdinalIgnoreCase);
+            var isBuildPipeline = string.Equals(buildModeLabel, "Build pipeline", StringComparison.OrdinalIgnoreCase);
+
+            if (isPlannerOpen)
+            {
+                if (!_recording)
+                    BeginRecordingSession(deferUnitySceneCapture: true);
+                else
+                    WriteCaptureSessionManifest(_currentBuildModeLabel);
+            }
+            else if (isBuildPipeline)
+            {
+                if (!_recording)
+                    BeginRecordingSession();
+                else
+                {
+                    WriteCaptureSessionManifest(_currentBuildModeLabel);
+                    ResumeUnitySceneCapture();
+                }
+            }
+            else if (!_recording)
                 BeginRecordingSession();
+            else
+                WriteCaptureSessionManifest(_currentBuildModeLabel);
 
             if (!string.IsNullOrEmpty(buildModeLabel))
                 Debug.Log("[DemoRecorder] Hub build recording armed — " + buildModeLabel);
+        }
+
+        static void TryResumeSceneCaptureAfterWizardFinalize()
+        {
+            if (!_recording || !_deferUnitySceneCapture || string.IsNullOrEmpty(_runFolder))
+                return;
+
+            var metaPath = Path.Combine(_runFolder, "wizard", "wizard-capture-meta.json");
+            if (!File.Exists(metaPath))
+                return;
+
+            AppendChapter("wizard_complete", "Planning complete", "wizard_complete", "wizard");
+            ResumeUnitySceneCapture();
+        }
+
+        /// <summary>Start Scene timelapse after planner finalize — generation is about to run.</summary>
+        static void ResumeUnitySceneCapture()
+        {
+            if (!_recording || !_deferUnitySceneCapture)
+                return;
+
+            _deferUnitySceneCapture = false;
+            WriteCaptureSessionManifest(_currentBuildModeLabel);
+            if (SmartTimelapseEnabled)
+            {
+                var settings = CaveBuildCursorSettings.LoadOrCreate();
+                settings.LoadFromPrefs();
+                _savedLivePlacement = settings.showLiveScenePlacement;
+                if (settings.forceLivePreviewWhenRecording || ForceBackgroundSceneUpdates)
+                {
+                    settings.showLiveScenePlacement = true;
+                    settings.stabilizationMode = false;
+                    settings.cinematicSceneCamera = true;
+                    settings.SaveToPrefs();
+                }
+
+                CaveBuildLiveSceneFeedback.PushDemoRecordingSession();
+                TryCaptureTimelapseFrame(force: true);
+                TryRecordMilestone(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+            }
+            else
+            {
+                TryCaptureFrame(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+            }
+
+            Debug.Log("[DemoRecorder] Unity Scene capture resumed — world generation starting.");
+        }
+
+        /// <summary>Chapter marker for recap compose (wizard + Unity share one manifest).</summary>
+        public static void AppendChapter(string chapterId, string title, string phase = "", string source = "unity")
+        {
+            if (string.IsNullOrEmpty(_runFolder))
+                return;
+
+            Chapters.Add(new ChapterEntry
+            {
+                id = chapterId ?? string.Empty,
+                title = title ?? string.Empty,
+                phase = phase ?? string.Empty,
+                source = source ?? "unity",
+                utc = DateTime.UtcNow.ToString("o"),
+            });
+            FlushChaptersToDisk();
         }
 
         /// <summary>Compose recap when the user stops the build in Hub (Pause, emergency stop).</summary>
@@ -353,9 +464,19 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         /// <summary>Hub idle but timelapse folder has frames and no presentation MP4 — finish compose.</summary>
+        const double MinIdleSecondsBeforeOrphanCompose = 90.0;
+
         public static void TryComposeOrphanedCaptureIfIdle()
         {
             if (_recording || CaveBuildHubSessionReconcile.IsPacedWorkActive())
+                return;
+
+            if (CaveBuildPostBuildFinalizeGate.IsActive)
+                return;
+
+            var sinceEnd = EditorApplication.timeSinceStartup - CaveBuildRunStatusPublisher.LastSessionEndedAt;
+            if (CaveBuildRunStatusPublisher.LastSessionEndedAt > 0 &&
+                sinceEnd < MinIdleSecondsBeforeOrphanCompose)
                 return;
 
             var folder = !string.IsNullOrEmpty(_runFolder) ? _runFolder : LastOutputFolder;
@@ -403,6 +524,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             TryDrainPendingCompose();
             TryResumeRecapReviewGate();
+            TryResumeSceneCaptureAfterWizardFinalize();
 
             var hubSession = _hubBuildRecordingSession;
             var manualSession = _manualRecordingSession;
@@ -433,17 +555,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             if ((AutoEnabled || hubSession) && active && !_recording && !_userFinalizedCapture)
                 BeginRecordingSession();
-            else if (!active && _recording && hubSession && IsPipelineFullyComplete() &&
+            else             if (!active && _recording && hubSession && IsPipelineFullyComplete() &&
                      !_composeHoldForPostBuildPlaythrough)
                 TryFinalizeOnBuildSessionEnd();
+
+            if (!active && !hubSession && _recording && !_composeHoldForPostBuildPlaythrough)
+                EndRecordingSession();
 
             if (!_recording)
                 return;
 
-            PumpSceneViewForRecording();
+            if (!_deferUnitySceneCapture)
+            {
+                PumpSceneViewForRecording();
 
-            if (SmartTimelapseEnabled)
-                TryCaptureTimelapseFrame();
+                if (SmartTimelapseEnabled)
+                    TryCaptureTimelapseFrame();
+            }
 
             if (EditorApplication.isPlaying)
                 return;
@@ -454,7 +582,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var changed = step != _lastStep ||
                           !string.Equals(phase, _lastPhase, StringComparison.Ordinal) ||
                           !string.Equals(sub, _lastSub, StringComparison.Ordinal);
-            if (!changed)
+            if (!changed || _deferUnitySceneCapture)
                 return;
 
             _lastStep = step;
@@ -495,7 +623,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             CleanupSessionIntermediates(_runFolder);
         }
 
-        static void BeginRecordingSession()
+        static void BeginRecordingSession(bool deferUnitySceneCapture = false)
         {
             try
             {
@@ -508,9 +636,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 Directory.CreateDirectory(_framesFolder);
                 Directory.CreateDirectory(_timelapseFolder);
                 Directory.CreateDirectory(_segmentsFolder);
+                Directory.CreateDirectory(Path.Combine(_runFolder, "wizard", "frames"));
                 Frames.Clear();
                 Milestones.Clear();
+                Chapters.Clear();
                 _recording = true;
+                _deferUnitySceneCapture = deferUnitySceneCapture;
                 _lastPhase = string.Empty;
                 _lastSub = string.Empty;
                 _lastNarration = string.Empty;
@@ -521,7 +652,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 _timelapseIndex = 0;
                 CaveBuildRecapComposeLatch.ClearRecordingEndHandled(_runFolder);
                 EditorPrefs.SetString(PrefLastFolder, _runFolder);
-                if (SmartTimelapseEnabled)
+                WriteCaptureSessionManifest(_currentBuildModeLabel);
+                AppendChapter("session_start", "Capture session armed", "start", "unity");
+                if (deferUnitySceneCapture)
+                {
+                    AppendChapter("planner_open", "AI Planning Session", "wizard", "wizard");
+                    Debug.Log(
+                        "[DemoRecorder] Planner recording — browser UI capture only until world generation starts: " +
+                        _runFolder);
+                }
+                else if (SmartTimelapseEnabled)
                 {
                     var settings = CaveBuildCursorSettings.LoadOrCreate();
                     settings.LoadFromPrefs();
@@ -556,6 +696,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static void EndRecordingSession()
         {
             _recording = false;
+            _deferUnitySceneCapture = false;
+            AppendChapter("session_end", "Capture session complete", "end", "unity");
+            WriteCaptureSessionManifest(_currentBuildModeLabel);
 
             if (!string.IsNullOrEmpty(_runFolder) &&
                 CaveBuildRecapComposeLatch.IsRecordingEndHandled(_runFolder))
@@ -613,7 +756,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (File.Exists(serverStarted))
             {
                 Debug.Log(
-                    "[DemoRecorder] Compose already started by recap dashboard — skipping Unity duplicate. " +
+                    "[DemoRecorder] Compose already started by AI Director — skipping Unity duplicate. " +
                     "Watch Terminal for Personal Voice narration.");
                 return;
             }
@@ -1286,6 +1429,60 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         /// <summary>Removes every prior run folder so only the active session writes frames.</summary>
+        static void WriteCaptureSessionManifest(string buildModeLabel)
+        {
+            if (string.IsNullOrEmpty(_runFolder))
+                return;
+
+            try
+            {
+                var hub = CaveBuildCursorSettings.ResolveHubRoot();
+                var rel = CaptureSessionRel.Replace('\\', '/');
+                var abs = Path.Combine(hub, rel);
+                var dir = Path.GetDirectoryName(abs);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                var wizardUi = _recording && _deferUnitySceneCapture;
+                var json =
+                    "{\n"
+                    + $"  \"recording\": {(_recording ? "true" : "false")},\n"
+                    + $"  \"wizardUiCapture\": {(wizardUi ? "true" : "false")},\n"
+                    + $"  \"runFolder\": {JsonEscape(_runFolder)},\n"
+                    + $"  \"buildModeLabel\": {JsonEscape(buildModeLabel ?? _currentBuildModeLabel)},\n"
+                    + $"  \"armedUtc\": {JsonEscape(DateTime.UtcNow.ToString("o"))}\n"
+                    + "}\n";
+                EnvironmentKitDataRoot.TryWriteAllText(abs, json, "demo capture session");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[DemoRecorder] Could not write capture session manifest: " + ex.Message);
+            }
+        }
+
+        static string JsonEscape(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "\"\"";
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
+        static void FlushChaptersToDisk()
+        {
+            if (string.IsNullOrEmpty(_runFolder))
+                return;
+
+            try
+            {
+                var doc = new ChaptersDoc { chapters = Chapters.ToArray() };
+                var path = Path.Combine(_runFolder, ChaptersFileName);
+                File.WriteAllText(path, JsonUtility.ToJson(doc, true) + "\n");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[DemoRecorder] Could not write chapters: " + ex.Message);
+            }
+        }
+
         static void PurgeAllCaptureRunFolders(string keepRunFolder)
         {
             try

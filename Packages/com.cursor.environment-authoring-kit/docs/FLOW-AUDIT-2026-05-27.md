@@ -1,17 +1,19 @@
 # Flow audit — 2026-05-27 (updated 2026-05-28)
 
-Reviews Hub/pipeline consistency after the queued-pipeline migration and Hub/provider work. **Current queue:** 122 steps (`CaveBuildQueuedPipelineSchedule.Total`). **FullWorld terrain:** 81 tiles — see [FULLWORLD_TERRAIN_AND_HUB.md](FULLWORLD_TERRAIN_AND_HUB.md).
+> **Archive:** Historical audit snapshot. For current pipeline numbers use [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md) and [FULLWORLD_TERRAIN_AND_HUB.md](FULLWORLD_TERRAIN_AND_HUB.md).
+
+Reviews Hub/pipeline consistency after the queued-pipeline migration and Hub/provider work. **Current queue:** 122 steps (`CaveBuildQueuedPipelineSchedule.Total`). **FullWorld terrain:** ~289 tiles default (81-tile core).
 
 ## Scope checked
 
 - Build entry points (Hub + menu)
 - Run status and generated artifact paths
 - Provider key/model settings vs **`grade-and-fix.ts` runtime**
-- Messaging consistency (120-step wording, provider hints, license docs)
+- Messaging consistency (122-step wording, provider hints, license docs)
 
 ## Resolved
 
-1. **63-step docs** — repo-wide pass; pipeline total = **120** (`CaveBuildQueuedPipelineSchedule.Total`); step index **63** = meat loop only.
+1. **Stale step-count docs** — pipeline total = **122**; geo **1–15**; meat loop entry = step **65** (not 63).
 
 2. **Provider UI warnings** — centralized `CaveBuildCursorSettings.CursorWorkflowCredentialHint()`.
 

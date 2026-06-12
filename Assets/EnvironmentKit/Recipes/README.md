@@ -6,7 +6,7 @@ JSON recipes under this folder configure **scope**, **gates**, **meat loop**, an
 
 | Recipe | Use |
 |--------|-----|
-| `aaa-full-cave-production.json` | **Default for Build Complete Cave** — FullWorld **81-tile** surface + **122-step** queued cave pipeline, gates, meat loop toward Ship tier |
+| `aaa-full-cave-production.json` | **Default for Build Complete Cave** — FullWorld **~289-tile** surface (81-tile core) + **122-step** queued cave pipeline, gates, meat loop toward Ship tier |
 | `showcase-florida-karst-xr.json` | Showcase / reel profile (same ladder family; tune for your demo scene locally) |
 | `surface-only-iteration.json` | Surface / terrain iteration without full cave geo |
 

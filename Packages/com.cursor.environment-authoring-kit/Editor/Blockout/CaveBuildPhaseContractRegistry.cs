@@ -531,8 +531,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             file.sessionUtc = DateTime.UtcNow.ToString("o");
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
             var path = Path.Combine(hub, CompletionRel);
-            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? hub);
-            File.WriteAllText(path, JsonUtility.ToJson(file, true));
+            EnvironmentKitDataRoot.TryWriteAllText(
+                path,
+                JsonUtility.ToJson(file, true),
+                "ladder completion registry");
         }
     }
 }

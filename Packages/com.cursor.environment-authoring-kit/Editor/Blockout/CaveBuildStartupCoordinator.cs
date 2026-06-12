@@ -776,7 +776,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             {
                 SetProgress(
                     0.6f,
-                    "[Startup] Cave pipeline queued — step 1/120 in Console (validate + research)…");
+                    "[Startup] Cave pipeline queued — step 1/122 in Console (validate + research)…");
                 CaveBuildEditorLog.LogCave(
                     "[Startup] Phased cave pipeline queued — if nothing advances in 30s, use Cave Build → Emergency Unfreeze.",
                     forceUnityConsole: true);

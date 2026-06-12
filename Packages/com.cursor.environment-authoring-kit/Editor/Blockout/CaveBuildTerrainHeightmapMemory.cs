@@ -27,11 +27,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         /// <summary>16 GB extended grid — sync only the edited tile, not all ~289 terrains per micro step.</summary>
         public static bool PreferSingleTileHeightmapFlush =>
-            CaveBuildEditorResponsiveness.IsLongBuildActive &&
-            CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f &&
-            (SurfaceTerrainTileExpansion.IsLiveFullWorldTerraformPhase ||
-             SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain ||
-             CaveBuildLateBuildPerformance.IsInLateBuildBand);
+            CaveBuildLivePlacementPolicy.Active ||
+            (CaveBuildEditorResponsiveness.IsLongBuildActive &&
+             CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f &&
+             (SurfaceTerrainTileExpansion.IsLiveFullWorldTerraformPhase ||
+              SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain ||
+              CaveBuildLateBuildPerformance.IsInLateBuildBand));
 
         static bool PreferBatchedImmediateCommits =>
             PreferImmediateHeightCommits && PreferSingleTileHeightmapFlush;
@@ -144,7 +145,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             tiles.AddRange(SurfaceTerrainTileExpansion.CollectMountainWildernessTiles(mainTerrain));
 
             var index = 0;
-            const int batch = 8;
+            var batch = CaveBuildLoadAwareBatching.Clamp(2);
 
             void FlushBatch()
             {
@@ -154,6 +155,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     onComplete?.Invoke();
                     return;
                 }
+
+                if (CaveBuildMemoryGuard.ShouldHoldQueueForMemory())
+                    batch = 1;
 
                 var end = Mathf.Min(index + batch, tiles.Count);
                 CaveBuildActionPacing.ScheduleLight(

@@ -28,7 +28,7 @@ Full builds can apply **`VitureXRPro`** (`Assets/EnvironmentKit/Presets/VitureXR
 1. Open a scene with a **Ground**-tagged walkable surface.
 2. Place **`PortalFive`** for the cave entrance (not the shop portal).
 3. **Window → Environment Kit → Hub** → **Build Complete Cave Level (Active Scene)**  
-   Builds surface (when FullWorld) then the **120-step** queued cave pipeline (block tunnel / shell / spline per configuration).
+   Builds surface (when FullWorld) then the **122-step** queued cave pipeline (block tunnel / shell / spline per configuration).
 4. Optional: **Generate Lighting** for baked GI.
 5. Optional: portal setup menu if your scene uses the kit portal helpers.
 

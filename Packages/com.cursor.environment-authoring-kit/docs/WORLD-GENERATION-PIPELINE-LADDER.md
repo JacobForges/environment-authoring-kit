@@ -1,6 +1,6 @@
 # World generation pipeline ladder
 
-**Product scope:** [PRODUCT_BOUNDARY.md](PRODUCT_BOUNDARY.md) · **Contracts:** [PHASE_CONTRACTS.md](PHASE_CONTRACTS.md) · **Recipes:** `Assets/EnvironmentKit/Recipes/`
+**Product scope:** [PRODUCT_BOUNDARY.md](PRODUCT_BOUNDARY.md) · **Contracts:** [PHASE_CONTRACTS.md](PHASE_CONTRACTS.md) · **Pipeline truth:** [PIPELINE_TRUTH.md](../../../../docs/PIPELINE_TRUTH.md) · **Planner:** [PLANNER_SESSION.md](../../../../docs/PLANNER_SESSION.md) · **Recipes:** `Assets/EnvironmentKit/Recipes/`
 
 Curated from AAA production talks (Ubisoft Far Cry 5, Guerrilla Horizon), engine R&D (UE5 PCG, SideFX Houdini), indie scale (Hello Games No Man's Sky), and ML repair loops (NVIDIA Fly, Fail, Fix). Serialized for the Cursor bot under `Assets/EnvironmentKit/ResearchCache/entries/world-gen-pipeline-ladder-best-practices/`.
 
@@ -25,7 +25,7 @@ Curated from AAA production talks (Ubisoft Far Cry 5, Guerrilla Horizon), engine
 | 1 | Macro terrain | Heightmap, county hillshade refs, terrain grade report | Terrain hash unchanged |
 | 2 | Hydrology / karst masks | Structure masks (cave only — no water sim) | Masks unchanged |
 | 3 | Trails + walk band | Splines, NavMesh surface band, trail repair report | Trail graph unchanged |
-| 4 | Surface props | `GeneratedSurfaceWorld/Vegetation` — per-tile density contract (9-tile FullWorld: e.g. 150 grass/tile target) | Prop seed + masks unchanged; scene instances must exist |
+| 4 | Surface props | `GeneratedSurfaceWorld/Vegetation` — per-tile density contract (play disk + extended grid: e.g. 150 grass/tile target) | Prop seed + masks unchanged; scene instances must exist |
 | 5 | Pre-build Cursor gate | Readiness report, pre-placement gate | Gate passed for seed |
 | 6 | Cave layout + spline | `CaveMazeLayout`, route spline | Layout seed unchanged |
 | 7 | Route floor / ceiling + NavMesh | Walk mesh, cave NavMesh | Route geometry unchanged |
@@ -44,7 +44,7 @@ Curated from AAA production talks (Ubisoft Far Cry 5, Guerrilla Horizon), engine
 |------------|----------------|
 | `CaveBuildSurfacePipeline` / `SurfaceWorldGenerator` | 1–4 |
 | `CaveBuildPreBuildLadder` / Cursor bridge | 5 |
-| `LavaTubeCaveBuildPipeline.QueueRun` (120 steps) | 6–9 |
+| `LavaTubeCaveBuildPipeline.QueueRun` (122 steps) | 6–9 |
 | `CaveBuildAutomatedValidation` | 10 |
 | `CavePlaytestPreBuildPipeline` | 11 only (not inside route probe) |
 | `CaveBuildActionPacing` | One queue action per editor frame; no `Thread.Sleep` |
