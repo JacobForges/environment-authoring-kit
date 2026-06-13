@@ -1,0 +1,211 @@
+[
+  {
+    "id": "beat_01",
+    "kind": "beat",
+    "start": 0.0,
+    "end": 3.156591,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 0.0,
+    "wallEnd": 3.156591,
+    "wallMid": 1.5782955
+  },
+  {
+    "id": "gap_01_02",
+    "kind": "gap",
+    "start": 3.156591,
+    "end": 12.82365,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 3.156591,
+    "wallEnd": 5.090002800000001,
+    "wallMid": 4.1232969
+  },
+  {
+    "id": "beat_02",
+    "kind": "beat",
+    "start": 12.82365,
+    "end": 15.980241,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 5.090002800000001,
+    "wallEnd": 8.246593800000001,
+    "wallMid": 6.668298300000001
+  },
+  {
+    "id": "gap_02_03",
+    "kind": "gap",
+    "start": 15.980241,
+    "end": 25.647301,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 8.246593800000001,
+    "wallEnd": 10.180005600000001,
+    "wallMid": 9.2132997
+  },
+  {
+    "id": "beat_03",
+    "kind": "beat",
+    "start": 25.647301,
+    "end": 28.803892,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 10.180005600000001,
+    "wallEnd": 13.336596600000002,
+    "wallMid": 11.7583011
+  },
+  {
+    "id": "gap_03_04",
+    "kind": "gap",
+    "start": 28.803892,
+    "end": 38.470951,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 13.336596600000002,
+    "wallEnd": 15.270008400000002,
+    "wallMid": 14.303302500000001
+  },
+  {
+    "id": "beat_04",
+    "kind": "beat",
+    "start": 38.470951,
+    "end": 41.627542,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 15.270008400000002,
+    "wallEnd": 18.4265994,
+    "wallMid": 16.8483039
+  },
+  {
+    "id": "gap_04_05",
+    "kind": "gap",
+    "start": 41.627542,
+    "end": 51.294601,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 18.4265994,
+    "wallEnd": 20.360011200000002,
+    "wallMid": 19.3933053
+  },
+  {
+    "id": "beat_05",
+    "kind": "beat",
+    "start": 51.294601,
+    "end": 54.451192,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 20.360011200000002,
+    "wallEnd": 23.5166022,
+    "wallMid": 21.938306700000002
+  },
+  {
+    "id": "gap_05_06",
+    "kind": "gap",
+    "start": 54.451192,
+    "end": 64.118252,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 23.5166022,
+    "wallEnd": 25.450014000000003,
+    "wallMid": 24.483308100000002
+  },
+  {
+    "id": "beat_06",
+    "kind": "beat",
+    "start": 64.118252,
+    "end": 67.274843,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 25.450014000000003,
+    "wallEnd": 28.606605000000002,
+    "wallMid": 27.028309500000002
+  },
+  {
+    "id": "gap_06_07",
+    "kind": "gap",
+    "start": 67.274843,
+    "end": 76.941902,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 28.606605000000002,
+    "wallEnd": 30.540016800000004,
+    "wallMid": 29.573310900000003
+  },
+  {
+    "id": "beat_07",
+    "kind": "beat",
+    "start": 76.941902,
+    "end": 80.098493,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 30.540016800000004,
+    "wallEnd": 33.6966078,
+    "wallMid": 32.11831230000001
+  },
+  {
+    "id": "gap_07_08",
+    "kind": "gap",
+    "start": 80.098493,
+    "end": 89.765552,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 33.6966078,
+    "wallEnd": 35.630019600000004,
+    "wallMid": 34.6633137
+  },
+  {
+    "id": "beat_08",
+    "kind": "beat",
+    "start": 89.765552,
+    "end": 92.922143,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 35.630019600000004,
+    "wallEnd": 38.7866106,
+    "wallMid": 37.20831510000001
+  },
+  {
+    "id": "gap_08_09",
+    "kind": "gap",
+    "start": 92.922143,
+    "end": 102.589203,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 38.7866106,
+    "wallEnd": 40.720022400000005,
+    "wallMid": 39.753316500000004
+  },
+  {
+    "id": "beat_09",
+    "kind": "beat",
+    "start": 102.589203,
+    "end": 105.745794,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 40.720022400000005,
+    "wallEnd": 43.876613400000004,
+    "wallMid": 42.29831790000001
+  },
+  {
+    "id": "gap_09_10",
+    "kind": "gap",
+    "start": 105.745794,
+    "end": 115.412853,
+    "durationS": 9.667059,
+    "playbackSpeed": 5.0,
+    "wallStart": 43.876613400000004,
+    "wallEnd": 45.810025200000005,
+    "wallMid": 44.843319300000005
+  },
+  {
+    "id": "beat_10",
+    "kind": "beat",
+    "start": 115.412853,
+    "end": 118.569444,
+    "durationS": 3.156591,
+    "playbackSpeed": 1.0,
+    "wallStart": 45.810025200000005,
+    "wallEnd": 48.966616200000004,
+    "wallMid": 47.38832070000001
+  }
+]

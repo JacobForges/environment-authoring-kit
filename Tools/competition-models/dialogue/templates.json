@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "channels": {
+    "global": {
+      "greet": [
+        "{name} joined the channel.",
+        "Hey everyone — {name} here.",
+        "Hello from {name}."
+      ],
+      "victory": [
+        "{name} finished a run in {time}s!",
+        "Goal reached — nice work {name}."
+      ],
+      "encourage": [
+        "{name}: keep pushing!",
+        "We've got this."
+      ]
+    },
+    "proximity": {
+      "greet": [
+        "{name} (nearby): hey.",
+        "{name} waves from close range.",
+        "Over here — {name}."
+      ],
+      "social_local": [
+        "{name} mutters something nearby.",
+        "{name} to local: watching this route.",
+        "{name} nods at the agents nearby."
+      ],
+      "taunt": [
+        "{name}: bet you take the long way.",
+        "{name} smirks at a nearby agent."
+      ],
+      "warn": [
+        "{name}: pit ahead — step light.",
+        "{name}: hazard close."
+      ]
+    },
+    "command_ack": {
+      "cmd_hold": ["Copy. Holding position.", "Stopped. Waiting.", "On hold."],
+      "cmd_follow": ["Following you.", "On your six.", "Staying with owner."],
+      "cmd_rush": ["Pushing pace.", "Speeding up.", "Rush mode."],
+      "cmd_attack": ["Engaging.", "Moving to attack.", "Weapons hot."],
+      "cmd_defend": ["Defensive stance.", "Blocking ready.", "Guarding up."],
+      "cmd_skill": ["Using ability.", "Skill queued.", "Casting."],
+      "cmd_cancel": ["Order cleared.", "Standing by.", "Cancelled."]
+    },
+    "agent_reply": {
+      "status": [
+        "HP near {hp}%. Stamina {stamina}%. Strikes: {strikes}.",
+        "Still running — {hp}% health, mood {mood}.",
+        "Status: {hp}% HP, checkpoint {checkpoint}."
+      ],
+      "strategy": [
+        "Next target: checkpoint {checkpoint}. I'll bias {style}.",
+        "Plan: push toward goal, watch pit at cp{pit_cp}.",
+        "Routing east — memory says trail is safer."
+      ],
+      "learned": [
+        "I remember {fact_count} facts. Latest: {latest_fact}.",
+        "Knowledge: {latest_fact} (confidence {confidence}%).",
+        "Logged {fact_count} lessons this season."
+      ],
+      "hurt": [
+        "That hurt — down to {hp}%.",
+        "Taking damage. Need a cleaner line.",
+        "Low health. Adjusting caution."
+      ],
+      "stuck": [
+        "I'm stuck — backing up.",
+        "Path blocked. Trying jump recovery.",
+        "Snagged. Requesting new heading."
+      ],
+      "stuck_reply_owner": [
+        "Owner, I'm wedged near cp{checkpoint}.",
+        "Can't advance — send follow or hold?"
+      ]
+    }
+  },
+  "slots": [
+    "name",
+    "hp",
+    "stamina",
+    "strikes",
+    "mood",
+    "checkpoint",
+    "pit_cp",
+    "style",
+    "fact_count",
+    "latest_fact",
+    "confidence",
+    "time"
+  ]
+}

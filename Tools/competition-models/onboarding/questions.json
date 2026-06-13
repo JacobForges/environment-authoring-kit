@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "phaseA_character": [
+    {
+      "id": "A1_name",
+      "prompt": "What should we call your explorer?",
+      "type": "short_text",
+      "maxLength": 24,
+      "encode": "name_hash"
+    },
+    {
+      "id": "A2_build",
+      "prompt": "Pick a build.",
+      "type": "chips",
+      "options": ["Light", "Medium", "Heavy"],
+      "encode": "build_onehot"
+    },
+    {
+      "id": "A3_height",
+      "prompt": "How tall should they feel?",
+      "type": "chips",
+      "options": ["Short", "Average", "Tall"],
+      "encode": "height_onehot"
+    },
+    {
+      "id": "A4_style",
+      "prompt": "Surface look?",
+      "type": "chips",
+      "options": ["Sun-worn", "Lush", "Dusty"],
+      "encode": "style_onehot"
+    },
+    {
+      "id": "A5_color",
+      "prompt": "Signature color?",
+      "type": "chips",
+      "options": ["Emerald", "Gold", "Coral", "Slate"],
+      "encode": "color_onehot"
+    },
+    {
+      "id": "A6_kit",
+      "prompt": "Choose a kit.",
+      "type": "cards",
+      "options": ["Explorer", "Ranger", "Scholar", "Scout"],
+      "encode": "kit_onehot"
+    }
+  ],
+  "phaseB_agent": [
+    {
+      "id": "B1_race",
+      "prompt": "Race style?",
+      "type": "chips",
+      "options": ["Sprint", "Steady", "Careful"],
+      "encode": "race_onehot"
+    },
+    {
+      "id": "B2_jump",
+      "prompt": "Jumps?",
+      "type": "chips",
+      "options": ["Aggressive", "Normal", "Rare"],
+      "encode": "jump_onehot"
+    },
+    {
+      "id": "B3_stuck",
+      "prompt": "When stuck?",
+      "type": "chips",
+      "options": ["Backtrack", "Jump", "Wait"],
+      "encode": "stuck_onehot"
+    },
+    {
+      "id": "B4_risk",
+      "prompt": "Risk at edges?",
+      "type": "chips",
+      "options": ["Bold", "Balanced", "Safe"],
+      "encode": "risk_onehot"
+    },
+    {
+      "id": "B5_focus",
+      "prompt": "Goal focus?",
+      "type": "chips",
+      "options": ["Time", "Checkpoints", "Explore"],
+      "encode": "focus_onehot"
+    },
+    {
+      "id": "B6_fall",
+      "prompt": "After a fall?",
+      "type": "chips",
+      "options": ["Push harder", "Play safe", "Same pace"],
+      "encode": "fall_onehot"
+    }
+  ]
+}

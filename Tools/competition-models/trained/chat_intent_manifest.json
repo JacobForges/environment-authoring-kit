@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "file": "competition_chat_intent.onnx",
+  "inputs": {
+    "text_features": [
+      1,
+      64
+    ]
+  },
+  "outputs": {
+    "intent_logits": [
+      1,
+      18
+    ]
+  },
+  "intents": {
+    "0": "cmd_hold",
+    "1": "cmd_follow",
+    "2": "cmd_rush",
+    "3": "cmd_attack",
+    "4": "cmd_defend",
+    "5": "cmd_skill",
+    "6": "cmd_cancel",
+    "7": "greet",
+    "8": "status",
+    "9": "strategy",
+    "10": "encourage",
+    "11": "taunt",
+    "12": "learned",
+    "13": "hurt",
+    "14": "victory",
+    "15": "stuck",
+    "16": "social_local",
+    "17": "unknown"
+  },
+  "commandIntents": [
+    "cmd_hold",
+    "cmd_follow",
+    "cmd_rush",
+    "cmd_attack",
+    "cmd_defend",
+    "cmd_skill",
+    "cmd_cancel"
+  ],
+  "encode": "train/text_encoder.py encode_text (keyword slots + stable hash)"
+}

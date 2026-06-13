@@ -1,0 +1,10 @@
+{
+  "model": "competition_setup",
+  "trainRows": 7200,
+  "valRows": 800,
+  "valAvatarMse": 0.090736,
+  "valZMse": 0.130307,
+  "valArchetypeAcc": 0.7937,
+  "epochs": 80,
+  "note": "Synthetic supervised \u2014 replace with real onboarding logs later."
+}

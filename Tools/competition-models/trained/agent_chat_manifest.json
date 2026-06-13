@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "headsFile": "competition_agent_chat_heads.onnx",
+  "stepFile": "competition_agent_chat_step.onnx",
+  "inputs": {
+    "context_features": [
+      1,
+      128
+    ]
+  },
+  "hiddenDim": 176,
+  "acts": {
+    "0": "reply",
+    "1": "ask_question",
+    "2": "ask_permission",
+    "3": "ack"
+  },
+  "places": {
+    "0": "portal",
+    "1": "cave",
+    "2": "trail",
+    "3": "spawn",
+    "4": "finish",
+    "5": "landmark",
+    "6": "follow_owner",
+    "7": "wander"
+  },
+  "wakeWord": "{ownerPlayerName}bot",
+  "permissionTimeoutSeconds": 30
+}

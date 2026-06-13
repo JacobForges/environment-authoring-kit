@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "currentSeasonId": "2026-06-a",
+  "displayName": "Florida Karst — Season 1",
+  "mapBundleUrl": "",
+  "mapBundleHash": "",
+  "mapBundleBytes": 0,
+  "completionThreshold": 0.85,
+  "minSubmissions": 20,
+  "submissionsCount": 0,
+  "completionsCount": 0,
+  "publishedUtc": "",
+  "notes": "Fill after Hub build proof; bump seasonId when most bots finish."
+}

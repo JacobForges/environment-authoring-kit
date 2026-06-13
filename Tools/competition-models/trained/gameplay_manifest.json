@@ -1,0 +1,90 @@
+{
+  "gameplayVersion": 2,
+  "file": "competition_gameplay.onnx",
+  "inputs": {
+    "state": [
+      1,
+      96
+    ]
+  },
+  "outputs": {
+    "actions": [
+      1,
+      12
+    ]
+  },
+  "actionLayout": [
+    "move_x",
+    "move_z",
+    "turn",
+    "jump_logit",
+    "attack_logit",
+    "defend_logit",
+    "skill1_logit",
+    "skill2_logit",
+    "skill3_logit",
+    "target_cycle_logit",
+    "bark_trigger_logit",
+    "bark_category_raw"
+  ],
+  "obsBlocks": {
+    "locomotion": [
+      0,
+      18
+    ],
+    "rays": [
+      18,
+      26
+    ],
+    "combat_self": [
+      26,
+      38
+    ],
+    "combat_target": [
+      38,
+      52
+    ],
+    "agent_z": [
+      52,
+      76
+    ],
+    "memory_hint": [
+      76,
+      84
+    ],
+    "ledger_mood": [
+      84,
+      90
+    ],
+    "season": [
+      90,
+      96
+    ]
+  },
+  "raySlots": {
+    "forward": 18,
+    "forwardLeft": 19,
+    "forwardRight": 20,
+    "left": 21,
+    "right": 22,
+    "cliffSafe": 23,
+    "forwardBlocked": 24,
+    "flankBias": 25
+  },
+  "inferenceHz": 15,
+  "backend": "CPU",
+  "activationsInUnity": {
+    "move_x": "Tanh",
+    "move_z": "Tanh",
+    "turn": "Tanh",
+    "jump_logit": "Sigmoid",
+    "attack_logit": "Sigmoid",
+    "defend_logit": "Sigmoid",
+    "skill1_logit": "Sigmoid",
+    "skill2_logit": "Sigmoid",
+    "skill3_logit": "Sigmoid",
+    "target_cycle_logit": "Sigmoid",
+    "bark_trigger_logit": "Sigmoid",
+    "bark_category_raw": "Clamp -1..1 \u2192 bucket"
+  }
+}

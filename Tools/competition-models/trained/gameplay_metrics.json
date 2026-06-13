@@ -1,0 +1,10 @@
+{
+  "model": "competition_gameplay",
+  "version": 2,
+  "obsDim": 96,
+  "actDim": 12,
+  "transitions": 95350,
+  "valMse": 0.092866,
+  "epochs": 55,
+  "note": "Unity-aligned ray BC expert \u2014 retrain on Season-1 combat+route logs."
+}

@@ -1,0 +1,54 @@
+{
+  "ok": true,
+  "models": [
+    {
+      "file": "competition_setup.onnx",
+      "bytes": 163822,
+      "outputs": {
+        "avatar": [
+          1,
+          12
+        ],
+        "z": [
+          1,
+          24
+        ],
+        "archetype": [
+          1,
+          8
+        ]
+      }
+    },
+    {
+      "file": "competition_policy.onnx",
+      "bytes": 90954,
+      "outputs": {
+        "actions": [
+          1,
+          4
+        ]
+      }
+    },
+    {
+      "file": "competition_gameplay.onnx",
+      "bytes": 501380,
+      "outputs": {
+        "actions": [
+          1,
+          12
+        ]
+      }
+    },
+    {
+      "file": "competition_chat_intent.onnx",
+      "bytes": 109470,
+      "outputs": {
+        "intent_logits": [
+          1,
+          18
+        ]
+      }
+    }
+  ],
+  "trainedDir": "/Users/jacob/Hub/Tools/competition-models/trained"
+}

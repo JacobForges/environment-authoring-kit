@@ -1,0 +1,7 @@
+{
+  "model": "competition_policy",
+  "transitions": 48039,
+  "valMse": 0.009147,
+  "epochs": 40,
+  "note": "Synthetic checkpoint expert \u2014 retrain on Season-1 trajectories after map freeze."
+}

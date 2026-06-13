@@ -1,0 +1,52 @@
+{
+  "model": "competition_agent_chat",
+  "contextDim": 128,
+  "hiddenDim": 176,
+  "vocabSize": 98,
+  "maxReplyLen": 56,
+  "acts": [
+    "reply",
+    "ask_question",
+    "ask_permission",
+    "ack"
+  ],
+  "places": [
+    "portal",
+    "cave",
+    "trail",
+    "spawn",
+    "finish",
+    "landmark",
+    "follow_owner",
+    "wander"
+  ],
+  "valLoss": 3.8347,
+  "actAccuracy": 0.6322,
+  "epochs": 48,
+  "canary": {
+    "hey": {
+      "want_act": "reply",
+      "got_act": "reply",
+      "reply": "t t t"
+    },
+    "what now": {
+      "want_act": "ask_question",
+      "got_act": "reply",
+      "reply": "t t t"
+    },
+    "scout": {
+      "want_act": "ask_permission",
+      "got_act": "reply",
+      "reply": "t t t"
+    },
+    "yes": {
+      "want_act": "ack",
+      "got_act": "reply",
+      "reply": "t t t"
+    }
+  },
+  "files": [
+    "competition_agent_chat_heads.onnx",
+    "competition_agent_chat_step.onnx"
+  ]
+}
