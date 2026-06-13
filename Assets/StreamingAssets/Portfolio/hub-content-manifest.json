@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "contentVersion": "2026.06.13.1",
+  "worldSeed": 0,
+  "publishedUtc": "2026-06-13T00:00:00Z",
+  "remoteManifestUrl": "",
+  "configFiles": [
+    {
+      "relativePath": "Competition/season/season_manifest.json",
+      "url": ""
+    },
+    {
+      "relativePath": "Competition/season/season_rotation.json",
+      "url": ""
+    },
+    {
+      "relativePath": "Competition/onboarding/questions.json",
+      "url": ""
+    },
+    {
+      "relativePath": "Competition/dialogue/templates.json",
+      "url": ""
+    }
+  ],
+  "bundleUrl": "",
+  "bundleHash": "",
+  "bundleBytes": 0,
+  "notes": "MVP baseline — set remoteManifestUrl + configFiles[].url when hosting updates (CDN or static site). Bump version + contentVersion for lobby matching."
+}
