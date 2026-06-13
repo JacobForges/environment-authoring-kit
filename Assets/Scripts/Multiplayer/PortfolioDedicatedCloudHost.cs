@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Hub.Competition;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
-using Unity.Services.Authentication;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
@@ -131,9 +130,7 @@ namespace Hub.Multiplayer
             _starting = true;
             try
             {
-                await HubUnityServices.EnsureInitializedAsync();
-                if (!AuthenticationService.Instance.IsSignedIn)
-                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                await HubUnityServices.EnsureSignedInAnonymouslyAsync();
 
                 var maxConn = PortfolioMultiplayerConfig.DedicatedServerRelayConnections;
                 var allocation = await RelayService.Instance.CreateAllocationAsync(maxConn);
@@ -142,8 +139,8 @@ namespace Hub.Multiplayer
                 var transport = nm.GetComponent<UnityTransport>();
                 transport.SetRelayServerData(AllocationUtils.ToRelayServerData(allocation, "dtls"));
 
-                var seed = HubContentUpdater.CurrentWorldSeed;
-                var contentVersion = HubContentUpdater.CurrentContentVersion;
+                var seed = HubContentUpdater.LocalWorldSeed;
+                var contentVersion = HubContentUpdater.LocalContentVersion;
                 _lobby = await CreateDedicatedLobbyAsync(joinCode, seed, contentVersion);
 
                 HubPlayerAuth.ApplyConnectionPayload(nm);

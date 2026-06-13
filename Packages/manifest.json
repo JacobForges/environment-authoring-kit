@@ -19,6 +19,7 @@
     "com.unity.services.authentication": "3.5.1",
     "com.unity.services.cloudsave": "3.4.1",
     "com.unity.services.multiplayer": "2.2.2",
+    "com.unity.services.vivox": "16.9.0",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.12",
     "com.unity.ugui": "2.0.0",

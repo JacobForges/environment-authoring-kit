@@ -73,6 +73,7 @@ namespace Hub.Multiplayer
                 OnMainMenuShown();
             }
 
+            _ = HubNetworkReachability.EnsureBootCheckAsync();
             _ = RunContentUpdateCheckAsync();
 
             void AfterWelcome()
@@ -173,11 +174,11 @@ namespace Hub.Multiplayer
             PlaceBullet(
                 panel.transform,
                 1,
-                $"Play Online — cloud server, up to {PortfolioMultiplayerConfig.MaxPlayersSession} players.");
+                "Host Session — your machine hosts; classmates join with Play Online.");
             PlaceBullet(
                 panel.transform,
                 2,
-                $"Host Session — your Mac hosts, up to {PortfolioMultiplayerConfig.MaxPlayersSession} players.");
+                $"Play Online — join a classmate's Host Session · up to {PortfolioMultiplayerConfig.MaxPlayersSession} players.");
             PlaceBullet(panel.transform, 3, "Verified lobby chat — humans with confirmed email.");
 
             _menuLobbyChat = PortfolioMenuLobbyChatPanel.Attach(panel.transform);
@@ -207,13 +208,13 @@ namespace Hub.Multiplayer
             _buttons.Add(AddModeButton(
                 buttonsRoot.transform,
                 "Play Online",
-                $"Join cloud server · up to {PortfolioMultiplayerConfig.MaxPlayersSession} · free Relay",
+                $"Join classmate Host Session · up to {PortfolioMultiplayerConfig.MaxPlayersSession} · free Relay",
                 false,
                 OnJoinClicked));
             _buttons.Add(AddModeButton(
                 buttonsRoot.transform,
                 "Host Session",
-                $"Listen server on this Mac · up to {PortfolioMultiplayerConfig.MaxPlayersSession} · laptop must stay on",
+                $"Listen server on this Mac · laptop stays on · teammates Play Online",
                 false,
                 OnHostClicked));
             _switchAgentButton = AddModeButton(
@@ -234,6 +235,12 @@ namespace Hub.Multiplayer
                 "Change name, age, hair, body, and trail kit",
                 false,
                 OnEditCharacterClicked);
+            _buttons.Add(AddModeButton(
+                buttonsRoot.transform,
+                "Quit Game",
+                "Save progress and exit",
+                false,
+                OnQuitClicked));
             RefreshAgentButtons();
             RefreshCharacterButton();
 
@@ -300,6 +307,12 @@ namespace Hub.Multiplayer
                 : null;
             var who = playerNote != null ? $"{playerNote} · {account}" : account;
             var contentNote = string.IsNullOrWhiteSpace(_contentStatusLine) ? string.Empty : _contentStatusLine + " · ";
+            if (HubNetworkReachability.OfflineMode
+                && _contentStatusLine != HubNetworkReachability.OfflineStatusMessage)
+            {
+                contentNote = HubNetworkReachability.OfflineStatusMessage + " · ";
+            }
+
             _status.text = nmReady
                 ? $"{contentNote}{who} · {chatNote} · up to {PortfolioMultiplayerConfig.MaxPlayersSession} players"
                 : $"{contentNote}Network not ready · {who}";
@@ -406,6 +419,14 @@ namespace Hub.Multiplayer
             });
         }
 
+        void OnQuitClicked()
+        {
+            if (_busy)
+                return;
+
+            HubApplicationQuit.GracefulQuit();
+        }
+
         void RefreshCharacterButton()
         {
             var complete = CompetitionProfileStore.Current?.playerCharacterComplete == true;
@@ -443,6 +464,10 @@ namespace Hub.Multiplayer
         async void OnHostClicked()
         {
             if (_busy)
+                return;
+            if (!EnsureContentReadyForMultiplayer())
+                return;
+            if (!EnsureOnlineForCloud())
                 return;
             if (!EnsureNetworkReady())
                 return;
@@ -489,6 +514,10 @@ namespace Hub.Multiplayer
         {
             if (_busy)
                 return;
+            if (!EnsureContentReadyForMultiplayer())
+                return;
+            if (!EnsureOnlineForCloud())
+                return;
             if (!EnsureNetworkReady())
                 return;
             if (!EnsureAgentReady())
@@ -500,9 +529,9 @@ namespace Hub.Multiplayer
 
             _busy = true;
             SetButtonsInteractable(false);
-            PortfolioSessionLoadingOverlay.Show(transform, "Joining cloud session…");
+            PortfolioSessionLoadingOverlay.Show(transform, "Joining class session…");
             HideMenuForSessionLoading();
-            SetStatus("Joining cloud session (free Relay tier)…");
+            SetStatus("Joining class session…");
             var sessionEntered = false;
             try
             {
@@ -511,9 +540,7 @@ namespace Hub.Multiplayer
                 {
                     PortfolioSessionLoadingOverlay.Hide();
                     RestoreMenuAfterFailedSession();
-                    SetStatus(
-                        "No live session — start dedicated server (Game → Play Mode → Start Dedicated Cloud Server), "
-                        + "or press Host Session on this Mac.");
+                    SetStatus("No live session — ask a classmate to Host Session.");
                     _playerGate?.LockScenePlayer();
                     SetButtonsInteractable(true);
                     return;
@@ -635,6 +662,34 @@ namespace Hub.Multiplayer
                 return inner;
 
             return "try again.";
+        }
+
+        bool EnsureContentReadyForMultiplayer()
+        {
+            if (HubContentUpdater.IsReadyForMultiplayer(out var reason))
+                return true;
+
+            SetStatus(reason);
+            RefreshFooterStatus();
+            return false;
+        }
+
+        bool EnsureOnlineForCloud()
+        {
+            if (HubNetworkReachability.BootCheckComplete)
+            {
+                if (!HubNetworkReachability.ShouldSkipCloudServices)
+                    return true;
+            }
+            else if (Application.internetReachability != NetworkReachability.NotReachable
+                     && Application.internetReachability != NetworkReachability.ReachableViaLocalAreaNetwork)
+            {
+                return true;
+            }
+
+            SetStatus(HubNetworkReachability.OfflineStatusMessage);
+            RefreshFooterStatus();
+            return false;
         }
 
         bool EnsureAgentReady()

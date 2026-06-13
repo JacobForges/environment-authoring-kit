@@ -25,6 +25,9 @@ namespace Hub.Multiplayer
 
         public async Task HostPortfolioSessionAsync()
         {
+            if (HubNetworkReachability.ShouldSkipCloudServices)
+                throw new InvalidOperationException(HubNetworkReachability.OfflineStatusMessage);
+
             await EnsureUgsSignedInAsync();
 
             var networkManager = RequireNetworkManager();
@@ -40,8 +43,8 @@ namespace Hub.Multiplayer
 
             transport.SetRelayServerData(AllocationUtils.ToRelayServerData(allocation, "dtls"));
 
-            var seed = HubContentUpdater.CurrentWorldSeed;
-            var contentVersion = HubContentUpdater.CurrentContentVersion;
+            var seed = HubContentUpdater.LocalWorldSeed;
+            var contentVersion = HubContentUpdater.LocalContentVersion;
             var options = new CreateLobbyOptions
             {
                 IsPrivate = false,
@@ -82,25 +85,13 @@ namespace Hub.Multiplayer
             Debug.Log($"[Multiplayer] Hosting {_lobby.Name} · join via Quick Join (no code)");
         }
 
-        /// <returns>True when a lobby was joined; false when no cloud or listen lobby exists.</returns>
+        /// <returns>True when a listen-host lobby was joined; false when none exists.</returns>
         public async Task<bool> QuickJoinOrShowOfflineAsync()
         {
-            await EnsureUgsSignedInAsync();
+            if (HubNetworkReachability.ShouldSkipCloudServices)
+                return false;
 
-            var cloud = await PortfolioSessionQueries.QueryLatestLobbyAsync(
-                PortfolioMultiplayerConfig.DedicatedLobbyName);
-            if (cloud != null)
-            {
-                try
-                {
-                    await JoinLobbyAsync(cloud.Id);
-                    return true;
-                }
-                catch (InvalidOperationException ex) when (IsRecoverableLobbyJoinFailure(ex))
-                {
-                    Debug.LogWarning("[Multiplayer] Cloud lobby unavailable — trying listen host. " + ex.Message);
-                }
-            }
+            await EnsureUgsSignedInAsync();
 
             var listen = await PortfolioSessionQueries.QueryLatestLobbyAsync(
                 PortfolioMultiplayerConfig.LobbyName);
@@ -127,7 +118,7 @@ namespace Hub.Multiplayer
                 || string.IsNullOrWhiteSpace(relayData.Value))
                 throw new InvalidOperationException("Lobby missing relay join code — host may still be starting.");
 
-            ValidateContentVersionOrThrow(_lobby);
+            ValidateLobbyContentOrThrow(_lobby);
 
             _relayJoinCode = relayData.Value.Trim();
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode: _relayJoinCode);
@@ -150,16 +141,6 @@ namespace Hub.Multiplayer
             AgentSecurityLobbyBanSync.QueueAnnounceLobbyBans(_lobby);
             await PortfolioVivoxSupport.TryJoinLobbyVoiceAsync(_lobby.Id);
             Debug.Log("[Multiplayer] Joined lobby");
-        }
-
-        static bool IsRecoverableLobbyJoinFailure(InvalidOperationException ex)
-        {
-            var msg = ex.Message ?? string.Empty;
-            return msg.Contains("relay", StringComparison.OrdinalIgnoreCase)
-                   || msg.Contains("lobby", StringComparison.OrdinalIgnoreCase)
-                   || msg.Contains("closed", StringComparison.OrdinalIgnoreCase)
-                   || msg.Contains("expired", StringComparison.OrdinalIgnoreCase)
-                   || msg.Contains("full", StringComparison.OrdinalIgnoreCase);
         }
 
         static NetworkManager RequireNetworkManager()
@@ -209,65 +190,78 @@ namespace Hub.Multiplayer
 
         static async Task EnsureUgsSignedInAsync()
         {
-            await HubUnityServices.EnsureInitializedAsync();
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            await HubUnityServices.EnsureSignedInAnonymouslyAsync();
 
             await CompetitionCloudPersistence.TrySyncAfterSignInAsync();
         }
 
-        static void ValidateContentVersionOrThrow(Lobby lobby)
+        static void ValidateLobbyContentOrThrow(Lobby lobby)
         {
             if (lobby?.Data == null)
                 return;
 
+            string lobbyVersion = null;
             if (lobby.Data.TryGetValue(PortfolioMultiplayerConfig.ContentVersionLobbyKey, out var versionData)
                 && versionData != null
                 && !string.IsNullOrWhiteSpace(versionData.Value))
             {
-                var lobbyVersion = versionData.Value.Trim();
-                var localVersion = HubContentUpdater.CurrentContentVersion;
-                if (!string.IsNullOrWhiteSpace(localVersion)
-                    && !string.Equals(lobbyVersion, localVersion, StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException(
-                        $"Content version mismatch — host {lobbyVersion}, yours {localVersion}. "
-                        + "Restart from the menu to check for updates.");
-                }
-
-                return;
+                lobbyVersion = versionData.Value.Trim();
             }
 
-            ValidateWorldSeedOrThrow(lobby);
-        }
+            int lobbySeed = 0;
+            if (lobby.Data.TryGetValue(PortfolioMultiplayerConfig.WorldSeedLobbyKey, out var seedData)
+                && seedData != null
+                && !string.IsNullOrWhiteSpace(seedData.Value)
+                && int.TryParse(seedData.Value, out var parsedSeed))
+            {
+                lobbySeed = parsedSeed;
+            }
 
-        static void ValidateWorldSeedOrThrow(Lobby lobby)
-        {
-            if (lobby?.Data == null)
+            var localVersion = HubContentUpdater.LocalContentVersion;
+            var localSeed = HubContentUpdater.LocalWorldSeed;
+            var versionMismatch = !string.IsNullOrWhiteSpace(lobbyVersion)
+                                  && !string.IsNullOrWhiteSpace(localVersion)
+                                  && !string.Equals(lobbyVersion, localVersion, StringComparison.Ordinal);
+            var seedMismatch = lobbySeed != 0 && localSeed != 0 && lobbySeed != localSeed;
+
+            if (!versionMismatch && !seedMismatch)
                 return;
 
-            if (!lobby.Data.TryGetValue(PortfolioMultiplayerConfig.WorldSeedLobbyKey, out var seedData)
-                || seedData == null
-                || string.IsNullOrWhiteSpace(seedData.Value))
-                return;
-
-            if (!int.TryParse(seedData.Value, out var lobbySeed) || lobbySeed == 0)
-                return;
-
-            var localSeed = HubContentUpdater.CurrentWorldSeed;
-            if (localSeed != 0 && lobbySeed != localSeed)
+            if (versionMismatch && seedMismatch)
             {
                 throw new InvalidOperationException(
-                    $"World version mismatch — host seed {lobbySeed}, your build seed {localSeed}. "
-                    + "Use the same world build or check for updates from the menu.");
+                    $"Map mismatch — host content {lobbyVersion} seed {lobbySeed}, "
+                    + $"yours {localVersion} seed {localSeed}. Restart from the menu to check for updates.");
             }
+
+            if (versionMismatch)
+            {
+                throw new InvalidOperationException(
+                    $"Content version mismatch — host {lobbyVersion}, yours {localVersion}. "
+                    + "Restart from the menu to check for updates.");
+            }
+
+            throw new InvalidOperationException(
+                $"World seed mismatch — host {lobbySeed}, yours {localSeed}. "
+                + "Download the latest map from the menu, then try Play Online again.");
         }
 
         void OnDestroy()
         {
             _ = PortfolioVivoxSupport.TryLeaveLobbyVoiceAsync();
             AgentSecurityLobbyBanSync.ClearBind();
+            TryDeleteHostedLobbyInternal();
+        }
 
+        /// <summary>Best-effort lobby delete before process exit (called from graceful quit).</summary>
+        public static void TryDeleteHostedLobbyForQuit()
+        {
+            var orchestrator = UnityEngine.Object.FindAnyObjectByType<PortfolioSessionOrchestrator>();
+            orchestrator?.TryDeleteHostedLobbyInternal();
+        }
+
+        void TryDeleteHostedLobbyInternal()
+        {
             if (_lobby == null)
                 return;
 
@@ -283,6 +277,8 @@ namespace Hub.Multiplayer
             {
                 /* session teardown */
             }
+
+            _lobby = null;
         }
 
         void OnApplicationQuit()

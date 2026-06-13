@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using UnityEngine;
-using Hub.Multiplayer;
+using Hub;
 
 namespace Hub.Competition
 {
@@ -36,6 +36,12 @@ namespace Hub.Competition
                     EnsureLoaded();
                 return _active;
             }
+        }
+
+        public static void InvalidateCache()
+        {
+            _active = null;
+            _rotation = null;
         }
 
         public static void EnsureLoaded()

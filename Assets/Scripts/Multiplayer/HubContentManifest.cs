@@ -15,6 +15,10 @@ namespace Hub.Multiplayer
         public int worldSeed;
         public string publishedUtc;
         public string remoteManifestUrl;
+        /// <summary>GitHub raw or Releases URL — tried after remoteManifestUrl when primary (GCS) is down.</summary>
+        public string githubManifestUrl;
+        /// <summary>Optional extra manifest URLs tried in order after githubManifestUrl.</summary>
+        public string[] fallbackManifestUrls = Array.Empty<string>();
         public HubContentFileEntry[] configFiles = Array.Empty<HubContentFileEntry>();
         public string bundleUrl;
         public string bundleHash;

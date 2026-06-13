@@ -25,5 +25,7 @@
   "bundleUrl": "",
   "bundleHash": "",
   "bundleBytes": 0,
-  "notes": "MVP baseline — set remoteManifestUrl + configFiles[].url when hosting updates (CDN or static site). Bump version + contentVersion for lobby matching."
+  "notes": "Baseline manifest — JacobForges: Game → Publish Content Manifest after EnvKit build. Primary: remoteManifestUrl or HUB_CONTENT_MANIFEST_URL (static hosting). Backup: githubManifestUrl (raw.githubusercontent.com or GitHub Releases). No 24/7 game server required — classmates use Host Session + Play Online.",
+  "githubManifestUrl": "",
+  "fallbackManifestUrls": []
 }
