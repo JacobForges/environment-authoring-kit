@@ -36,6 +36,7 @@ namespace Hub.Multiplayer
         public string ContentVersion { get; }
         public int WorldSeed { get; }
         public string Message { get; }
+        public HubManifestFetchSource FetchSource { get; }
 
         public HubContentUpdateResult(
             HubContentUpdateState state,
