@@ -121,11 +121,10 @@ namespace EnvironmentAuthoringKit.Cave
         static bool TrySampleTerrain(Vector3 world, out float surfaceY)
         {
             surfaceY = world.y;
-            var terrains = Terrain.activeTerrains;
-            if (terrains == null || terrains.Length == 0)
-                return false;
+            var bestY = float.MinValue;
+            var found = false;
 
-            foreach (var terrain in terrains)
+            foreach (var terrain in Object.FindObjectsByType<Terrain>())
             {
                 if (terrain?.terrainData == null)
                     continue;
@@ -135,11 +134,19 @@ namespace EnvironmentAuthoringKit.Cave
                 if (world.x < pos.x || world.z < pos.z || world.x > pos.x + size.x || world.z > pos.z + size.z)
                     continue;
 
-                surfaceY = terrain.SampleHeight(world) + pos.y;
-                return true;
+                var y = terrain.SampleHeight(world) + pos.y;
+                if (y <= bestY)
+                    continue;
+
+                bestY = y;
+                found = true;
             }
 
-            return false;
+            if (!found)
+                return false;
+
+            surfaceY = bestY;
+            return true;
         }
 
         public static bool IsWalkableForSpawn(Collider collider)

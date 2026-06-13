@@ -1,3 +1,4 @@
+using System.Collections;
 using EnvironmentAuthoringKit.Cave;
 using UnityEngine;
 using UnityEngine.AI;
@@ -45,6 +46,7 @@ namespace EnvironmentAuthoringKit.World
 
             EnsurePlayerTag(player);
             EnsurePlayerController(player);
+            PlayerSpawnGroundHold.Ensure(player.transform);
 
             if (player.GetComponent<PlayerPersistence>() == null)
                 player.AddComponent<PlayerPersistence>();
@@ -99,8 +101,26 @@ namespace EnvironmentAuthoringKit.World
             if (player.GetComponent<PlayerController>() != null)
                 return;
 
+            if (HasGlobalPlayerController(player))
+                return;
+
             player.AddComponent<PlayerController>();
             Debug.Log("[World] Added PlayerController to " + player.name, player);
+        }
+
+        static bool HasGlobalPlayerController(GameObject player)
+        {
+            foreach (var mb in player.GetComponents<MonoBehaviour>())
+            {
+                if (mb == null)
+                    continue;
+
+                var name = mb.GetType().Name;
+                if (name == "PlayerController" && mb.GetType() != typeof(PlayerController))
+                    return true;
+            }
+
+            return false;
         }
 
         static GameObject CreatePlayerAtSurfaceSpawn()
@@ -129,6 +149,7 @@ namespace EnvironmentAuthoringKit.World
 
             go.AddComponent<PlayerController>();
             EnsurePlayerTag(go);
+            PlayerSpawnGroundHold.Ensure(go.transform);
             var grounded = PlayerSpawnHeightUtility.ResolveSpawnMarkerPosition(pos, cc);
             go.transform.position = grounded;
             PlayerGroundSnap.SnapTransform(go.transform, grounded);
@@ -218,19 +239,37 @@ namespace EnvironmentAuthoringKit.World
     /// <summary>Re-wires the play character after scene Start() so runtime spawns cannot steal Player tag.</summary>
     sealed class WorldPlayerMovementBootstrap : MonoBehaviour
     {
-        void Start()
+        void Start() => StartCoroutine(BootstrapRoutine());
+
+        IEnumerator BootstrapRoutine()
         {
             if (!WorldUiBootstrapGate.SuppressDuringTitleMenu)
                 WorldPlayerSetupRuntime.WireScenePlayer();
 
             var player = WorldPlayerSetupRuntime.ResolvePlayerRoot();
             if (player != null)
-            {
-                PlayerGroundSnap.SnapTransform(player.transform, player.transform.position);
-                CavePlayerMovementGuard.UnlockMovement(player.transform);
-            }
+                yield return GroundPlayerWhenReady(player.transform);
 
             Destroy(gameObject);
         }
+
+        static IEnumerator GroundPlayerWhenReady(Transform root)
+        {
+            PlayerSpawnGroundHold.Ensure(root);
+            const int maxFrames = 240;
+
+            for (var i = 0; i < maxFrames; i++)
+            {
+                if (!PlayerSpawnGroundHold.IsActiveOn(root))
+                    break;
+
+                yield return null;
+            }
+
+            CavePlayerMovementGuard.UnlockMovement(root);
+        }
+
+        static bool HasPhysicsGround(Transform root, CharacterController cc) =>
+            PlayerSpawnGroundHold.HasPhysicsWalkableGround(root.position, cc);
     }
 }

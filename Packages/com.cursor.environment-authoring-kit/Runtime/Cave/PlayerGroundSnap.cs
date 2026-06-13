@@ -72,6 +72,8 @@ namespace EnvironmentAuthoringKit.Cave
             var snapped = TrySnapToNearbySpawnPad(root, near, controller, out var grounded);
             if (!snapped)
                 snapped = TryGetGroundPosition(near, controller, out grounded);
+            if (!snapped)
+                snapped = TryTerrainSampleGround(near, controller, out grounded);
 
             if (snapped)
                 root.position = grounded;
@@ -136,6 +138,20 @@ namespace EnvironmentAuthoringKit.Cave
             else
                 grounded = new Vector3(near.x, top + 0.2f, near.z);
 
+            return true;
+        }
+
+        /// <summary>Terrain heightmap sample when Physics raycasts miss tile colliders (common after world gen).</summary>
+        static bool TryTerrainSampleGround(Vector3 near, CharacterController controller, out Vector3 grounded)
+        {
+            grounded = near;
+            if (!PlayerSpawnHeightUtility.TrySampleWalkableSurfaceY(near, out var surfaceY))
+                return false;
+
+            grounded = new Vector3(
+                near.x,
+                PlayerSpawnHeightUtility.PivotYForSurface(surfaceY, controller),
+                near.z);
             return true;
         }
 

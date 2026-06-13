@@ -109,6 +109,9 @@ namespace EnvironmentAuthoringKit.Cave
 
         void HandleMove()
         {
+            if (World.PlayerSpawnGroundHold.IsActiveOn(transform))
+                return;
+
             var grounded = _controller.isGrounded;
             if (grounded && _verticalVelocity < 0f)
                 _verticalVelocity = -2f;
