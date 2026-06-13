@@ -168,3 +168,20 @@ Packages/com.cursor.environment-authoring-kit/Tools/codeql-build-csharp.sh.meta
 Packages/com.cursor.environment-authoring-kit/Tools/codeql-runner-reset.sh.meta
 Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-local-verify.sh.meta
 Packages/com.cursor.environment-authoring-kit/Tools/run-codeql-unity-prep.sh.meta
+
+# Deep Train intro — local Piper ONNX voices (~245 MB) + venv
+Tools/deep-train-intro/voices/*.onnx
+Tools/deep-train-intro/voices/*.onnx.json
+Tools/deep-train-intro/.venv-intro-vo/
+Tools/deep-train-intro/work/
+Tools/deep-train-intro/listen/
+
+# Competition ONNX training venvs (local only)
+.venv-competition-onnx/
+Tools/competition-models/.venv-competition-onnx/
+
+# Local scratch / screen captures / intro recordings
+/tmp/
+intro-recording*.mov
+tl322_*.png
+tmp_*.png
