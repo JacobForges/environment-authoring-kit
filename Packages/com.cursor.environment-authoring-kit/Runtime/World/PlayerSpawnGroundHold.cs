@@ -140,7 +140,7 @@ namespace EnvironmentAuthoringKit.World
             return soleY <= best + controller.skinWidth + 0.35f;
         }
 
-        static bool HasPhysicsWalkableGround() =>
+        bool HasPhysicsWalkableGround() =>
             HasPhysicsWalkableGround(
                 transform.position,
                 _controller != null && _controller.enabled ? _controller : GetComponent<CharacterController>());
