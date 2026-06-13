@@ -47,10 +47,13 @@ namespace EnvironmentAuthoringKit.Cave
             if (enemyPrefab != null)
             {
                 instance = UnityEngine.Object.Instantiate(enemyPrefab, position, rotation, parent);
+                instance.SetActive(false);
+                DisableNavMeshAgents(instance);
                 instance.name = enemyPrefab.name;
                 StripPhysicsCollidersOnRoot(instance);
                 EnsureCombatComponents(instance, height, radius, stepOffset);
                 HideBuiltinPrimitiveMeshIfAnimated(instance);
+                instance.SetActive(true);
             }
             else
             {
@@ -105,17 +108,20 @@ namespace EnvironmentAuthoringKit.Cave
             }
 
             var agent = go.GetComponent<NavMeshAgent>();
-            if (agent == null && NavMesh.SamplePosition(go.transform.position, out _, 12f, NavMesh.AllAreas))
-                agent = go.AddComponent<NavMeshAgent>();
-
             if (agent != null)
+                agent.enabled = false;
+
+            var spawnPos = go.transform.position;
+            NavMeshSpawnGate.TrySnapToNavMesh(ref spawnPos);
+            go.transform.position = spawnPos;
+
+            if (agent == null && NavMeshSpawnGate.CanPlaceAgent(spawnPos))
             {
-                agent.height = height;
-                agent.radius = radius;
-                agent.speed = 3.6f;
-                agent.stoppingDistance = 1.2f;
-                agent.autoBraking = true;
+                agent = go.AddComponent<NavMeshAgent>();
+                agent.enabled = false;
             }
+
+            NavMeshSpawnGate.ApplyAgentOrDisable(agent, go.transform.position, height, radius);
 
             if (_npcEnemyType != null && go.GetComponent(_npcEnemyType) == null)
                 go.AddComponent(_npcEnemyType);
@@ -124,6 +130,9 @@ namespace EnvironmentAuthoringKit.Cave
 
             if (_enemyControllerType != null && go.GetComponent(_enemyControllerType) == null)
                 go.AddComponent(_enemyControllerType);
+
+            agent = go.GetComponent<NavMeshAgent>();
+            NavMeshSpawnGate.ApplyAgentOrDisable(agent, go.transform.position, height, radius);
 
             var cc = go.GetComponent<CharacterController>();
             if (cc == null)
@@ -135,6 +144,15 @@ namespace EnvironmentAuthoringKit.Cave
             cc.stepOffset = stepOffset;
             cc.skinWidth = 0.05f;
             cc.enabled = false;
+        }
+
+        static void DisableNavMeshAgents(GameObject root)
+        {
+            if (root == null)
+                return;
+
+            foreach (var navAgent in root.GetComponentsInChildren<NavMeshAgent>(true))
+                navAgent.enabled = false;
         }
 
         static void HideBuiltinPrimitiveMeshIfAnimated(GameObject root)

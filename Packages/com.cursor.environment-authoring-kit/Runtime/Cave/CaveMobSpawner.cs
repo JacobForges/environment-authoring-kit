@@ -25,7 +25,29 @@ namespace EnvironmentAuthoringKit.Cave
         void Start()
         {
             if (spawnOnStart)
-                SpawnAll();
+                StartCoroutine(DeferredSpawnAll());
+        }
+
+        IEnumerator DeferredSpawnAll()
+        {
+            const float pollInterval = 0.5f;
+            const float maxWaitSeconds = 300f;
+            var elapsed = 0f;
+            while (elapsed < maxWaitSeconds)
+            {
+                if (NavMeshSpawnGate.HasNavMeshData())
+                {
+                    SpawnAll();
+                    yield break;
+                }
+
+                elapsed += pollInterval;
+                yield return new WaitForSeconds(pollInterval);
+            }
+
+            NavMeshSpawnGate.WarnOnce(
+                nameof(CaveMobSpawner),
+                "NavMesh not ready — mob spawns skipped.");
         }
 
         public void SpawnAll()
@@ -47,6 +69,9 @@ namespace EnvironmentAuthoringKit.Cave
                 var pos = transform.position + offset;
                 if (Physics.Raycast(pos + Vector3.up * 8f, Vector3.down, out var hit, 16f))
                     pos = hit.point + Vector3.up * 0.2f;
+
+                if (!NavMeshSpawnGate.CanPlaceAgent(pos, radius + 4f))
+                    continue;
 
                 var rot = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
                 var seed = spawnSeed + i * 997 + UnityObjectCompat.ReferenceId(this) + (int)mobAggression * 17;

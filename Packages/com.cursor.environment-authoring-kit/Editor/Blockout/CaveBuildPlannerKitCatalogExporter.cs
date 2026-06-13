@@ -233,7 +233,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             AssetPreview.SetPreviewTextureCacheSize(512);
             for (var attempt = 0; attempt < 160; attempt++)
             {
-                if (AssetPreview.IsLoadingAssetPreview(prefab.GetInstanceID()))
+                if (AssetPreview.IsLoadingAssetPreview(prefab.GetEntityId()))
                 {
                     PumpEditor(attempt);
                     continue;

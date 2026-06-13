@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using EnvironmentAuthoringKit.World;
 using UnityEngine;
@@ -40,7 +41,29 @@ namespace EnvironmentAuthoringKit.Cave
         void Start()
         {
             if (spawnOnStart)
-                SpawnAll();
+                StartCoroutine(DeferredSpawnAll());
+        }
+
+        IEnumerator DeferredSpawnAll()
+        {
+            const float pollInterval = 0.5f;
+            const float maxWaitSeconds = 300f;
+            var elapsed = 0f;
+            while (elapsed < maxWaitSeconds)
+            {
+                if (NavMeshSpawnGate.HasNavMeshData())
+                {
+                    SpawnAll();
+                    yield break;
+                }
+
+                elapsed += pollInterval;
+                yield return new WaitForSeconds(pollInterval);
+            }
+
+            NavMeshSpawnGate.WarnOnce(
+                nameof(SurfaceTerrainEnemySpawner),
+                "NavMesh not ready — surface enemy spawns skipped.");
         }
 
         public int SpawnAll()

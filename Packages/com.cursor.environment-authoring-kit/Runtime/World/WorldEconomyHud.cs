@@ -61,7 +61,7 @@ namespace EnvironmentAuthoringKit.World
                 alignment = TextAnchor.UpperLeft,
             };
             var total = WorldCurrencyService.TotalCopper(c);
-            GUILayout.BeginArea(new Rect(12f, 12f, 280f, 120f), style);
+            GUILayout.BeginArea(new Rect(12f, 12f, 248f, 108f), style);
             GUILayout.Label("Wallet");
             GUILayout.Label($"Pt {c.platinum}  Au {c.gold}  Ag {c.silver}  Cu {c.copper}");
             GUILayout.Label($"({total} copper total)");

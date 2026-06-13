@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using EnvironmentAuthoringKit;
 using EnvironmentAuthoringKit.Cave;
@@ -23,7 +25,21 @@ namespace EnvironmentAuthoringKit.World
         void Start()
         {
             if (spawnOnStart)
-                SpawnAll();
+                StartCoroutine(DeferredSpawnAll());
+        }
+
+        IEnumerator DeferredSpawnAll()
+        {
+            yield return NavMeshSpawnGate.WaitUntilReadyOrTimeout(300f);
+            if (!NavMeshSpawnGate.HasNavMeshData())
+            {
+                NavMeshSpawnGate.WarnOnce(
+                    nameof(HollowTitanLandmarkSpawner),
+                    "NavMesh not ready — landmark spawns skipped.");
+                yield break;
+            }
+
+            SpawnAll();
         }
 
         public int SpawnAll()
