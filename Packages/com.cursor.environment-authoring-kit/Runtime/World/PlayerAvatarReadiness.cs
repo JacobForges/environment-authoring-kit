@@ -22,6 +22,7 @@ namespace EnvironmentAuthoringKit.World
             if (root == null)
                 return;
 
+            HumanoidVisualFit.TryFitToCharacterController(root);
             CharacterBodyColliderUtility.EnsureMeshCollider(root);
             CharacterMeshColliderEnsurer.Attach(root);
         }

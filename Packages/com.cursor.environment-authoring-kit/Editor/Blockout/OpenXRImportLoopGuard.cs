@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using EnvironmentAuthoringKit.Editor.World;
+using EnvironmentAuthoringKit.World;
 using UnityEditor;
 using UnityEngine;
 
@@ -179,21 +180,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         }
 
         /// <summary>Benign NGO double-ShutdownInternal NRE when exiting Play Mode without hosting.</summary>
-        internal static bool IsNgoPlayModeShutdownNoise(string condition, string stackTrace)
-        {
-            if (string.IsNullOrEmpty(stackTrace) || string.IsNullOrEmpty(condition))
-                return false;
-
-            if (!condition.Contains("NullReferenceException", StringComparison.Ordinal))
-                return false;
-
-            if (!stackTrace.Contains("Unity.Netcode.NetworkManager.OnDestroy", StringComparison.Ordinal) &&
-                !stackTrace.Contains("Unity.Netcode.NetworkManager.OnApplicationQuit", StringComparison.Ordinal))
-                return false;
-
-            return stackTrace.Contains("NetworkSceneManager.Dispose", StringComparison.Ordinal) ||
-                   stackTrace.Contains("NetworkTimeSystem.Shutdown", StringComparison.Ordinal);
-        }
+        internal static bool IsNgoPlayModeShutdownNoise(string condition, string stackTrace) =>
+            NgoShutdownLogFilter.IsBenignShutdownNoise(condition, stackTrace);
 
         internal static bool IsInputManagerDeprecationNoise(string condition)
         {

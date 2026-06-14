@@ -5,7 +5,7 @@ namespace EnvironmentAuthoringKit.Cave
     /// <summary>Match playtest bot and fallback enemies to the tagged Player CharacterController.</summary>
     public static class HumanoidDimensions
     {
-        public const float DefaultHeight = 1.85f;
+        public const float DefaultHeight = 1.8f;
         public const float DefaultRadius = 0.35f;
         public const float DefaultStepOffset = 0.32f;
 

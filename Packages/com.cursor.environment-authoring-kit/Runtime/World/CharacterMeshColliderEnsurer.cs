@@ -22,11 +22,13 @@ namespace EnvironmentAuthoringKit.World
             if (existing != null)
             {
                 existing._deadline = Time.unscaledTime + MaxSeconds;
+                HumanoidVisualFit.TryFitToCharacterController(root);
                 if (CharacterBodyColliderUtility.TryEnsureMeshCollider(root))
                     Object.Destroy(existing);
                 return;
             }
 
+            HumanoidVisualFit.TryFitToCharacterController(root);
             if (CharacterBodyColliderUtility.TryEnsureMeshCollider(root))
                 return;
 
@@ -42,6 +44,7 @@ namespace EnvironmentAuthoringKit.World
                 return;
             }
 
+            HumanoidVisualFit.TryFitToCharacterController(transform);
             if (CharacterBodyColliderUtility.TryEnsureMeshCollider(transform))
                 Destroy(this);
         }

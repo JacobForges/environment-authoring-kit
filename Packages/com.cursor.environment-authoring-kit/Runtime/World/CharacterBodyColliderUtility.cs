@@ -126,7 +126,9 @@ namespace EnvironmentAuthoringKit.World
             if (mc == null)
                 mc = go.AddComponent<MeshCollider>();
 
-            mc.sharedMesh = mesh;
+            if (mc.sharedMesh != mesh)
+                mc.sharedMesh = mesh;
+
             mc.convex = true;
             mc.isTrigger = false;
 

@@ -91,7 +91,9 @@ Set environment variables before launching Editor or player build:
 | `HUB_STT_API_KEY` | `sk-…` | Bearer token |
 | `HUB_STT_MODEL` | `whisper-1` | Optional model name |
 
-Players toggle **Voice ON** in the chat panel. Without STT env, the System tab explains configuration is missing.
+Free Groq tier: `HUB_STT_API_URL=https://api.groq.com/openai` + `HUB_STT_API_KEY=gsk_…` + `HUB_STT_MODEL=whisper-large-v3-turbo`.
+
+Players toggle **Listen ON** in the chat panel. **Talk ON** speaks agent replies via system TTS (macOS `say` / Windows SAPI). Without STT env, the System tab explains configuration is missing.
 
 ---
 

@@ -1,4 +1,5 @@
 using System;
+using EnvironmentAuthoringKit.World;
 using UnityEngine;
 
 namespace Hub
@@ -100,6 +101,9 @@ namespace Hub
                     LogSkippedOnce();
                     return;
                 }
+
+                if (exception != null && NgoShutdownLogFilter.IsBenignShutdownNoise(exception.Message, exception.StackTrace))
+                    return;
 
                 _inner.LogException(exception, context);
             }

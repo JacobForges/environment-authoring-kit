@@ -180,6 +180,13 @@ Tools/deep-train-intro/listen/
 .venv-competition-onnx/
 Tools/competition-models/.venv-competition-onnx/
 
+# Local Whisper bundle (run Tools/competition-voice/bundle-whisper-for-unity.sh)
+Tools/competition-voice/models/*.bin
+Tools/competition-voice/bin/
+Tools/competition-voice/.build-whisper/
+Assets/StreamingAssets/Competition/Voice/*.bin
+Assets/StreamingAssets/Competition/Voice/bin/
+
 # Local scratch / screen captures / intro recordings
 /tmp/
 intro-recording*.mov
