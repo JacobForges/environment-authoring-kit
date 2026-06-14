@@ -40,6 +40,8 @@ namespace EnvironmentAuthoringKit.Cave
         {
             _controller = GetComponent<CharacterController>();
             _cameraRig = GetComponent<PlayerCameraRig>();
+            if (HasPortfolioPlayerController())
+                enabled = false;
         }
 
         void Start()
@@ -151,6 +153,21 @@ namespace EnvironmentAuthoringKit.Cave
                 _controller.enabled = true;
             Cursor.lockState = CursorLockMode.Confined;
             Cursor.visible = false;
+        }
+
+        bool HasPortfolioPlayerController()
+        {
+            foreach (var mb in GetComponents<MonoBehaviour>())
+            {
+                if (mb == null || mb == this)
+                    continue;
+
+                var type = mb.GetType();
+                if (type.Name == "PlayerController" && type != typeof(PlayerController))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

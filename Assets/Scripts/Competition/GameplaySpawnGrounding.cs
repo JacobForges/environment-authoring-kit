@@ -45,9 +45,12 @@ namespace Hub.Competition
             if (!WorldPlayerSetupRuntime.IsPlayableCharacter(go))
                 return;
 
+            PlayableHumanoidScale.Apply(root);
+
             var cc = go.GetComponent<CharacterController>();
             if (cc != null)
             {
+                DisableEnvKitController(go);
                 if (go.GetComponent<PlayerController>() == null)
                     go.AddComponent<PlayerController>();
                 return;
@@ -63,17 +66,24 @@ namespace Hub.Competition
             foreach (var rb in go.GetComponents<Rigidbody>())
                 Object.Destroy(rb);
 
-            HumanoidDimensions.Resolve(out var height, out var radius, out var stepOffset);
-            go.transform.localScale = HumanoidDimensions.CapsuleLocalScale(height, radius);
             cc = go.AddComponent<CharacterController>();
-            cc.height = height;
-            cc.radius = radius;
-            cc.center = new Vector3(0f, height * 0.5f, 0f);
-            cc.stepOffset = stepOffset;
+            cc.height = PlayableHumanoidScale.Height;
+            cc.radius = PlayableHumanoidScale.Radius;
+            cc.center = new Vector3(0f, PlayableHumanoidScale.Height * 0.5f, 0f);
+            cc.stepOffset = PlayableHumanoidScale.StepOffset;
             cc.skinWidth = 0.05f;
 
             if (go.GetComponent<PlayerController>() == null)
                 go.AddComponent<PlayerController>();
+
+            DisableEnvKitController(go);
+        }
+
+        static void DisableEnvKitController(GameObject go)
+        {
+            var envKit = go.GetComponent<EnvironmentAuthoringKit.Cave.PlayerController>();
+            if (envKit != null)
+                envKit.enabled = false;
         }
 
         public static void PlaceAboveGround(Transform root, float dropM = PlayerSpawnHeightUtility.DefaultDropHeightM)

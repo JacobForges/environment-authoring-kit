@@ -39,7 +39,11 @@ public class PlayerController : MonoBehaviour
         if (_controller == null)
             _controller = GetComponent<CharacterController>();
 
+        PlayerCameraRig.Ensure(transform);
         ResolveCameraPivot();
+        DisableConflictingEnvKitController();
+        PlayableHumanoidScale.Apply(transform);
+
         var inv = GetComponent<PlayerInventory>();
         if (inv != null && inv.UsedSlots == 0)
             inv.SeedStarterKit();
@@ -52,6 +56,8 @@ public class PlayerController : MonoBehaviour
             || IsCaveWarpPlaying())
         {
             IsDefending = false;
+            if (uiMenuOpen)
+                _verticalVelocity = 0f;
             chatInputActive = PlayerUiInputCoordinator.ShouldBlockGameplay()
                               || CompetitionChatPanel.BlocksInput;
             return;
@@ -67,6 +73,21 @@ public class PlayerController : MonoBehaviour
     public void Defend(bool defending) => IsDefending = defending;
 
     public void SetIntroLock(bool locked) => introActive = locked;
+
+    /// <summary>Clear menu/cinematic locks after spawn or portal transitions.</summary>
+    public void UnlockMovement()
+    {
+        introActive = false;
+        dialogActive = false;
+        uiMenuOpen = false;
+        chatInputActive = false;
+
+        if (_controller != null && !_controller.enabled
+            && !EnvironmentAuthoringKit.World.PlayerSpawnGroundHold.IsActiveOn(transform))
+            _controller.enabled = true;
+
+        PlayerControllerLock.ExitUiPointerMode();
+    }
 
     public void PickupItem(string itemName)
     {
@@ -103,11 +124,28 @@ public class PlayerController : MonoBehaviour
 
     void HandleLook()
     {
-        if (cameraPivot == null || chatInputActive || CompetitionChatPanel.BlocksInput)
+        if (!Input.GetMouseButton(1))
+            return;
+
+        if (chatInputActive || CompetitionChatPanel.BlocksInput)
             return;
 
         var yaw = Input.GetAxis("Mouse X") * lookSensitivity;
         var pitchDelta = Input.GetAxis("Mouse Y") * lookSensitivity;
+        if (Mathf.Abs(yaw) < 0.0001f && Mathf.Abs(pitchDelta) < 0.0001f)
+            return;
+
+        var rig = GetComponent<PlayerCameraRig>();
+        if (rig != null)
+        {
+            rig.ApplyLookInput(yaw, -pitchDelta);
+            return;
+        }
+
+        ResolveCameraPivot();
+        if (cameraPivot == null)
+            return;
+
         transform.Rotate(0f, yaw, 0f);
         _pitch = Mathf.Clamp(_pitch - pitchDelta, -80f, 80f);
         cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
@@ -133,7 +171,10 @@ public class PlayerController : MonoBehaviour
         var moveZ = Input.GetAxis("Vertical");
         if (Mathf.Abs(moveX) >= 0.01f || Mathf.Abs(moveZ) >= 0.01f)
         {
-            var move = transform.right * moveX + transform.forward * moveZ;
+            var rig = GetComponent<PlayerCameraRig>();
+            var forward = rig != null ? rig.GetMovementForward() : transform.forward;
+            var right = rig != null ? rig.GetMovementRight() : transform.right;
+            var move = right * moveX + forward * moveZ;
             move = Vector3.ClampMagnitude(move, 1f) * moveSpeed;
             _controller.Move(move * Time.deltaTime);
         }
@@ -149,5 +190,12 @@ public class PlayerController : MonoBehaviour
     {
         var warp = Object.FindAnyObjectByType<CaveWarpTransition>();
         return warp != null && warp.IsPlaying;
+    }
+
+    void DisableConflictingEnvKitController()
+    {
+        var envKit = GetComponent<EnvironmentAuthoringKit.Cave.PlayerController>();
+        if (envKit != null)
+            envKit.enabled = false;
     }
 }

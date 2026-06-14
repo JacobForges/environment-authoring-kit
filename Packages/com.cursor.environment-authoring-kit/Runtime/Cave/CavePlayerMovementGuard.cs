@@ -117,8 +117,15 @@ namespace EnvironmentAuthoringKit.Cave
                 var t = mb.GetType();
                 var intro = t.GetField("introActive", BindingFlags.Instance | BindingFlags.Public);
                 var dialog = t.GetField("dialogActive", BindingFlags.Instance | BindingFlags.Public);
+                var menu = t.GetField("uiMenuOpen", BindingFlags.Instance | BindingFlags.Public);
                 intro?.SetValue(mb, introActive);
                 dialog?.SetValue(mb, dialogActive);
+                if (!introActive && !dialogActive)
+                {
+                    menu?.SetValue(mb, false);
+                    t.GetMethod("UnlockMovement", BindingFlags.Instance | BindingFlags.Public)?.Invoke(mb, null);
+                }
+
                 return;
             }
         }
