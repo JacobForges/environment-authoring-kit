@@ -63,6 +63,7 @@ import {
 import {
   formatMissionPhaseLine,
   loadHubGameProgress,
+  loadPrimaryQualityGate,
   resolveMissionPhase,
   worldGatePassed,
 } from "./mission-phase.js";
@@ -547,9 +548,18 @@ async function main(): Promise<void> {
     }
   } else if (isGameplay) {
     if (!worldGatePassed(hubRoot)) {
-      console.error(
-        `[CaveCursor:info] World gate not passed (need buildAcceptable + score ≥ 85). Stay on post_build workflow.`
-      );
+      const q = loadPrimaryQualityGate(hubRoot);
+      if (!q) {
+        console.error(
+          `[CaveCursor:info] No CaveBuildQualityReport.json — world not built yet. ` +
+            `Open Unity → Window → Environment Kit → Hub → Build Complete Cave, then re-grade. ` +
+            `Stay on post_build workflow (set CAVE_SCENE_DEMO_BYPASS=1 only for G8 scene-only work).`
+        );
+      } else {
+        console.error(
+          `[CaveCursor:info] World gate not passed (need buildAcceptable + score ≥ 85). Stay on post_build workflow.`
+        );
+      }
       console.log(formatMissionPhaseLine(hubRoot));
       writeLastRunDiagnostics(workflowMode, {
         exitCode: 1,

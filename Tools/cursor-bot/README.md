@@ -78,3 +78,9 @@ Import draft from [automation-draft.json](./automation-draft.json) in the Automa
 - [docs/PLANNER_SESSION.md](../../docs/PLANNER_SESSION.md) — layout-first builds (AI optional)
 - [docs/PIPELINE_TRUTH.md](../../docs/PIPELINE_TRUTH.md) — 122 steps, geo 1–15, meat at 65
 - [AGENTS.md](../../AGENTS.md)
+
+## License / Copyright
+
+- Tooling in this folder is licensed under `Tools/LICENSE_JACOBFORGES_TOOL_NONCOMMERCIAL.md`.
+- Copyright (c) JacobForges.
+- The game/project code and content remain proprietary and protected.

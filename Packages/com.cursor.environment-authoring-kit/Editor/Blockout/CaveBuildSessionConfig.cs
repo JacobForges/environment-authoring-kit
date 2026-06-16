@@ -15,6 +15,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     public static class CaveBuildSessionConfig
     {
         public const int CurrentVersion = 2;
+        /// <summary>Minimum FullWorld scope — 3×3 play disk only (no outer rings).</summary>
+        public const int PlayDiskTerrainTileCount = 9;
         public const string ActiveRelPath = "Assets/EnvironmentKit/Generated/CaveBuildActiveSessionConfig.json";
         public const string WizardStateRelPath = "Assets/EnvironmentKit/Generated/CaveBuildWizardState.json";
         public const string PlannerBriefRelPath = CaveBuildPlannerLayoutBridge.PlannerBriefRelPath;
@@ -25,7 +27,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             public int version = CurrentVersion;
             public string finalizedUtc;
             public string label = "Custom build";
-            public int tileCount = 81;
+            public int tileCount = 9;
             public bool randomSeedEachBuild = true;
             public int seed;
             public bool playDiskProps = true;
@@ -68,6 +70,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool HasFinalizedActive => LoadActive() != null;
 
+        /// <summary>
+        /// Planner handoff on disk — <see cref="Doc.finalizedUtc"/> set by wizard approve/finalize.
+        /// Survives session scratch reset (wizard state JSON is ephemeral).
+        /// </summary>
+        public static bool HasApprovedPlannerSession()
+        {
+            var doc = LoadActive();
+            return doc != null && !string.IsNullOrWhiteSpace(doc.finalizedUtc);
+        }
+
         public static int PreviewTileCount()
         {
             if (!HasFinalizedActive)
@@ -76,6 +88,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var doc = LoadActive();
             if (doc == null)
                 return CreateDefaults().tileCount;
+
+            if (IsPlayDiskOnlyDemo(doc))
+                return PlayDiskTerrainTileCount;
 
             if (IsFloatingIslandsDemo(doc))
                 return SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount;
@@ -87,7 +102,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             new Doc
             {
                 label = "Speed walkable demo",
-                tileCount = 81,
+                tileCount = 9,
                 randomSeedEachBuild = true,
                 playDiskProps = true,
                 hollowTitan = false,
@@ -109,6 +124,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 use3DCaveSystem = true,
             };
 
+        /// <summary>Hub scratch path — skip browser planner and use <see cref="CreateDefaults"/> (9-tile speed demo).</summary>
+        public static bool UseScratchDefaultsWithoutPlanner =>
+            string.Equals(
+                Environment.GetEnvironmentVariable("CAVE_USE_BUILD_DEFAULTS"),
+                "1",
+                StringComparison.Ordinal);
+
         public static Doc LoadActive()
         {
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
@@ -118,13 +140,63 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             try
             {
-                var doc = JsonUtility.FromJson<Doc>(File.ReadAllText(abs));
-                return doc != null && doc.version > 0 ? doc : null;
+                var raw = JsonUtility.FromJson<Doc>(File.ReadAllText(abs));
+                if (raw == null || raw.version <= 0)
+                    return null;
+
+                var beforeTiles = raw.tileCount;
+                var beforeFloating = raw.floatingTiles;
+                var doc = NormalizeDoc(raw);
+                if (doc.tileCount != beforeTiles || doc.floatingTiles != beforeFloating)
+                {
+                    Debug.LogWarning(
+                        $"[CaveBuild] Normalized planner session scope — tileCount {beforeTiles}→{doc.tileCount}, " +
+                        $"floatingTiles={beforeFloating}→{doc.floatingTiles}.");
+                    SaveActive(doc);
+                }
+
+                return doc;
             }
             catch
             {
                 return null;
             }
+        }
+
+        /// <summary>Repair inconsistent planner JSON (e.g. tileCount=81 + floatingTiles=true → 13).</summary>
+        public static Doc NormalizeDoc(Doc doc)
+        {
+            if (doc == null)
+                return null;
+
+            doc.tileCount = NormalizeTileCount(doc.tileCount, doc.floatingTiles);
+            if (doc.tileCount == PlayDiskTerrainTileCount)
+                doc.floatingTiles = false;
+            else if (doc.tileCount == SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount)
+                doc.floatingTiles = true;
+            else
+                doc.floatingTiles = false;
+
+            doc.surfaceTerrainPasses = Mathf.Clamp(doc.surfaceTerrainPasses, 2, 12);
+
+            // Floating-islands social demo — match build_planner.py _normalize_config (8–16 GB safe pacing).
+            if (doc.tileCount == SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
+                doc.floatingTiles &&
+                !doc.proLevelWorld)
+            {
+                doc.sequentialTerrain = true;
+                doc.enhancementPhases = false;
+                doc.prePlacementResearch = false;
+                doc.preBuildReloop = false;
+                doc.outerRingMountains = false;
+                doc.mountainLabyrinth = false;
+                doc.agentInvokes = false;
+                doc.runPostBuildResearch = false;
+                doc.hollowTitan = false;
+                doc.surfaceTerrainPasses = Mathf.Min(4, doc.surfaceTerrainPasses);
+            }
+
+            return doc;
         }
 
         public static void SaveActive(Doc doc)
@@ -136,7 +208,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (string.IsNullOrEmpty(doc.finalizedUtc))
                 doc.finalizedUtc = DateTime.UtcNow.ToString("o");
 
-            doc.tileCount = doc.tileCount <= 81 ? 81 : 289;
+            NormalizeDoc(doc);
             _active = doc;
 
             var hub = CaveBuildCursorSettings.ResolveHubRoot();
@@ -193,7 +265,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             request.SatelliteCaveCount = doc.proLevelWorld ? 3 : doc.tileCount <= 81 ? 1 : 3;
             request.PropEmphasis = doc.playDiskProps ? "speed_playable_demo" : string.Empty;
 
-            if (IsFloatingIslandsDemo(doc))
+            if (IsPlayDiskOnlyDemo(doc) || IsFloatingIslandsDemo(doc))
             {
                 request.UseOuterRingMountains = false;
                 request.SurfaceIncludeMountains = false;
@@ -245,18 +317,52 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return doc.tileCount <= 81;
         }
 
+        /// <summary>Planner minimum — 3×3 play disk only (tileCount=9, no outer rings).</summary>
+        public static bool IsPlayDiskOnlyDemo(Doc doc = null)
+        {
+            doc ??= Active;
+            return HasFinalizedActive && doc.tileCount == PlayDiskTerrainTileCount;
+        }
+
+        public static bool IsPlayDiskOnlyDemo(WorldGenerationRequest request)
+        {
+            if (request == null || !IsSessionRequest(request))
+                return IsPlayDiskOnlyDemo();
+            return HasFinalizedActive && Active.tileCount == PlayDiskTerrainTileCount;
+        }
+
         /// <summary>Planner fast path: centered 3×3 play disk + four cardinal floating wilderness tiles.</summary>
         public static bool IsFloatingIslandsDemo(Doc doc = null)
         {
             doc ??= Active;
-            return HasFinalizedActive && doc.tileCount <= 81 && doc.floatingTiles;
+            return HasFinalizedActive &&
+                   doc.tileCount == SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
+                   doc.floatingTiles;
         }
 
         public static bool IsFloatingIslandsDemo(WorldGenerationRequest request)
         {
             if (request == null || !IsSessionRequest(request))
                 return IsFloatingIslandsDemo();
-            return HasFinalizedActive && Active.tileCount <= 81 && Active.floatingTiles;
+            return HasFinalizedActive &&
+                   Active.tileCount == SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
+                   Active.floatingTiles;
+        }
+
+        public static int NormalizeTileCount(int tileCount, bool floatingTiles = false)
+        {
+            if (floatingTiles && tileCount < 289)
+                return SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount;
+
+            if (tileCount <= PlayDiskTerrainTileCount)
+                return PlayDiskTerrainTileCount;
+            if (tileCount == SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount)
+                return SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount;
+            if (tileCount == 81)
+                return 81;
+            if (tileCount >= 289)
+                return 289;
+            return PlayDiskTerrainTileCount;
         }
 
         public static bool IsSessionRequest(WorldGenerationRequest request) =>
@@ -312,14 +418,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.autoInvokeTerrainAfterSurfaceBuild = doc.agentInvokes;
             settings.preBuildReloopUntilPass = doc.preBuildReloop;
             settings.invokeCursorOnResearchPhase = doc.agentInvokes;
-            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(
-                doc.tileCount <= 81
-                    ? Mathf.Max(settings.editorQueueBatchSize, 2)
-                    : settings.editorQueueBatchSize);
+            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(settings.editorQueueBatchSize);
+            if (doc.sequentialTerrain)
+                settings.showLiveScenePlacement = true;
             SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = doc.sequentialTerrain;
             SurfaceTerrainTileExpansion.PreferLightweightSeamsOnly =
-                IsFloatingIslandsDemo(doc) || (IsFastDemo(doc) && !doc.outerRingMountains);
-            if (IsFloatingIslandsDemo(doc))
+                IsPlayDiskOnlyDemo(doc) ||
+                IsFloatingIslandsDemo(doc) ||
+                (IsFastDemo(doc) && !doc.outerRingMountains);
+            if (IsPlayDiskOnlyDemo(doc) || IsFloatingIslandsDemo(doc))
             {
                 CaveBuildSpeedDemoPolicy.ApplySessionSettings(settings, savePrefs: false);
                 settings.enableEnhancementPhases = false;
@@ -327,9 +434,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 settings.autoInvokePreBuildWorkflow = false;
                 settings.preBuildReloopUntilPass = false;
                 settings.invokeCursorOnResearchPhase = false;
-                settings.lidarGuidedSculptOnly = true;
-                SurfaceLidarGuidedSculptPolicy.PreferSculptOverStamp = true;
-                SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = false;
+                settings.lidarGuidedSculptOnly = IsFloatingIslandsDemo(doc);
+                SurfaceLidarGuidedSculptPolicy.PreferSculptOverStamp = IsFloatingIslandsDemo(doc);
+                var lowRam = CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f;
+                if (doc.sequentialTerrain || lowRam)
+                    SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = true;
+                else
+                    SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = false;
             }
 
             settings.SaveToPrefs();
@@ -347,6 +458,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (doc == null)
                 return;
 
+            doc = NormalizeDoc(doc);
             SaveActive(doc);
             ApplyToEditorSettings(doc);
             FullWorldConceptLayoutCatalog.SetRandomOnBuild(doc.randomSeedEachBuild);
@@ -428,11 +540,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var tilePlan = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
             var steps = CaveBuildPlannedStepBudget.ComputeForRequest(request);
-            var layout = IsFloatingIslandsDemo(doc)
-                ? "floating islands (3×3 + 4 cardinal)"
-                : request.UseExtendedOpenWorldGrid
-                    ? "extended ~289"
-                    : "81 core grid";
+            var layout = IsPlayDiskOnlyDemo(doc)
+                ? "play disk only (3×3)"
+                : IsFloatingIslandsDemo(doc)
+                    ? "floating islands (3×3 + 4 cardinal)"
+                    : request.UseExtendedOpenWorldGrid
+                        ? "extended ~289"
+                        : "81 core grid";
             Debug.Log(
                 $"[CaveBuild] Planner approved — \"{doc.label}\" · {layout} · {tilePlan} terrains · ~{steps:N0} steps · " +
                 $"props={(doc.playDiskProps ? "on" : "off")} · trails={(doc.surfaceTrails ? "on" : "off")} · " +
@@ -446,13 +560,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return "no approved plan";
 
             var doc = Active;
+            if (IsPlayDiskOnlyDemo(doc))
+                return "play disk only — 3×3 (9 terrains)";
+
             if (IsFloatingIslandsDemo(doc))
                 return "floating islands — 3×3 play disk + 4 cardinal tiles (13 terrains)";
 
             if (doc.tileCount > 81)
                 return $"~{doc.tileCount} terrain tiles (17×17 extended grid)";
 
-            return "81-tile core grid (9×9) or planner-minimal shell";
+            return "81-tile core grid (9×9)";
         }
     }
 }

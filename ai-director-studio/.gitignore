@@ -1,0 +1,26 @@
+# Secrets and local env
+.env
+
+# Dependencies
+node_modules/
+ai-director/node_modules/
+
+# Runtime data (lives under DIRECTOR_DATA_ROOT, not in repo)
+projects/
+dist/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Build output
+ai-director/dist/
+
+# OS
+.DS_Store
+
+# Server runtime (also under data root; ignore if symlinked)
+.server-runtime/

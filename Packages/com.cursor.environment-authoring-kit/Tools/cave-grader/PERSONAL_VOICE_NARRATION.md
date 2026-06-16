@@ -194,3 +194,11 @@ Health check: `python3 recap-doctor.py <capture_folder>`
 | `apply-approved-cards.py` | Merge approved JSON into timeline |
 | `recap-doctor.py` | Capture + voice sanity check |
 | `requirements-recap.txt` | Optional Python deps (opencv, edge-tts, …) |
+
+---
+
+## License / Copyright
+
+- Tooling is covered by `LICENSE_TOOL.md` (JacobForges non-commercial tooling terms).
+- Copyright (c) JacobForges.
+- Game/project code and content remain proprietary and protected.

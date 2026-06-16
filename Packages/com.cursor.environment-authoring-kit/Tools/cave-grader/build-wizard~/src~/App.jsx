@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CardMatrixRain, { useCardWorkProgress } from "./CardMatrixRain";
-import { useWizardRecorder } from "./useWizardRecorder";
 
 const PHASE_LABELS = {
   qna: "Q&A",
@@ -16,7 +15,7 @@ const AI_PRESETS = [
   {
     id: "small",
     label: "Small world",
-    hint: "9-tile play disk + floating islands · fast demo",
+    hint: "9-tile play disk (3×3) · minimum world",
   },
   {
     id: "medium",
@@ -34,35 +33,100 @@ const TYPEWRITER_CPS = 68;
 const STREAM_POLL_MS = 100;
 const PRESENTATION_IDLE_MS = 80;
 
-function displayChatContent(content) {
-  const text = String(content || "").trim();
-  if (!text.startsWith("{")) {
-    return content;
+const PLANNER_JSON_MARKERS = [
+  '"checklist"',
+  '"assistantMessage"',
+  '"qnaComplete"',
+  '"teachingMoment"',
+  '"brief"',
+  '"sessionConfig"',
+];
+
+function stripMarkdownFence(text) {
+  const t = String(text || "").trim();
+  if (!t.startsWith("```")) return t;
+  return t
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function looksLikePlannerPayload(text) {
+  return PLANNER_JSON_MARKERS.some((marker) => text.includes(marker));
+}
+
+function isolateJsonObject(text) {
+  const t = String(text || "").trim();
+  if (t.startsWith("{")) return t;
+  const fenced = t.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+  if (fenced) return fenced[1];
+  const start = t.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  for (let i = start; i < t.length; i += 1) {
+    const ch = t[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return t.slice(start, i + 1);
+    }
   }
-  if (
-    !text.includes('"checklist"') &&
-    !text.includes('"assistantMessage"') &&
-    !text.includes('"qnaComplete"') &&
-    !text.includes('"teachingMoment"')
-  ) {
-    return content;
-  }
+  const tail = t.slice(start);
+  return looksLikePlannerPayload(tail) ? tail : null;
+}
+
+function extractAssistantMessage(text) {
+  const blob = isolateJsonObject(text) || stripMarkdownFence(text).trim();
+  if (!blob) return "";
+  if (!blob.startsWith("{") && !looksLikePlannerPayload(blob)) return "";
+
   try {
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(blob);
     if (typeof parsed.assistantMessage === "string" && parsed.assistantMessage.trim()) {
       return parsed.assistantMessage.trim();
     }
   } catch {
-    const match = text.match(/"assistantMessage"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
-    if (match) {
-      try {
-        return JSON.parse(`"${match[1]}"`);
-      } catch {
-        return match[1].replace(/\\n/g, "\n");
-      }
-    }
+    /* partial stream or truncated JSON */
   }
-  return "";
+
+  const match = blob.match(/"assistantMessage"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/s);
+  if (!match) return "";
+  try {
+    return JSON.parse(`"${match[1]}"`).trim();
+  } catch {
+    return match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\").trim();
+  }
+}
+
+function parseChatContent(content) {
+  const raw = String(content || "");
+  const stripped = stripMarkdownFence(raw.trim());
+  if (!stripped) return { display: "", reasoning: null };
+
+  const jsonBlob = isolateJsonObject(stripped);
+  const plannerJson =
+    Boolean(jsonBlob && looksLikePlannerPayload(jsonBlob)) ||
+    (stripped.startsWith("{") && looksLikePlannerPayload(stripped));
+
+  if (!plannerJson) {
+    return { display: raw, reasoning: null };
+  }
+
+  const blob = jsonBlob || stripped;
+  const assistant = extractAssistantMessage(blob);
+  if (assistant) {
+    return { display: assistant, reasoning: null };
+  }
+
+  if (looksLikePlannerPayload(blob)) {
+    return { display: "", reasoning: blob };
+  }
+
+  return { display: raw, reasoning: null };
+}
+
+function displayChatContent(content) {
+  return parseChatContent(content).display;
 }
 
 function streamingDuplicatesAssistant(session) {
@@ -373,6 +437,31 @@ function TypedBubble({ content, animate, onTypingDone }) {
       {animate && !done && <span className="caret" aria-hidden />}
     </>
   );
+}
+
+function ChatBubbleBody({ content, animate, onTypingDone }) {
+  const { display, reasoning } = useMemo(() => parseChatContent(content), [content]);
+
+  return (
+    <>
+      {reasoning && !display && (
+        <details className="chat-reasoning">
+          <summary>Reasoning</summary>
+          <pre className="chat-reasoning-body">{reasoning}</pre>
+        </details>
+      )}
+      {shouldShowChatText(display) &&
+        (animate ? (
+          <TypedBubble content={display} animate onTypingDone={onTypingDone} />
+        ) : (
+          display
+        ))}
+    </>
+  );
+}
+
+function shouldShowChatText(text) {
+  return Boolean(String(text || "").trim());
 }
 
 const CHECKLIST_META = {
@@ -865,7 +954,6 @@ export default function App() {
   const prevPhaseRef = useRef(null);
   const prevMessageCountRef = useRef(0);
   const prevCardUrlsRef = useRef({});
-  const wrapRef = useRef(null);
   const sessionRef = useRef(null);
   const typeLastAssistantRef = useRef(false);
 
@@ -972,14 +1060,6 @@ export default function App() {
 
   const checklistBusy =
     busy || session?.cursorWorking || Boolean(session?.autoRespondActive);
-
-  const { recording: wizardRecording, chapterTitle, chapterVisible } = useWizardRecorder({
-    hub: hubFromUrl(),
-    api,
-    started,
-    session,
-    rootRef: wrapRef,
-  });
 
   const autoRespondLabel = useMemo(() => {
     if (!session?.autoRespondActive) return "";
@@ -1598,28 +1678,9 @@ export default function App() {
 
   return (
     <>
-      {wizardRecording ? (
-        <div className="recording-bar capture-exclude" aria-live="polite">
-          <span className="recording-dot" />
-          <span className="recording-label">Recording</span>
-          <span className="recording-phase">Pre-production</span>
-          <span className="recording-hint">
-            Planner UI capture — stops when you finalize the plan; Unity Scene timelapse continues in the Editor
-          </span>
-        </div>
-      ) : null}
-      {chapterVisible && chapterTitle ? (
-        <div className="chapter-toast capture-exclude" aria-live="polite">
-          <span className="chapter-toast-kicker">Chapter</span>
-          <span className="chapter-toast-title">{chapterTitle}</span>
-        </div>
-      ) : null}
-      <div
-        className={`wrap ${started ? "wrap-wide" : ""} ${wizardRecording ? "wrap-recording" : ""}`}
-        ref={wrapRef}
-      >
+      <div className={`wrap planner-pane planner-pane-world ${started ? "wrap-wide" : ""}`}>
       <header className="planner-hero">
-        <p className="planner-kicker">Environment Kit</p>
+        <p className="planner-kicker">Environment Kit · World build</p>
         <h1>AI Build Planner</h1>
         <p className="sub">
           Pre-production briefing — checklist Q&amp;A, concept approval
@@ -1712,9 +1773,17 @@ export default function App() {
 
             {conceptApprovalPanel}
 
+            <div className="chat-scope-banner chat-scope-world" role="note">
+              <span className="chat-scope-tag">World build session</span>
+              <span className="chat-scope-detail">
+                This chat does not share messages with Content layout. For MainScene NPCs, dialog, and shops, use
+                the Content layout tab.
+              </span>
+            </div>
+
             <div className={`chat${phase === "awaiting_concept_approval" ? " chat-transcript" : ""}`}>
               {(aiActive || liveStreamingText) && phase !== "awaiting_concept_approval" && (
-                <h3 className="chat-transcript-title live-conversation">Live conversation</h3>
+                <h3 className="chat-transcript-title live-conversation">World build conversation</h3>
               )}
               {phase === "awaiting_concept_approval" && (
                 <h3 className="chat-transcript-title">Planning transcript</h3>
@@ -1724,7 +1793,6 @@ export default function App() {
                   m.role === "user" && (session?.autoRespondActive || session?.autoRespondPreset);
                 const roleLabel =
                   m.role === "user" ? (isAutoUser ? "AI Responder" : "You") : "Planner";
-                const body = displayChatContent(m.content);
                 const shouldAnimate =
                   m.role === "assistant" &&
                   !animatedMsgRef.current.has(i) &&
@@ -1734,18 +1802,14 @@ export default function App() {
                   <div key={i} className={`bubble ${m.role}`}>
                     <div className="role">{roleLabel}</div>
                     <div className="text">
-                      {shouldAnimate ? (
-                        <TypedBubble
-                          content={body}
-                          animate
-                          onTypingDone={() => {
-                            animatedMsgRef.current.add(i);
-                            if (i === lastAssistantIdx) setTypeLastAssistant(false);
-                          }}
-                        />
-                      ) : (
-                        body
-                      )}
+                      <ChatBubbleBody
+                        content={m.content}
+                        animate={shouldAnimate}
+                        onTypingDone={() => {
+                          animatedMsgRef.current.add(i);
+                          if (i === lastAssistantIdx) setTypeLastAssistant(false);
+                        }}
+                      />
                     </div>
                   </div>
                 );
@@ -1909,8 +1973,7 @@ export default function App() {
             {phase === "finalized" && (
               <div className="card status-box">
                 <p className="status">
-                  Plan finalized — switching to Unity, opening the Hub, and starting the build
-                  with demo recording.
+                  Plan finalized — switching to Unity, opening the Hub, and starting the build.
                 </p>
                 <p className="hint">
                   To test approve again: reset below, then in Unity click{" "}

@@ -1412,7 +1412,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return true;
 
             request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
-            if (request != null && CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+            if (request != null &&
+                (CaveBuildSessionConfig.IsFloatingIslandsDemo(request) ||
+                 CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request)))
                 return true;
 
             if (!CaveBuildSessionConfig.HasFinalizedActive)
@@ -1512,8 +1514,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             return list.ToArray();
         }
 
+        /// <summary>Planner minimum — 3×3 play disk only (9 terrains).</summary>
+        public const int PlayDiskTerrainTileCount = 9;
+
         /// <summary>Planner floating-islands demo — 3×3 play disk + four cardinal wilderness tiles (13 total).</summary>
         public const int FloatingIslandsTerrainTileCount = 13;
+
+        /// <summary>Center → ring 1 play disk (3×3) — minimum FullWorld placement.</summary>
+        public static Vector2Int[] BuildPlayDiskPlaceOrder()
+        {
+            var list = new List<Vector2Int>(PlayDiskTerrainTileCount);
+            for (var y = -1; y <= 1; y++)
+            {
+                for (var x = -1; x <= 1; x++)
+                    list.Add(new Vector2Int(x, y));
+            }
+
+            return list.ToArray();
+        }
 
         public static Vector2Int[] BuildFloatingIslandsPlaceOrder()
         {
@@ -7014,7 +7032,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EnsureFullWorldGridAnchorTransform(session);
             ConsolidateScatteredFullWorldTerrains(session.MainTerrain);
 
-            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            var order = ResolvePlaceOffsets(session);
             var snapped = 0;
 
             foreach (var off in order)
@@ -7061,7 +7079,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            var order = ResolvePlaceOffsets(session);
             if (order == null || order.Length == 0)
             {
                 onComplete?.Invoke();
@@ -7158,7 +7176,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var removed = 0;
             var keepers = new Dictionary<Vector2Int, Terrain>();
 
-            foreach (var off in session.PlaceOffsets ?? BuildFullWorldPlaceOrder())
+            foreach (var off in ResolvePlaceOffsets(session))
             {
                 if (TryForceResolveFullWorldTileAtOffset(session, off, out var keeper) && keeper != null)
                     keepers[off] = keeper;
@@ -7337,7 +7355,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (session?.MainTerrain == null)
                 return;
 
-            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            var order = ResolvePlaceOffsets(session);
             if (order == null)
                 return;
 
@@ -7362,7 +7380,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            var order = ResolvePlaceOffsets(session);
             if (order == null || order.Length == 0)
             {
                 onComplete?.Invoke();
@@ -7451,7 +7469,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            var order = session.PlaceOffsets ?? BuildFullWorldPlaceOrder();
+            var order = ResolvePlaceOffsets(session);
             if (order == null || order.Length == 0)
             {
                 onComplete?.Invoke();
@@ -8206,11 +8224,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 ? request.UseExtendedOpenWorldGrid
                 : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid;
 
+        static Vector2Int[] ResolvePlaceOffsets(FullWorldGridSession session)
+        {
+            if (session?.PlaceOffsets != null && session.PlaceOffsets.Length > 0)
+                return session.PlaceOffsets;
+            if (session?.Offsets != null && session.Offsets.Length > 0)
+                return session.Offsets;
+            return ResolveFullWorldPlaceOffsets(session?.Request);
+        }
+
         static Vector2Int[] ResolveFullWorldPlaceOffsets(WorldGenerationRequest request = null)
         {
             request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
             if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
                 return BuildFloatingIslandsPlaceOrder();
+
+            if (CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request))
+                return BuildPlayDiskPlaceOrder();
 
             return ResolveExtendedGridForRequest(request)
                 ? SurfaceOpenWorldGridExpansion.BuildAaaExtendedPlaceOrder()
@@ -8241,13 +8271,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Action<int, string> onComplete,
             bool markGridPipelineFinished = true)
         {
-            var terraformOffsets = CaveBuildSessionConfig.IsFloatingIslandsDemo(request)
+            var terraformOffsets = CaveBuildSessionConfig.IsFloatingIslandsDemo(request) ||
+                                   CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request)
                 ? placeOffsets
                 : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
                     ? placeOffsets
                     : SurfaceFullWorldDirectionalBuild.BuildDirectionalOffsetOrder();
 
-            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+            if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request) ||
+                CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request))
                 PreferLightweightSeamsOnly = true;
 
             return new FullWorldGridSession
@@ -9069,17 +9101,24 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 onComplete);
         }
 
-        internal static FullWorldGridSession CreateMinimalFullWorldGridSession(Terrain mainTerrain)
+        internal static FullWorldGridSession CreateMinimalFullWorldGridSession(
+            Terrain mainTerrain,
+            WorldGenerationRequest request = null)
         {
             if (mainTerrain == null)
                 return null;
+
+            request ??= CaveBuildAaaSessionPolicy.ActiveRequest;
+            if (request == null)
+                request = FullWorldConceptLayoutCatalog.CreateHubBoundRequest();
 
             var ground = SceneGroundResolver.ResolveForFullWorld(mainTerrain.transform);
             var session = new FullWorldGridSession
             {
                 MainTerrain = mainTerrain,
                 Ground = ground,
-                PlaceOffsets = BuildFullWorldPlaceOrder(),
+                Request = request,
+                PlaceOffsets = ResolveFullWorldPlaceOffsets(request),
                 TilesRoot = FindTilesRoot(mainTerrain),
                 WildernessRoot = GetOrCreateMountainWildernessRoot(mainTerrain),
                 GridAnchorLocked = true,

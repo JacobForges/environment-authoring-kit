@@ -1,0 +1,6 @@
+{
+  "name": "Deep Train Academy Hub",
+  "description": "The companion web platform for the Unity 6 game Deep Train Academy (internal codename Hub), featuring real-time dashboards, leaderboard tracking, classroom cohorts, and deep integration specs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

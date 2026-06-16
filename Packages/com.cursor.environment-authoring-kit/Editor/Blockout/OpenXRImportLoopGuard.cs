@@ -164,10 +164,39 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             IsUnityAiRelayNoise(condition, stackTrace) ||
             IsUnitySearchDbLockNoise(condition, stackTrace) ||
             IsUnityConnectPackageManagerNoise(condition, stackTrace) ||
+            IsLegacyWorldTabOnnxImporterNoise(condition, stackTrace) ||
             IsTerrainResourceIdNoise(condition, stackTrace) ||
             IsNgoPlayModeShutdownNoise(condition, stackTrace) ||
             IsVivoxProvisionPendingNoise(condition) ||
             Cc0ImportWarningSuppressor.ShouldSuppress(condition, stackTrace);
+
+        /// <summary>
+        /// Legacy world-tab sklearn ONNX models are executed by Python onnxruntime, not Unity Sentis.
+        /// If stale *_brain.onnx files briefly reappear, Unity's ONNX importer can throw internal NREs.
+        /// Treat this as editor noise while suppression is enabled.
+        /// </summary>
+        internal static bool IsLegacyWorldTabOnnxImporterNoise(string condition, string stackTrace)
+        {
+            var message = condition ?? string.Empty;
+            var stack = stackTrace ?? string.Empty;
+            if (message.Length == 0 && stack.Length == 0)
+                return false;
+
+            var mentionsWorldTabBrain =
+                message.Contains("world_tab_brains/models/", StringComparison.OrdinalIgnoreCase) &&
+                message.Contains("_brain.onnx", StringComparison.OrdinalIgnoreCase);
+            if (!mentionsWorldTabBrain)
+                return false;
+
+            if (message.Contains("Asset import failed", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (message.Contains("ONNXModelConverter", StringComparison.Ordinal))
+                return true;
+
+            return stack.Contains("Unity.InferenceEngine.Editor.Onnx.ONNXModelConverter", StringComparison.Ordinal) ||
+                   stack.Contains("Unity.InferenceEngine.Editor.Onnx.ONNXModelImporter", StringComparison.Ordinal);
+        }
 
         /// <summary>Package spams this while Hub auto-retries Vivox provisioning in the background.</summary>
         internal static bool IsVivoxProvisionPendingNoise(string condition)

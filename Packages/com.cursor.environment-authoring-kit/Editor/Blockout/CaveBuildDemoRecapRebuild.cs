@@ -12,7 +12,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var folder = CaveBuildDemoAutoRecorder.LastOutputFolder;
             if (string.IsNullOrEmpty(folder) || !System.IO.Directory.Exists(folder))
             {
-                Debug.LogWarning("[DemoRecorder] No last capture folder. Run a build with demo recording enabled first.");
+                Debug.LogWarning("[DemoRecorder] No last capture folder.");
                 return;
             }
 
@@ -39,6 +39,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 EditorUtility.RevealInFinder(System.IO.Path.Combine(folder, "DemoRecap.mp4"));
         }
 
+        [MenuItem("Window/Environment Kit/Rebuild Demo Recap From Last Capture", true)]
+        static bool RebuildFromLastValidate() => CaveBuildDemoAutoRecorder.HubBuildRecordingOptIn;
+
         [MenuItem("Window/Environment Kit/Rebuild Producer Recap Preview (Desktop)")]
         static void RebuildProducerPreview()
         {
@@ -52,6 +55,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (CaveBuildDemoProducerCompose.TryComposeProducer(folder, previewOnly: true, out var outPath))
                 EditorUtility.RevealInFinder(outPath);
         }
+
+        [MenuItem("Window/Environment Kit/Rebuild Producer Recap Preview (Desktop)", true)]
+        static bool RebuildProducerPreviewValidate() => CaveBuildDemoAutoRecorder.HubBuildRecordingOptIn;
     }
 }
 #endif

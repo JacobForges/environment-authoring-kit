@@ -1,0 +1,44 @@
+{
+  "compiledTabs": [
+    {
+      "tabId": "terrain",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/terrain_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "surface-content",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/surface-content_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "caves",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/caves_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "mazes",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/mazes_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "interior-content",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/interior-content_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "atmosphere",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/atmosphere_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "music",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/music_brain.tabbrain",
+      "testAccuracy": 1.0
+    },
+    {
+      "tabId": "video",
+      "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/video_brain.tabbrain",
+      "testAccuracy": 1.0
+    }
+  ]
+}

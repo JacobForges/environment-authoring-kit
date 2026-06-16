@@ -47,7 +47,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return SurfaceOpenWorldGridExpansion.BuildAaaExtendedPlaceOrder().Length;
 
             if (request?.SurfaceScope == SurfaceBuildScope.FullWorld)
+            {
+                if (CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request))
+                    return SurfaceTerrainTileExpansion.PlayDiskTerrainTileCount;
+
+                if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
+                    return SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount;
+
                 return SurfaceTerrainTileExpansion.FullWorldTerrainTileCount;
+            }
 
             return 1;
         }

@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c764cbd60a64328b17693cd93ddac7, type: 3}
+  m_Name: ContentLayoutVisualCatalog
+  m_EditorClassIdentifier: EnvironmentAuthoringKit.Runtime::EnvironmentAuthoringKit.WorldContent.ContentLayoutVisualCatalog
+  npcs:
+  - id: npc_mara_dispatch
+    prefab: {fileID: 8632080959131540185, guid: 028b86ece8f074a009a0996a66644c29, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: npc_sera_scout
+    prefab: {fileID: 8848593337685155680, guid: dd602c7779f2648cdb9c58500941d6ea, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: npc_lumen_gate
+    prefab: {fileID: 4944040480164975774, guid: f5d20b45a6832444ca2989d9eee34a12, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: npc_ambient_sigrid
+    prefab: {fileID: 1857878171462674935, guid: d72612c6256a14d68ae483f6d7a942bd, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: npc_ambient_jonas
+    prefab: {fileID: 8653492032658807737, guid: 4c243710b947c4b819fc265862ecce1f, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: npc_ambient_ren
+    prefab: {fileID: 2128567612894402502, guid: 71faf081a3090496a914a3b6c7bc41ba, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  enemies:
+  - id: enemy_spawner_east_trail
+    prefab: {fileID: 8596783966023814875, guid: 607a514f8d2b8492bbe2392f36732493, type: 3}
+    scale: 0.85
+    feetClearanceM: 0.08
+  - id: enemy_spawner_arena_ring
+    prefab: {fileID: 4949033949383489021, guid: e2e53675d72cf4dac81a424f5388bafc, type: 3}
+    scale: 0.9
+    feetClearanceM: 0.08
+  props:
+  - id: prop_depot_sign
+    prefab: {fileID: 1511654282710689857, guid: b4b9b78b0bf3b42429583fbcc453459d, type: 3}
+    scale: 1.2
+    feetClearanceM: 0.08
+  - id: prop_mara_manifest_crate
+    prefab: {fileID: 4797444590208763688, guid: bc59edfcd440c4d58a21467a7bc5b22a, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: prop_sera_fork_sign
+    prefab: {fileID: 1511654282710689857, guid: b4b9b78b0bf3b42429583fbcc453459d, type: 3}
+    scale: 1.1
+    feetClearanceM: 0.08
+  - id: prop_jonas_rumor_board
+    prefab: {fileID: 4158434250097583077, guid: 287e447e065e6410ca48967ab7687d0b, type: 3}
+    scale: 1
+    feetClearanceM: 0.08
+  - id: prop_cave_mouth_arch
+    prefab: {fileID: 6506593664773916687, guid: ddf67cbbab2b54e7e86b91c9819e6fa0, type: 3}
+    scale: 1.5
+    feetClearanceM: 0.08
+  - id: prop_depot_pennant
+    prefab: {fileID: 4377714158895221006, guid: 3294070bb3a5244a08a573dc0d38c369, type: 3}
+    scale: 1.2
+    feetClearanceM: 0.08
+  - id: prop_sera_fork_pennant
+    prefab: {fileID: 8359392697787378210, guid: 6b0ffe8e62c3a45a8a338cd9b0ab58d5, type: 3}
+    scale: 1.2
+    feetClearanceM: 0.08
+  - id: prop_ren_bleacher_banners
+    prefab: {fileID: 5472280110567738621, guid: 81d3a082643424b9698417b3d32249f2, type: 3}
+    scale: 1.3
+    feetClearanceM: 0.08
+  propHints:
+  - hintContains: wood
+    prefab: {fileID: 4797444590208763688, guid: bc59edfcd440c4d58a21467a7bc5b22a, type: 3}
+    scale: 1
+  - hintContains: slate
+    prefab: {fileID: 9220852771394039703, guid: 26c622169a09444feab04ba5cc7ab17c, type: 3}
+    scale: 1.2
+  - hintContains: banner
+    prefab: {fileID: 4377714158895221006, guid: 3294070bb3a5244a08a573dc0d38c369, type: 3}
+    scale: 1.2
+  - hintContains: pennant
+    prefab: {fileID: 8359392697787378210, guid: 6b0ffe8e62c3a45a8a338cd9b0ab58d5, type: 3}
+    scale: 1.2
+  - hintContains: sign
+    prefab: {fileID: 1511654282710689857, guid: b4b9b78b0bf3b42429583fbcc453459d, type: 3}
+    scale: 1.1

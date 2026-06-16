@@ -40,7 +40,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                  Definitions[SpeedMinimalIndex].Id,
                  StringComparison.Ordinal) ||
              (CaveBuildSessionConfig.IsSessionRequest(request) &&
-              !request.UseExtendedOpenWorldGrid) ||
+              !request.UseExtendedOpenWorldGrid &&
+              CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request)) ||
              CaveBuildSessionConfig.IsFloatingIslandsDemo(request));
 
         public static void ApplyByIndex(WorldGenerationRequest request, int index)
@@ -138,6 +139,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             if (request == null || request.SurfaceScope != SurfaceBuildScope.FullWorld)
                 return 0;
+            if (CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request))
+                return SurfaceTerrainTileExpansion.PlayDiskTerrainTileCount;
             if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
                 return SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount;
             return request.UseExtendedOpenWorldGrid ? 289 : 81;

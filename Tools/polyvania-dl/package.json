@@ -1,0 +1,8 @@
+{
+  "name": "polyvania-dl",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "itchio-downloader": "latest"
+  }
+}

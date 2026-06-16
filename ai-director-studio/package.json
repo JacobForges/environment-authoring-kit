@@ -1,0 +1,17 @@
+{
+  "name": "ai-director-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:ui": "npm --prefix ai-director run build",
+    "dev:ui": "npm --prefix ai-director run dev"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.13"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

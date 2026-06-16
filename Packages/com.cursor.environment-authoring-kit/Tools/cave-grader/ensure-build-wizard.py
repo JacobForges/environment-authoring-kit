@@ -51,7 +51,21 @@ def _http_ok() -> bool:
 
 def _planner_ready() -> bool:
     h = _health()
-    return h is not None and h.get("mode") == "ai-planner"
+    if h is None:
+        return False
+    if h.get("mode") != "ai-planner":
+        return False
+    if h.get("contentApi") is not True:
+        return False
+    if h.get("plannerTmpDirOk") is False:
+        return False
+    # Stale servers from before Music tab lack musicApi / 8 tabs — force restart.
+    tabs = int(h.get("wizardTabs") or 0)
+    if tabs < 8:
+        return False
+    if h.get("musicApi") is not True:
+        return False
+    return True
 
 
 def _pids_on_port(port: int) -> list[int]:
@@ -69,7 +83,7 @@ def _pids_on_port(port: int) -> list[int]:
 
 
 def _stop_wrong_server_on_port() -> None:
-    """Free BUILD_WIZARD_PORT if AI Director (or another app) is bound there."""
+    """Free BUILD_WIZARD_PORT if another process is bound there."""
     h = _health()
     if h is not None and h.get("mode") == "ai-planner":
         return

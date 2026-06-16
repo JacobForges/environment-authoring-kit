@@ -37,3 +37,9 @@ python3 recap-dashboard-server.py
 - Saving timeline rejects `videoPlaybackFactor != 1.0`.
 - Narration compose uses `run-recap-terminal.sh` so Personal Voice stays in Terminal.app.
 - Unity can gate compose until you proceed from this UI (or Hub **Skip recap review**).
+
+## License / Copyright
+
+- Tooling is covered by `../LICENSE_TOOL.md` (JacobForges non-commercial tooling terms).
+- Copyright (c) JacobForges.
+- Game/project code and content remain proprietary and protected.

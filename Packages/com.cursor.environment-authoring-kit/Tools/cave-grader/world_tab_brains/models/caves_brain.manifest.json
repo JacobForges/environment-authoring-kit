@@ -1,0 +1,20 @@
+{
+  "tabId": "caves",
+  "modelPath": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/models/caves_brain.tabbrain",
+  "sourceDataset": "/Users/jacob/Hub/Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/world_tab_brains/qa_datasets_out/qa_cases_caves.jsonl",
+  "inputSchema": {
+    "input_text": "string tensor [N,1] with tab/checklist/question/decision concatenated text"
+  },
+  "labels": {
+    "0": "reopen",
+    "1": "pass"
+  },
+  "metrics": {
+    "records": 320,
+    "trainRecords": 272,
+    "testRecords": 48,
+    "trainAccuracy": 1.0,
+    "testAccuracy": 1.0
+  },
+  "version": 1
+}

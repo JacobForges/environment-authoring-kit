@@ -49,3 +49,11 @@ You should see log lines for word-queue capture and, if the phrase contains `[[b
 ```bash
 bash run-recap-terminal.sh ~/Hub/Library/EnvironmentKit/DemoCapture/<timestamp> --preview
 ```
+
+---
+
+## License / Copyright
+
+- Tooling is covered by `LICENSE_TOOL.md` (JacobForges non-commercial tooling terms).
+- Copyright (c) JacobForges.
+- Game/project code and content remain proprietary and protected.

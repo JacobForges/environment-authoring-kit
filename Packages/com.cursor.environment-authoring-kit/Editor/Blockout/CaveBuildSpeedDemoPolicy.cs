@@ -12,11 +12,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     {
         public static bool IsActive(WorldGenerationRequest request) =>
             FullWorldConceptLayoutCatalog.IsSpeedMinimal(request) ||
+            CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request) ||
             CaveBuildSessionConfig.IsFloatingIslandsDemo(request);
 
         public static bool IsActiveHubSelection() =>
             FullWorldConceptLayoutCatalog.IsSpeedMinimal(FullWorldGenerationStylePreset.LoadSelectedIndex()) ||
-            (CaveBuildSessionConfig.HasFinalizedActive && CaveBuildSessionConfig.IsFloatingIslandsDemo());
+            (CaveBuildSessionConfig.HasFinalizedActive &&
+             (CaveBuildSessionConfig.IsPlayDiskOnlyDemo() ||
+              CaveBuildSessionConfig.IsFloatingIslandsDemo()));
 
         public static void ApplySessionSettings(CaveBuildCursorSettings settings, bool savePrefs = true)
         {
@@ -40,12 +43,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.skipAutonomousWhenGradeAtOrAbove = true;
             settings.fastGateMinOverallScore = 70;
             settings.skipResearchNetworkSyncWhenCachePresent = true;
-            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(
-                Mathf.Max(settings.editorQueueBatchSize, 2));
+            settings.editorQueueBatchSize = CaveBuildLoadAwareBatching.Clamp(settings.editorQueueBatchSize);
             settings.demSupersampleTargetDim = Mathf.Min(settings.demSupersampleTargetDim, 64);
             settings.mirrorPacedBuildLogsToConsole = false;
 
-            SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = false;
+            if (!CaveBuildSessionConfig.HasFinalizedActive || !CaveBuildSessionConfig.Active.sequentialTerrain)
+                SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain = false;
 
             if (savePrefs)
                 settings.SaveToPrefs();
@@ -57,7 +60,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         {
             Debug.Log(
                 "[CaveBuild] Speed demo (concept 9) — 81 tiles, fresh seed " + seed +
-                ", play-disk props ON, Titan/CC0/research/agent loops OFF, faster queue batching.");
+                ", play-disk props ON, Titan/CC0/research/agent loops OFF, paced 1 item/step.");
         }
     }
 }

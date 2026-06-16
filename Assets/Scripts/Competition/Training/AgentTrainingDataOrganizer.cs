@@ -21,6 +21,8 @@ namespace Hub.Competition
             public int reasoningRows;
             public int missionRows;
             public int researchRows;
+            public int ownerVoiceRows;
+            public int customCommandRows;
             public Dictionary<string, int> gameplayActivities = new(StringComparer.OrdinalIgnoreCase);
             public List<string> files = new();
         }
@@ -45,6 +47,8 @@ namespace Hub.Competition
 
             RebuildCatalog(agentId);
             ExportReasoningTrain(agentId);
+            AgentOwnerVoiceTrainingExport.SyncFromProfile(agentId);
+            AgentCustomCommandTrainingExport.SyncFromRegistry(agentId);
             RebuildCatalog(agentId);
         }
 
@@ -76,7 +80,7 @@ namespace Hub.Competition
                 return "Dataset catalog: not built yet.";
 
             return
-                $"Dataset catalog: gameplay {catalog.gameplayRows}, chat {catalog.chatRows}, reasoning {catalog.reasoningRows}, mission {catalog.missionRows}, research {catalog.researchRows}.";
+                $"Dataset catalog: gameplay {catalog.gameplayRows}, chat {catalog.chatRows}, reasoning {catalog.reasoningRows}, mission {catalog.missionRows}, research {catalog.researchRows}, owner_voice {catalog.ownerVoiceRows}, custom_commands {catalog.customCommandRows}.";
         }
 
         static string CatalogPath(string agentId) =>
@@ -111,8 +115,18 @@ namespace Hub.Competition
                         snapshot.chatRows += CountJsonlLines(path);
                     else if (string.Equals(fileName, AgentTrainingDataKind.ReasoningJournal, StringComparison.OrdinalIgnoreCase))
                         snapshot.reasoningRows += CountJsonlLines(path);
+                    else if (string.Equals(fileName, AgentTrainingDataKind.OwnerVoiceTrainFile, StringComparison.OrdinalIgnoreCase))
+                        snapshot.ownerVoiceRows += CountJsonlLines(path);
+                    else if (string.Equals(fileName, AgentTrainingDataKind.CustomCommandsTrainFile, StringComparison.OrdinalIgnoreCase))
+                        snapshot.customCommandRows += CountJsonlLines(path);
                 }
             }
+
+            if (snapshot.ownerVoiceRows <= 0)
+                snapshot.ownerVoiceRows = AgentOwnerVoiceTrainingExport.CountRows(agentId);
+
+            if (snapshot.customCommandRows <= 0)
+                snapshot.customCommandRows = CountCommittedCustomCommands(agentId);
 
             var missionJournal = CompetitionPaths.AgentMissionDeliveryJournalPath(agentId);
             if (!string.IsNullOrEmpty(missionJournal) && File.Exists(missionJournal))
@@ -183,6 +197,10 @@ namespace Hub.Competition
             AppendKindBlock(sb, AgentTrainingDataKind.Mission, snapshot.missionRows, null);
             sb.Append(',');
             AppendKindBlock(sb, AgentTrainingDataKind.Research, snapshot.researchRows, null);
+            sb.Append(',');
+            AppendKindBlock(sb, AgentTrainingDataKind.OwnerVoice, snapshot.ownerVoiceRows, null);
+            sb.Append(',');
+            AppendKindBlock(sb, AgentTrainingDataKind.CustomCommands, snapshot.customCommandRows, null);
             sb.Append("},");
             sb.Append("\"files\":").Append(StringArrayJson(snapshot.files));
             sb.Append('}');
@@ -300,7 +318,26 @@ namespace Hub.Competition
             snapshot.reasoningRows = ReadKindRows(json, AgentTrainingDataKind.Reasoning);
             snapshot.missionRows = ReadKindRows(json, AgentTrainingDataKind.Mission);
             snapshot.researchRows = ReadKindRows(json, AgentTrainingDataKind.Research);
+            snapshot.ownerVoiceRows = ReadKindRows(json, AgentTrainingDataKind.OwnerVoice);
+            snapshot.customCommandRows = ReadKindRows(json, AgentTrainingDataKind.CustomCommands);
             return snapshot;
+        }
+
+        static int CountCommittedCustomCommands(string agentId)
+        {
+            var path = CompetitionPaths.AgentCustomCommandsPath(agentId);
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return 0;
+
+            try
+            {
+                var file = JsonUtility.FromJson<AgentCustomCommandFile>(File.ReadAllText(path));
+                return file?.commands != null ? file.commands.Length : 0;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         static int ReadKindRows(string json, string kind)

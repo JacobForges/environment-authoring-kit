@@ -640,8 +640,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (_demoRecordingDepth > 0)
                 EnsureMinimumDocumentaryBounds(ref work);
 
+            if (!IsFiniteBounds(work))
+                return;
+
             var padded = work;
             padded.Expand(work.size * BasePaddingFraction * ZoomCoverageScale());
+            if (!IsFiniteBounds(padded))
+                return;
+
             sv.Frame(padded, false);
             sv.Repaint();
         }
@@ -679,9 +685,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             var dt = SampleDeltaTime();
             AdvanceRigSmoothing(dt, profile, now, snapFraming || _forceInstantSnapOnce);
 
+            if (!IsFiniteVector3(_rig.Pivot) ||
+                !IsFinite(_rig.Distance) ||
+                !IsFinite(_rig.Pitch) ||
+                !IsFinite(_rig.Yaw) ||
+                !IsFinite(_rig.LookSize))
+                return;
+
             var rot = Quaternion.Euler(_rig.Pitch, _rig.Yaw, 0f);
+            if (!IsFiniteQuaternion(rot))
+                return;
+
             var eye = _rig.Pivot + rot * (Vector3.back * _rig.Distance) + Vector3.up * (_rig.Distance * 0.1f);
+            if (!IsFiniteVector3(eye))
+                return;
+
             var viewDir = Quaternion.LookRotation(_rig.Pivot - eye, Vector3.up);
+            if (!IsFiniteQuaternion(viewDir))
+                return;
+
             sv.LookAt(_rig.Pivot, viewDir, _rig.LookSize);
             sv.Repaint();
         }
@@ -987,6 +1009,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             return null;
         }
+
+        static bool IsFinite(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value);
+
+        static bool IsFiniteVector3(Vector3 value) =>
+            IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
+
+        static bool IsFiniteQuaternion(Quaternion value) =>
+            IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z) && IsFinite(value.w);
+
+        static bool IsFiniteBounds(Bounds bounds) =>
+            IsFiniteVector3(bounds.center) && IsFiniteVector3(bounds.size);
 
         static void OnSceneGui(SceneView view)
         {

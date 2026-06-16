@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -19,8 +21,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static Action _pendingStart;
         static double _gateStartedAt;
-        static double _lastOrphanCheckAt;
-        static string _orphanAutoStartConsumedUtc;
 
         static CaveBuildWizardGate()
         {
@@ -30,18 +30,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static void OpenPreview()
         {
             CaveBuildPlannerKitCatalogExporter.ExportIfStale(out _, force: false);
-            var hub = Uri.EscapeDataString(CaveBuildCursorSettings.ResolveHubRoot());
-            TryEnsureWizard($"http://127.0.0.1:{ApiPort}/?hub={hub}");
-        }
-
-        /// <summary>Hub button when planner finalized JSON exists but pipeline never started.</summary>
-        public static void StartFinalizedPlanNow()
-        {
-            if (LavaTubeCaveBuilder.TryStartFullWorldFromPlannerFinalize())
-                return;
-
-            Debug.LogWarning(
-                "[CaveBuild] Could not start from finalized plan — is Ground tagged? Is a build already running?");
+            var hubRoot = CaveBuildCursorSettings.ResolveHubRoot();
+            var hub = Uri.EscapeDataString(hubRoot);
+            TryEnsureWizard($"http://127.0.0.1:{ApiPort}/?hub={hub}", hubRoot);
         }
 
         public static void RequestFullWorldBuild(Action startBuild)
@@ -49,23 +40,23 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (startBuild == null)
                 return;
 
-            // Plan already approved in browser — start immediately (don't wipe active JSON).
-            if (CaveBuildSessionConfig.TryReadWizardPhase(out var existing) &&
-                string.Equals(existing, "finalized", StringComparison.OrdinalIgnoreCase) &&
-                CaveBuildSessionConfig.HasFinalizedActive)
+            if (CaveBuildSessionConfig.UseScratchDefaultsWithoutPlanner)
             {
-                _pendingStart = startBuild;
+                StartScratchDefaultsBuild(startBuild, "CAVE_USE_BUILD_DEFAULTS=1");
+                return;
+            }
+
+            // Plan already approved on disk — start immediately (don't wipe active JSON or reopen browser).
+            // CaveBuildWizardState.json is cleared each build click; finalizedUtc on active config is truth.
+            if (CaveBuildSessionConfig.HasApprovedPlannerSession())
+            {
                 if (!CaveBuildSessionConfig.ReloadAndApplyPlannerSession(out var active))
-                {
-                    _pendingStart = null;
                     return;
-                }
 
                 CaveBuildSessionConfig.PrepareFreshBuild(active);
                 Debug.Log(
-                    $"[CaveBuild] Finalized planner session found — starting {active?.label ?? "plan"} without reopening browser.");
+                    $"[CaveBuild] Approved planner session found — starting {active?.label ?? "plan"} without reopening browser.");
                 BeginFinalizedBuild(startBuild);
-                _pendingStart = null;
                 CaveBuildSessionConfig.WriteWizardState("started");
                 return;
             }
@@ -74,19 +65,38 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _gateStartedAt = EditorApplication.timeSinceStartup;
             CaveBuildSessionConfig.ClearActive();
             CaveBuildSessionConfig.WriteWizardState("awaiting_finalize");
-            CaveBuildDemoAutoRecorder.OnHubBuildStarting("AI build planner");
 
-            var hub = Uri.EscapeDataString(CaveBuildCursorSettings.ResolveHubRoot());
-            if (!TryEnsureWizard($"http://127.0.0.1:{ApiPort}/?hub={hub}"))
+            var hubRoot = CaveBuildCursorSettings.ResolveHubRoot();
+            var hub = Uri.EscapeDataString(hubRoot);
+            if (!TryEnsureWizard($"http://127.0.0.1:{ApiPort}/?hub={hub}", hubRoot))
             {
-                Debug.LogWarning(
-                    "[CaveBuild] Build wizard server not ready — using Hub defaults. " +
-                    "Run: python3 Packages/.../Tools/cave-grader/ensure-build-wizard.py");
-                var fallback = CaveBuildSessionConfig.CreateDefaults();
-                CaveBuildSessionConfig.PrepareFreshBuild(fallback);
                 _pendingStart = null;
-                startBuild();
+                CaveBuildSessionConfig.WriteWizardState("cancelled");
+                var scriptRel =
+                    "Packages/com.cursor.environment-authoring-kit/Tools/cave-grader/ensure-build-wizard.py";
+                Debug.LogWarning(
+                    "[CaveBuild] Build wizard server not ready. Run: python3 " + scriptRel);
+                EditorUtility.DisplayDialog(
+                    "AI Build Planner — server not running",
+                    "The build wizard could not start or open in your browser.\n\n" +
+                    "From the Hub repo root, run:\n" +
+                    "  python3 " + scriptRel + "\n\n" +
+                    "Then click Build Complete Cave again.\n\n" +
+                    "Scratch build without planner (opt-in): export CAVE_USE_BUILD_DEFAULTS=1 before launching Unity.",
+                    "OK");
             }
+        }
+
+        static void StartScratchDefaultsBuild(Action startBuild, string reason)
+        {
+            _pendingStart = null;
+            var defaults = CaveBuildSessionConfig.CreateDefaults();
+            CaveBuildSessionConfig.PrepareFreshBuild(defaults);
+            Debug.Log(
+                $"[CaveBuild] Scratch defaults ({reason}) — {defaults.label}, " +
+                $"{CaveBuildSessionConfig.DescribeActiveTilePlan()}, agentInvokes=false.");
+            BeginFinalizedBuild(startBuild);
+            CaveBuildSessionConfig.WriteWizardState("started");
         }
 
         public const string KitCatalogExportRequestRel =
@@ -106,7 +116,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             PollConceptCardMeshRequest();
             PollConceptCardSculptRequest();
             PollPendingFinalize();
-            PollOrphanedPlannerFinalize();
         }
 
         public const string ConceptCardMeshRequestRel =
@@ -375,8 +384,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             var active = CaveBuildSessionConfig.LoadActive();
-            if (active != null && CaveBuildSessionConfig.TryReadWizardPhase(out var phase) &&
-                string.Equals(phase, "finalized", StringComparison.OrdinalIgnoreCase))
+            var wizardFinalized = CaveBuildSessionConfig.TryReadWizardPhase(out var phase) &&
+                                  string.Equals(phase, "finalized", StringComparison.OrdinalIgnoreCase);
+            if (active != null &&
+                (wizardFinalized || CaveBuildSessionConfig.HasApprovedPlannerSession()))
             {
                 var start = _pendingStart;
                 _pendingStart = null;
@@ -408,50 +419,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
         }
 
-        static void PollOrphanedPlannerFinalize()
-        {
-            if (_pendingStart != null)
-                return;
-
-            var now = EditorApplication.timeSinceStartup;
-            if (now - _lastOrphanCheckAt < 0.35)
-                return;
-
-            _lastOrphanCheckAt = now;
-
-            if (!CaveBuildSessionConfig.HasFinalizedActive ||
-                !CaveBuildSessionConfig.TryReadWizardPhase(out var phase) ||
-                !string.Equals(phase, "finalized", StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (CaveBuildHubSessionReconcile.IsCoreBuildRunning())
-                return;
-
-            var active = CaveBuildSessionConfig.LoadActive();
-            if (active == null)
-                return;
-
-            // One auto-start per approved plan — do not relaunch after the operator idles post-build.
-            if (!string.IsNullOrEmpty(active.finalizedUtc) &&
-                string.Equals(_orphanAutoStartConsumedUtc, active.finalizedUtc, StringComparison.Ordinal))
-                return;
-
-            if (!LavaTubeCaveBuilder.TryStartFullWorldFromPlannerFinalize())
-                return;
-
-            _orphanAutoStartConsumedUtc = active.finalizedUtc;
-        }
-
         internal static void BeginFinalizedBuild(Action start)
         {
             CaveBuildSessionConfig.ReloadAndApplyPlannerSession(out _);
             FocusUnityEditor();
             EnvironmentKitHubWindow.EnsureOpenForBuild();
-            CaveBuildDemoAutoRecorder.OnHubBuildStarting("Build pipeline");
-            CaveBuildDemoAutoRecorder.AppendChapter("world_build", "World build pipeline", "build", "unity");
-            CaveBuildRunStatusPublisher.PulseSubOperation(
-                "hub",
-                "Planner finalized — starting build + recording…");
+
+            CaveBuildRunStatusPublisher.PulseSubOperation("hub", "Planner finalized — starting build…");
 
             // Defer one editor tick so macOS focus + Hub window can settle before the pipeline queues.
             EditorApplication.delayCall += () =>
@@ -489,7 +463,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
         }
 
-        static bool TryEnsureWizard(string url)
+        static bool TryEnsureWizard(string url, string hubRoot)
         {
             var tools = Path.Combine(
                 Path.GetDirectoryName(Application.dataPath) ?? string.Empty,
@@ -498,18 +472,25 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!File.Exists(script))
                 return false;
 
+            if (IsPlannerApiReady())
+            {
+                Application.OpenURL(url);
+                return true;
+            }
+
             try
             {
+                var hubArg = string.IsNullOrEmpty(hubRoot) ? string.Empty : $" --hub \"{hubRoot}\"";
                 var psi = new ProcessStartInfo
                 {
                     FileName = "/usr/bin/python3",
-                    Arguments = $"\"{script}\" --no-open --restart",
+                    Arguments = $"\"{script}\" --no-open --restart{hubArg}",
                     WorkingDirectory = tools,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
                 using var proc = Process.Start(psi);
-                proc?.WaitForExit(8000);
+                proc?.WaitForExit(45000);
             }
             catch (Exception ex)
             {
@@ -517,8 +498,48 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return false;
             }
 
+            for (var i = 0; i < 24; i++)
+            {
+                if (IsPlannerApiReady())
+                    break;
+                System.Threading.Thread.Sleep(250);
+            }
+
+            if (!IsPlannerApiReady())
+                return false;
+
             Application.OpenURL(url);
             return true;
+        }
+
+        static bool IsPlannerApiReady()
+        {
+            try
+            {
+                var json = HttpGet($"http://127.0.0.1:{ApiPort}/api/health", 2000);
+                return !string.IsNullOrEmpty(json) &&
+                       json.Contains("\"ok\"") &&
+                       json.Contains("ai-planner") &&
+                       json.Contains("\"musicApi\": true");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static string HttpGet(string url, int timeoutMs)
+        {
+            var req = (HttpWebRequest)WebRequest.Create(url);
+            req.Method = "GET";
+            req.Timeout = timeoutMs;
+            req.ReadWriteTimeout = timeoutMs;
+            using var resp = (HttpWebResponse)req.GetResponse();
+            using var stream = resp.GetResponseStream();
+            if (stream == null)
+                return string.Empty;
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            return reader.ReadToEnd();
         }
     }
 }

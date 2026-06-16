@@ -38,6 +38,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return Compute(SurfaceBuildScope.FullWorld, 289, extendedGrid: true);
 
             var tileCount = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
+            if (CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request))
+                return ComputePlayDiskOnly(tileCount, request);
+
             if (CaveBuildSessionConfig.IsFloatingIslandsDemo(request))
                 return ComputeFloatingIslands(tileCount, request);
 
@@ -59,6 +62,27 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 total += 36;
 
             total += EstimateSurfaceTerrainSculptMicroSteps(tileCount, request);
+
+            return Mathf.Max(480, total);
+        }
+
+        static int ComputePlayDiskOnly(int tileCount, WorldGenerationRequest request)
+        {
+            tileCount = Mathf.Max(tileCount, SurfaceTerrainTileExpansion.PlayDiskTerrainTileCount);
+            var passes = SurfaceTerrainCenteredAuthor.ResolvePassCount(request?.SurfaceTerrainBuildPasses ?? 4);
+            var sculpt = EstimateSurfaceTerrainSculptMicroSteps(tileCount, passes);
+            var total =
+                ComputePreGridSteps() +
+                ComputeCoreGridSteps(tileCount) +
+                sculpt +
+                ComputePostGridSteps(tileCount, includeTitan: false, lightweightSeams: true) +
+                ComputeCavePacedSteps(fullValidate: true);
+
+            if (!request.UseTrue3DCaveSystem)
+                total -= ComputeCavePacedSteps(fullValidate: true) - 90;
+
+            if (CaveBuildSessionConfig.SkipTerrainHelperScripts(request))
+                total -= 280;
 
             return Mathf.Max(480, total);
         }

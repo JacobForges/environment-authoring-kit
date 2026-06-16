@@ -1,0 +1,40 @@
+# DTA Training Companion License
+
+Copyright (c) 2026 JacobForges (Jacob Adkins)
+
+## Educational use (free)
+
+You may use, modify, and run this software **at no charge** for:
+
+- Non-commercial teaching and coursework
+- Personal learning and skill development
+- Non-commercial research and evaluation
+
+Attribution is appreciated but not required for educational use.
+
+## Commercial use
+
+**Commercial use requires a separate license from the copyright holder.**
+
+Commercial use includes, without limitation:
+
+- Charging money for access to this software, its source, or derivatives
+- Bundling the companion into a product or service you sell
+- Using the companion in paid client work where the deliverable is substantially this tooling
+- Offering paid training whose primary materials are this companion, unless covered by a written educational exemption from the author
+
+**Any monetary gain or public commercial use without a written license or purchase from JacobForges is not permitted.**
+
+Contact [JacobForges](https://github.com/JacobForges) to request permission or purchase a commercial license.
+
+## Trademarks
+
+Deep Train Academy™ and DTA Training Companion™ are trademarks of JacobForges. See TRADEMARK.md.
+
+## No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+## Third-party components
+
+This application may reference Unity Gaming Services, Firebase, npm packages, and AI provider APIs. Those materials remain under their respective licenses.

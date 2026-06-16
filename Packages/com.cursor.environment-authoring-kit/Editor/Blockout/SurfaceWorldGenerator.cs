@@ -653,9 +653,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     var fullWorldFlatGrid = request.SurfaceScope == SurfaceBuildScope.FullWorld &&
                         request.UseOuterRingMountains &&
                         SurfaceTerrainTileExpansion.UsesFixedNineTileSquare(request, fullWorld: true);
-                    var floatingIslandsGrid = CaveBuildSessionConfig.IsFloatingIslandsDemo(request);
+                    var minimalGridDemo = CaveBuildSessionConfig.IsFloatingIslandsDemo(request) ||
+                                          CaveBuildSessionConfig.IsPlayDiskOnlyDemo(request);
 
-                    if (fullWorldFlatGrid || floatingIslandsGrid)
+                    if (fullWorldFlatGrid || minimalGridDemo)
                     {
                         SurfaceTerrainTileExpansion.QueueFullWorldDirectionalPipeline(
                             terrain,

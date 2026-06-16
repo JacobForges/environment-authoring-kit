@@ -77,6 +77,63 @@ def recap_temp_dir() -> Path:
     return path
 
 
+def _is_local_volume(path: Path) -> bool:
+    """True when path is on internal disk (tsx IPC pipes fail with ENOTSUP on many externals)."""
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return False
+    parts = resolved.parts
+    return not (len(parts) >= 2 and parts[1] == "Volumes")
+
+
+def planner_ipc_temp_dir() -> Path:
+    """tsx IPC pipes (Unix domain sockets) — local disk only.
+
+    Hub/Library/EnvironmentKit often symlinks to Lexar; resolve_envkit_root() is external too.
+    Keep planner/tsx temp under ~/Library/EnvironmentKit on the internal SSD.
+    """
+    candidates = (
+        Path.home() / "Library" / "EnvironmentKit" / ".planner-tmp",
+        Path("/tmp") / "environmentkit-planner",
+    )
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            resolved = candidate.resolve()
+            if not _is_local_volume(resolved):
+                continue
+            probe = resolved / ".write_probe"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            return resolved
+        except OSError:
+            continue
+    fallback = Path("/tmp/environmentkit-planner")
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
+def ensure_planner_process_env() -> Path:
+    """Pin planner/tsx temp to local disk — override Lexar recap TMPDIR in long-lived servers."""
+    tmp = planner_ipc_temp_dir()
+    os.environ["TMPDIR"] = str(tmp)
+    os.environ["TEMP"] = str(tmp)
+    os.environ["TMP"] = str(tmp)
+    return tmp
+
+
+def planner_tmpdir_ok() -> bool:
+    """Health check: current TMPDIR must be local (not /Volumes/Lexar/.../.planner-tmp)."""
+    raw = os.environ.get("TMPDIR", "").strip()
+    if not raw:
+        return False
+    try:
+        return _is_local_volume(Path(raw))
+    except OSError:
+        return False
+
+
 def preview_mirror_dir() -> Path:
     """Preview MP4 shortcut folder — on external drive when available."""
     path = resolve_envkit_root() / "DesktopMirror"

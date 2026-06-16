@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Users Collection rules
+    match /users/{uid} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(uid) 
+        && incoming().uid == uid
+        && incoming().email is string
+        && incoming().role in ['student', 'teacher']
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && isOwner(uid)
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'isLinked', 'linkCode']);
+      allow delete: if false;
+    }
+
+    // Agents Collection rules
+    match /agents/{agentId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Filtered by client query or handled securely
+      allow create: if isSignedIn() && isOwner(incoming().playerId)
+        && incoming().agentId == agentId
+        && incoming().displayName is string
+        && incoming().displayName.size() <= 100
+        && incoming().level is int
+        && incoming().xp is int;
+      allow update: if isSignedIn() && isOwner(existing().playerId)
+        && incoming().playerId == existing().playerId
+        && incoming().agentId == existing().agentId
+        && (
+          // Action: Calibrate status or version increment
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'level', 'xp', 'mood', 'activeFocus', 'checkpointVersion', 'lastTrainUtc'])
+        );
+      allow delete: if false;
+
+      // Subcollection Checkpoints
+      match /checkpoints/{version} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        allow create: if isSignedIn() 
+          && get(/databases/$(database)/documents/agents/$(agentId)).data.playerId == request.auth.uid
+          && incoming().agentId == agentId
+          && incoming().checkpointVersion is int
+          && incoming().sha256 is string
+          && incoming().sha256.size() == 64
+          && incoming().trainUtc == request.time;
+        allow update, delete: if false; // Checkpoints are immutable
+      }
+
+      // Subcollection Training Plans
+      match /trainingPlans/current {
+        allow get: if isSignedIn();
+        allow create, update: if isSignedIn()
+          && get(/databases/$(database)/documents/agents/$(agentId)).data.playerId == request.auth.uid
+          && incoming().agentId == agentId;
+        allow delete: if false;
+      }
+
+      // Subcollection Sync Meta
+      match /syncMeta {
+        allow get: if isSignedIn();
+        allow create, update: if isSignedIn()
+          && get(/databases/$(database)/documents/agents/$(agentId)).data.playerId == request.auth.uid
+          && incoming().agentId == agentId
+          && incoming().lastUploadUtc == request.time;
+        allow delete: if false;
+      }
+    }
+
+    // Cohorts Collection rules
+    match /cohorts/{cohortId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() 
+        && incoming().cohortId == cohortId
+        && incoming().cohortName is string
+        && incoming().cohortName.size() <= 100
+        && incoming().teacherUid == request.auth.uid;
+      allow update: if isSignedIn()
+        && (
+          // Teacher updates plan Info
+          (existing().teacherUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['cohortName', 'activeObjective']))
+        );
+      allow delete: if false;
+    }
+  }
+}

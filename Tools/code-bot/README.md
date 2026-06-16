@@ -53,3 +53,9 @@ Unity 6 **Bee IPC** often aborts in `-batchmode` on recent macOS (even with the 
 | **Code** | `Tools/code-bot/` | Gameplay + competition + challenge wiring |
 
 Skill: `.cursor/skills/hub-code-completion/SKILL.md`
+
+## License / Copyright
+
+- Tooling in this folder is licensed under `Tools/LICENSE_JACOBFORGES_TOOL_NONCOMMERCIAL.md`.
+- Copyright (c) JacobForges.
+- The game/project code and content remain proprietary and protected.

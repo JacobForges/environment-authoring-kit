@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using Debug = UnityEngine.Debug;
 
 namespace EnvironmentAuthoringKit.Editor.Blockout
@@ -19,6 +20,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     public static class CaveBuildDemoAutoRecorder
     {
         const string PrefEnabled = "EnvironmentKit_DemoRecorder_Enabled";
+        const string PrefMasterDisable = "EnvironmentKit_DemoRecorder_MasterDisable";
         const string PrefLastFolder = "EnvironmentKit_DemoRecorder_LastFolder";
         const string PrefSmartTimelapse = "EnvironmentKit_DemoRecorder_SmartTimelapse";
         const string PrefTimelapseInterval = "EnvironmentKit_DemoRecorder_TimelapseIntervalSec";
@@ -83,6 +85,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         static bool _urpSceneCaptureBlocked;
         static double _urpBlockLoggedAt;
         static double _lastManualRenderAt;
+        static Camera _urpCaptureClone;
+        /// <summary>macOS ReadScreenPixel aborts when Unity is unfocused or display is transitioning — wait before capture.</summary>
+        static double _sceneCaptureGraceUntil;
+        static bool _screenReadbackBlockedLogged;
         /// <summary>User clicked Stop recording — do not auto-start a new capture while this build runs.</summary>
         static bool _userFinalizedCapture;
         /// <summary>Planner Q&amp;A — browser wizard frames only; Unity Scene timelapse starts when generation runs.</summary>
@@ -114,6 +120,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
         }
 
+        /// <summary>Off by default. Easter egg: CAVE_ENABLE_DEMO_RECORDER=1 before launching Unity.</summary>
+        public static bool MasterDisabled
+        {
+            get
+            {
+                if (HubBuildRecordingOptIn)
+                    return false;
+                return EditorPrefs.GetBool(PrefMasterDisable, true) ||
+                       string.Equals(
+                           Environment.GetEnvironmentVariable("CAVE_DISABLE_DEMO_RECORDER"),
+                           "1",
+                           StringComparison.Ordinal);
+            }
+            set => EditorPrefs.SetBool(PrefMasterDisable, value);
+        }
+
+        /// <summary>Easter egg: export CAVE_ENABLE_DEMO_RECORDER=1 before Unity launch.</summary>
+        public static bool HubBuildRecordingOptIn =>
+            string.Equals(
+                Environment.GetEnvironmentVariable("CAVE_ENABLE_DEMO_RECORDER"),
+                "1",
+                StringComparison.Ordinal);
+
         public static bool AutoEnabled
         {
             get => EditorPrefs.GetBool(PrefEnabled, false);
@@ -123,7 +152,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         /// <summary>Continuous Scene timelapse + auto-edit (not slideshow holds).</summary>
         public static bool SmartTimelapseEnabled
         {
-            get => EditorPrefs.GetBool(PrefSmartTimelapse, true);
+            get => EditorPrefs.GetBool(PrefSmartTimelapse, false);
             set => EditorPrefs.SetBool(PrefSmartTimelapse, value);
         }
 
@@ -141,7 +170,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool ProducerNarratorEnabled
         {
-            get => EditorPrefs.GetBool("CaveBuildDemo.ProducerNarrator", true);
+            get => EditorPrefs.GetBool("CaveBuildDemo.ProducerNarrator", false);
             set => EditorPrefs.SetBool("CaveBuildDemo.ProducerNarrator", value);
         }
 
@@ -287,9 +316,13 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             Debug.LogWarning("[DemoRecorder] ffmpeg not found.\n" + InstallHelpText);
         }
 
-        /// <summary>Manual start from Hub Demo recording section (independent of auto-record toggle).</summary>
+        /// <summary>Easter egg manual start — CAVE_ENABLE_DEMO_RECORDER=1 only.</summary>
         public static void StartRecordingManual()
         {
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1
+            if (!HubBuildRecordingOptIn || MasterDisabled)
+                return;
+
             if (_recording)
                 return;
 
@@ -316,9 +349,16 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             EndRecordingSession();
         }
 
-        /// <summary>Hub build buttons always capture a recap for this session (Build Complete / Surface / Cave / AAA).</summary>
+        /// <summary>Hub-build timelapse — env var only (no Hub UI).</summary>
+        public static bool HubBuildRecordingEnabled => HubBuildRecordingOptIn;
+
+        /// <summary>Arms Hub-build timelapse only when CAVE_ENABLE_DEMO_RECORDER=1 (easter egg).</summary>
         public static void OnHubBuildStarting(string buildModeLabel = null)
         {
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1
+            if (!HubBuildRecordingOptIn || MasterDisabled)
+                return;
+
             _userFinalizedCapture = false;
             _hubBuildRecordingSession = true;
             if (!string.IsNullOrEmpty(buildModeLabel))
@@ -343,6 +383,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     WriteCaptureSessionManifest(_currentBuildModeLabel);
                     ResumeUnitySceneCapture();
                 }
+
+                AppendChapter("world_build", "World build pipeline", "build", "unity");
             }
             else if (!_recording)
                 BeginRecordingSession();
@@ -373,6 +415,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
 
             _deferUnitySceneCapture = false;
+            _sceneCaptureGraceUntil = EditorApplication.timeSinceStartup + 2.0;
             WriteCaptureSessionManifest(_currentBuildModeLabel);
             if (SmartTimelapseEnabled)
             {
@@ -388,15 +431,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 }
 
                 CaveBuildLiveSceneFeedback.PushDemoRecordingSession();
-                TryCaptureTimelapseFrame(force: true);
-                TryRecordMilestone(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+                SchedulePostResumeCapture(forceTimelapse: true, forceFrame: false);
             }
             else
             {
-                TryCaptureFrame(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+                SchedulePostResumeCapture(forceTimelapse: false, forceFrame: true);
             }
 
-            Debug.Log("[DemoRecorder] Unity Scene capture resumed — world generation starting.");
+            Debug.Log("[DemoRecorder] Unity Scene capture resumed — waiting for focused Scene view before first frame.");
+        }
+
+        static void SchedulePostResumeCapture(bool forceTimelapse, bool forceFrame)
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (!_recording)
+                    return;
+
+                if (forceTimelapse && SmartTimelapseEnabled)
+                {
+                    TryCaptureTimelapseFrame(force: true);
+                    TryRecordMilestone(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+                }
+                else if (forceFrame)
+                {
+                    TryCaptureFrame(CaveBuildDemoNarration.BuildStartLines, "start", string.Empty, force: true);
+                }
+            };
         }
 
         /// <summary>Chapter marker for recap compose (wizard + Unity share one manifest).</summary>
@@ -468,6 +529,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void TryComposeOrphanedCaptureIfIdle()
         {
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1
+            if (!HubBuildRecordingOptIn)
+                return;
+
             if (_recording || CaveBuildHubSessionReconcile.IsPacedWorkActive())
                 return;
 
@@ -511,6 +576,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static void CaptureNow(string reason = "manual checkpoint")
         {
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1
+            if (!HubBuildRecordingOptIn || MasterDisabled)
+                return;
+
             if (!_recording)
                 BeginRecordingSession();
             var lines = new CaveBuildDemoNarration.Lines(
@@ -528,10 +597,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var hubSession = _hubBuildRecordingSession;
             var manualSession = _manualRecordingSession;
-            if (!AutoEnabled && !hubSession && !manualSession)
+            // Easter egg only — no AutoEnabled / Hub UI arming.
+            if (!HubBuildRecordingOptIn || (!hubSession && !manualSession))
                 return;
 
-            if (!AutoEnabled && !hubSession && manualSession)
+            if (!hubSession && manualSession)
             {
                 PumpSceneViewForRecording();
                 if (SmartTimelapseEnabled)
@@ -539,11 +609,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return;
             }
 
-            if (!AutoEnabled && hubSession && !manualSession)
-            {
-                // Hub build session recording without the legacy toggle.
-            }
-            else if (!AutoEnabled && !hubSession && _recording)
+            if (!hubSession && _recording)
             {
                 EndRecordingSession();
                 return;
@@ -553,9 +619,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                          CaveBuildStartupCoordinator.IsActive ||
                          CaveBuildRunStatusPublisher.HasActiveSession;
 
-            if ((AutoEnabled || hubSession) && active && !_recording && !_userFinalizedCapture)
+            if (hubSession && active && !_recording && !_userFinalizedCapture)
                 BeginRecordingSession();
-            else             if (!active && _recording && hubSession && IsPipelineFullyComplete() &&
+            else if (!active && _recording && hubSession && IsPipelineFullyComplete() &&
                      !_composeHoldForPostBuildPlaythrough)
                 TryFinalizeOnBuildSessionEnd();
 
@@ -605,6 +671,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         static void OnBeforeAssemblyReload()
         {
+            DestroyUrpCaptureClone();
+
             if (!_recording)
                 return;
 
@@ -722,22 +790,26 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildDemoNarrationAi.TryEnhanceFrames(Milestones, buildMode, _runFolder);
                 WriteTimelineJson(buildMode);
                 WriteRecapNotes();
-                CaveBuildRecapDashboardGate.BeginOrRunCompose(_runFolder, () => RunPostRecordingCompose(_runFolder));
+                CaveBuildRecapDashboardGate.BeginOrRunCompose(
+                    _runFolder,
+                    () => RunPostRecordingCompose(_runFolder));
             }
             else
             {
                 TryCaptureFrame(CaveBuildDemoNarration.BuildEndLines, "complete", string.Empty, force: true);
                 CaveBuildDemoNarrationAi.TryEnhanceFrames(Frames, buildMode, _runFolder);
                 WriteRecapNotes();
-                CaveBuildRecapDashboardGate.BeginOrRunCompose(_runFolder, () => RunPostRecordingCompose(_runFolder));
+                CaveBuildRecapDashboardGate.BeginOrRunCompose(
+                    _runFolder,
+                    () => RunPostRecordingCompose(_runFolder));
             }
 
             RestoreLivePlacementAfterRecording(wasSmart);
             if (CaveBuildRecapDashboardGate.IsWaitingForProceed)
             {
                 Debug.Log(
-                    "[DemoRecorder] Recording captured — recap review open in browser. " +
-                    "Compose starts when you click Proceed in the dashboard (or auto-proceed timeout).");
+                    "[DemoRecorder] Recording captured — AI Director review open. " +
+                    "Proceed in the dashboard (or auto-proceed timeout) to start compose.");
             }
             else
             {
@@ -1046,11 +1118,174 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 EditorApplication.QueuePlayerLoopUpdate();
             }
 
-            // URP: manual Camera.Render on Scene View re-initializes Blitter and floods the console.
+            // URP Scene View: never Camera.Render on the Scene View camera — it re-inits URP/Blitter (Unity issue).
             if (IsUniversalRenderPipelineActive() && IsSceneViewCamera(view.camera))
-                return TryCaptureSceneViewWindow(view, out pngBytes);
+                return TryCaptureUrpSceneView(view, out pngBytes);
 
             return TryRenderCameraToPng(view.camera, out pngBytes);
+        }
+
+        /// <summary>
+        /// URP timelapse: screen readback when safe, else offscreen clone camera (never Scene View Camera.Render).
+        /// </summary>
+        static bool TryCaptureUrpSceneView(SceneView view, out byte[] pngBytes)
+        {
+            pngBytes = null;
+            if (view == null)
+                return false;
+
+            // Never clone-render while readback is unsafe (unfocused, grace window, tiny tab) —
+            // Scene View camera matrices are often invalid and Camera.Render asserts IsMatrixValid.
+            if (!CanSafelyReadSceneViewPixels(view))
+                return false;
+
+            if (TryCaptureSceneViewWindow(view, out pngBytes))
+                return true;
+
+            if (!IsCameraCaptureReady(view.camera))
+                return false;
+
+            return TryRenderSceneViewCloneToPng(view, out pngBytes);
+        }
+
+        static bool TryRenderSceneViewCloneToPng(SceneView view, out byte[] pngBytes)
+        {
+            pngBytes = null;
+            if (view?.camera == null || _urpSceneCaptureBlocked)
+                return false;
+
+            if (!IsCameraCaptureReady(view.camera))
+                return false;
+
+            var clone = EnsureUrpCaptureClone();
+            if (clone == null)
+                return false;
+
+            if (!SyncCaptureCloneFromSceneView(clone, view))
+                return false;
+
+            return TryRenderCameraToPng(clone, out pngBytes);
+        }
+
+        static Camera EnsureUrpCaptureClone()
+        {
+            if (_urpCaptureClone != null)
+                return _urpCaptureClone;
+
+            var go = EditorUtility.CreateGameObjectWithHideFlags(
+                "DemoRecorder_UrpCapture",
+                HideFlags.HideAndDontSave);
+            _urpCaptureClone = go.AddComponent<Camera>();
+            _urpCaptureClone.enabled = false;
+            _urpCaptureClone.stereoTargetEye = StereoTargetEyeMask.None;
+            ConfigureUrpCaptureClone(_urpCaptureClone);
+            return _urpCaptureClone;
+        }
+
+        static void DestroyUrpCaptureClone()
+        {
+            if (_urpCaptureClone == null)
+                return;
+
+            UnityEngine.Object.DestroyImmediate(_urpCaptureClone.gameObject);
+            _urpCaptureClone = null;
+        }
+
+        static bool SyncCaptureCloneFromSceneView(Camera clone, SceneView view)
+        {
+            var src = view.camera;
+            if (!IsCameraCaptureReady(src))
+                return false;
+
+            clone.transform.SetPositionAndRotation(src.transform.position, src.transform.rotation);
+            clone.orthographic = src.orthographic;
+            clone.orthographicSize = Mathf.Max(0.01f, src.orthographicSize);
+            clone.fieldOfView = Mathf.Clamp(src.fieldOfView, 1f, 179f);
+            clone.nearClipPlane = Mathf.Max(0.01f, src.nearClipPlane);
+            clone.farClipPlane = Mathf.Max(clone.nearClipPlane + 0.1f, src.farClipPlane);
+            clone.clearFlags = src.clearFlags;
+            clone.backgroundColor = src.backgroundColor;
+            clone.cullingMask = src.cullingMask;
+            clone.rect = new Rect(0f, 0f, 1f, 1f);
+            return IsCameraCaptureReady(clone);
+        }
+
+        static bool IsFinite(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value);
+
+        static bool IsFiniteVector3(Vector3 value) =>
+            IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
+
+        static bool IsFiniteQuaternion(Quaternion value)
+        {
+            if (!IsFinite(value.x) || !IsFinite(value.y) || !IsFinite(value.z) || !IsFinite(value.w))
+                return false;
+
+            return value.x * value.x + value.y * value.y + value.z * value.z + value.w * value.w > 1e-8f;
+        }
+
+        static bool IsCameraCaptureReady(Camera cam)
+        {
+            if (cam == null)
+                return false;
+
+            if (!IsFiniteVector3(cam.transform.position) || !IsFiniteQuaternion(cam.transform.rotation))
+                return false;
+
+            if (cam.orthographic)
+            {
+                if (!IsFinite(cam.orthographicSize) || cam.orthographicSize <= 0.001f)
+                    return false;
+            }
+            else if (!IsFinite(cam.fieldOfView) || cam.fieldOfView < 0.1f || cam.fieldOfView > 179f)
+            {
+                return false;
+            }
+
+            if (!IsFinite(cam.nearClipPlane) || cam.nearClipPlane <= 0.001f)
+                return false;
+
+            return IsFinite(cam.farClipPlane) && cam.farClipPlane > cam.nearClipPlane + 0.01f;
+        }
+
+        static void ConfigureUrpCaptureClone(Camera clone)
+        {
+            var data = clone.GetUniversalAdditionalCameraData();
+            if (data == null)
+                return;
+
+            data.renderPostProcessing = false;
+            data.requiresColorTexture = false;
+            data.requiresDepthTexture = false;
+        }
+
+        /// <summary>
+        /// macOS ReadScreenPixel uses CGWindowListCreateImage and aborts the editor when displayID is null
+        /// (Unity unfocused, modal dialogs, foreground steal during planner finalize).
+        /// </summary>
+        static bool CanSafelyReadSceneViewPixels(SceneView view)
+        {
+            if (view == null)
+                return false;
+
+            if (EditorApplication.timeSinceStartup < _sceneCaptureGraceUntil)
+                return false;
+
+            if (!EditorApplication.isFocused)
+                return false;
+
+            var rect = view.position;
+            if (rect.width < 64f || rect.height < 64f)
+                return false;
+
+            if (Application.platform == RuntimePlatform.OSXEditor)
+            {
+                // Covered windows / zero-size tabs still pass position checks but crash native readback.
+                if (SceneView.lastActiveSceneView == null)
+                    return false;
+            }
+
+            return true;
         }
 
         static bool IsUniversalRenderPipelineActive()
@@ -1078,6 +1313,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (view == null)
                 return false;
 
+            if (!CanSafelyReadSceneViewPixels(view))
+            {
+                if (!_screenReadbackBlockedLogged)
+                {
+                    _screenReadbackBlockedLogged = true;
+                    Debug.Log(
+                        "[DemoRecorder] Scene View readback deferred — focus Unity and keep Scene view visible for timelapse capture.");
+                }
+
+                return false;
+            }
+
             try
             {
                 view.Repaint();
@@ -1088,6 +1335,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 if (pixels == null || pixels.Length == 0)
                     return false;
 
+                _screenReadbackBlockedLogged = false;
                 var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
                 tex.SetPixels(pixels);
                 tex.Apply();
@@ -1097,11 +1345,11 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
             catch (Exception ex)
             {
-                if (!_urpSceneCaptureBlocked)
+                if (!_screenReadbackBlockedLogged)
                 {
-                    _urpSceneCaptureBlocked = true;
+                    _screenReadbackBlockedLogged = true;
                     Debug.LogWarning(
-                        "[DemoRecorder] Scene View window readback failed; timelapse capture paused. " +
+                        "[DemoRecorder] Scene View window readback failed; trying offscreen capture. " +
                         ex.Message);
                 }
 
@@ -1160,6 +1408,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (cam == null || _urpSceneCaptureBlocked)
                 return false;
 
+            if (!IsCameraCaptureReady(cam))
+                return false;
+
+            // Scene View cameras must never use manual Render under URP (Blitter / VolumeComponent NRE).
             if (IsUniversalRenderPipelineActive() && IsSceneViewCamera(cam))
                 return false;
 
@@ -1185,16 +1437,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             }
             catch (Exception ex)
             {
-                if (ex.Message.IndexOf("Blitter", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (IsUrpManualRenderFailure(ex))
                 {
                     _urpSceneCaptureBlocked = true;
-                    if (now - _urpBlockLoggedAt > 2.0)
-                    {
-                        _urpBlockLoggedAt = now;
-                        Debug.LogWarning(
-                            "[DemoRecorder] URP Scene capture disabled (Blitter already initialized). " +
-                            "Timelapse will use fewer frames until domain reload.");
-                    }
+                    LogUrpCaptureBlockedOnce(now, ex);
                 }
 
                 return false;
@@ -1205,6 +1451,33 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 RenderTexture.active = prevActive;
                 RenderTexture.ReleaseTemporary(rt);
             }
+        }
+
+        static bool IsUrpManualRenderFailure(Exception ex)
+        {
+            if (ex == null)
+                return false;
+
+            var msg = ex.Message ?? string.Empty;
+            if (msg.IndexOf("Blitter", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            if (msg.IndexOf("VolumeComponent", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            if (ex is NullReferenceException && IsUniversalRenderPipelineActive())
+                return true;
+
+            return IsUrpManualRenderFailure(ex.InnerException);
+        }
+
+        static void LogUrpCaptureBlockedOnce(double now, Exception ex)
+        {
+            if (now - _urpBlockLoggedAt <= 2.0)
+                return;
+
+            _urpBlockLoggedAt = now;
+            Debug.LogWarning(
+                "[DemoRecorder] URP offscreen capture disabled (" + ex.GetType().Name + "). " +
+                "Timelapse uses Scene View readback when Unity is focused; unsafe frames are skipped until domain reload.");
         }
 
         static SceneView ResolveSceneViewForCapture()
@@ -1442,7 +1715,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 var dir = Path.GetDirectoryName(abs);
                 if (!string.IsNullOrEmpty(dir))
                     Directory.CreateDirectory(dir);
-                var wizardUi = _recording && _deferUnitySceneCapture;
+                var wizardUi = false;
                 var json =
                     "{\n"
                     + $"  \"recording\": {(_recording ? "true" : "false")},\n"

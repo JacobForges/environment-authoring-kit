@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "publisher": "JacobForges",
+  "models": [
+    {
+      "id": "dta-scout-starter-v1",
+      "name": "DTA Scout Starter (GitHub catalog)",
+      "description": "Example entry — publish your ONNX URLs here for the model market to auto-fetch.",
+      "source": "github",
+      "url": "",
+      "kind": "adapter",
+      "license": "JacobForges — update URL when published on Hugging Face"
+    }
+  ]
+}

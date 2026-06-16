@@ -28,8 +28,11 @@ namespace EnvironmentAuthoringKit.World
             if (!condition.Contains("NullReferenceException", StringComparison.Ordinal))
                 return false;
 
-            if (!stackTrace.Contains("Unity.Netcode.NetworkManager.OnDestroy", StringComparison.Ordinal) &&
-                !stackTrace.Contains("Unity.Netcode.NetworkManager.OnApplicationQuit", StringComparison.Ordinal))
+            if (!stackTrace.Contains("NetworkManager.OnDestroy", StringComparison.Ordinal) &&
+                !stackTrace.Contains("NetworkManager:OnDestroy", StringComparison.Ordinal) &&
+                !stackTrace.Contains("NetworkManager.OnApplicationQuit", StringComparison.Ordinal) &&
+                !stackTrace.Contains("NetworkManager:OnApplicationQuit", StringComparison.Ordinal) &&
+                !stackTrace.Contains("NetworkManager.ShutdownInternal", StringComparison.Ordinal))
                 return false;
 
             return stackTrace.Contains("NetworkSceneManager.Dispose", StringComparison.Ordinal) ||

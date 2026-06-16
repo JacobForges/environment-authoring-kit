@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Demo capture session bridge — wizard in-browser frames + chapter manifest."""
+"""Demo capture session bridge — wizard in-browser frames + chapter manifest.
+
+Easter egg: Unity arms capture only when CAVE_ENABLE_DEMO_RECORDER=1.
+"""
 from __future__ import annotations
 
 import json
@@ -35,17 +38,11 @@ def _wizard_meta_path(run_folder: Path) -> Path:
 
 
 def wizard_ui_capture_active(hub: Path) -> bool:
-    """True while the browser should capture planner UI frames (not Unity Scene timelapse)."""
+    """True only when wizardUiCapture is explicitly opted in on the capture session."""
     doc = read_capture_session(hub)
-    if "wizardUiCapture" in doc:
-        return bool(doc.get("wizardUiCapture"))
     if not doc.get("recording"):
         return False
-    run_folder = doc.get("runFolder") or ""
-    if run_folder and _wizard_meta_path(Path(run_folder)).is_file():
-        return False
-    label = str(doc.get("buildModeLabel") or "").lower()
-    return "planner" in label or "planning" in label
+    return doc.get("wizardUiCapture") is True
 
 
 def _write_capture_session(hub: Path, doc: dict[str, Any]) -> None:

@@ -82,24 +82,59 @@ def _utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _resolve_unity_app_bundle() -> Path | None:
+    """Best-effort Unity.app path for macOS foreground focus."""
+    unity_path = os.environ.get("UNITY_PATH", "").strip()
+    if unity_path:
+        app = Path(unity_path).expanduser()
+        if app.suffix == ".app" and app.is_dir():
+            return app
+        if app.name == "Unity" and app.parent.name == "MacOS":
+            bundle = app.parent.parent.parent
+            if bundle.suffix == ".app" and bundle.is_dir():
+                return bundle
+
+    hub = os.environ.get("HUB_ROOT", "").strip()
+    if hub:
+        version_file = Path(hub).expanduser() / "ProjectSettings/ProjectVersion.txt"
+        if version_file.is_file():
+            for line in version_file.read_text(encoding="utf-8").splitlines():
+                if line.startswith("m_EditorVersion:"):
+                    version = line.split(":", 1)[1].strip().split()[0]
+                    candidate = Path(f"/Applications/Unity/Hub/Editor/{version}/Unity.app")
+                    if candidate.is_dir():
+                        return candidate
+
+    editor_root = Path("/Applications/Unity/Hub/Editor")
+    if editor_root.is_dir():
+        for child in sorted(editor_root.iterdir(), reverse=True):
+            candidate = child / "Unity.app"
+            if candidate.is_dir():
+                return candidate
+    return None
+
+
 def _activate_unity_editor() -> None:
     """Bring Unity Editor to the foreground so finalize polling can start the build immediately."""
     if platform.system() != "Darwin":
         return
 
-    unity_path = os.environ.get("UNITY_PATH", "").strip()
-    if unity_path:
-        app = Path(unity_path)
-        bundle = app if app.suffix == ".app" else app.parent.parent if app.name == "Unity" else None
-        if bundle and bundle.suffix == ".app" and bundle.is_dir():
-            subprocess.run(["open", "-a", str(bundle)], check=False, timeout=5)
+    try:
+        bundle = _resolve_unity_app_bundle()
+        if bundle is not None:
+            subprocess.Popen(
+                ["open", "-a", str(bundle)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             return
-
-    subprocess.run(
-        ["osascript", "-e", 'tell application "Unity" to activate'],
-        check=False,
-        timeout=5,
-    )
+        subprocess.Popen(
+            ["open", "-a", "Unity"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        pass
 
 
 _DOTENV_FORCE_KEYS = frozenset(
@@ -137,7 +172,7 @@ def _planner_subprocess_env(hub: Path | None = None) -> dict[str, str]:
     """Subprocess env with cave-grader/.env applied for @cursor/sdk planner scripts."""
     load_dotenv(hub)
     env = _augment_path_env()
-    from envkit_paths import ENV_VAR, resolve_envkit_root
+    from envkit_paths import ENV_VAR, ensure_planner_process_env, resolve_envkit_root
 
     root = resolve_envkit_root()
     env[ENV_VAR] = str(root)
@@ -145,8 +180,8 @@ def _planner_subprocess_env(hub: Path | None = None) -> dict[str, str]:
         env["HUB_ROOT"] = str(Path(hub).expanduser().resolve())
     elif not env.get("HUB_ROOT"):
         env["HUB_ROOT"] = str(Path.cwd())
-    tmp = root / ".planner-tmp"
-    tmp.mkdir(parents=True, exist_ok=True)
+    # tsx creates IPC pipes under os.tmpdir(); external volumes (Lexar) often return ENOTSUP on listen.
+    tmp = ensure_planner_process_env()
     env["TMPDIR"] = str(tmp)
     env["TEMP"] = str(tmp)
     env["TMP"] = str(tmp)
@@ -272,14 +307,14 @@ def _defaults_config() -> dict[str, Any]:
     return {
         "version": 2,
         "label": "AI planned build",
-        "tileCount": 81,
+        "tileCount": 9,
         "randomSeedEachBuild": True,
         "seed": 0,
         "playDiskProps": True,
         "hollowTitan": False,
         "enhancementPhases": False,
         "prePlacementResearch": False,
-        "sequentialTerrain": False,
+        "sequentialTerrain": True,
         "surfaceTerrainPasses": 4,
         "outerRingMountains": True,
         "mountainLabyrinth": False,
@@ -296,9 +331,25 @@ def _defaults_config() -> dict[str, Any]:
     }
 
 
+def _normalize_tile_count(raw: int, *, floating: bool = False) -> int:
+    if floating:
+        return 13
+    tc = int(raw)
+    if tc <= 9:
+        return 9
+    if tc == 13:
+        return 13
+    if tc == 81:
+        return 81
+    if tc >= 289:
+        return 289
+    return 9
+
+
 def _normalize_config(cfg: dict[str, Any]) -> dict[str, Any]:
     out = {**_defaults_config(), **(cfg or {})}
-    out["tileCount"] = 289 if int(out.get("tileCount", 81)) > 81 else 81
+    floating = bool(out.get("floatingTiles"))
+    out["tileCount"] = _normalize_tile_count(out.get("tileCount", 9), floating=floating)
     out["surfaceTerrainPasses"] = max(2, min(12, int(out.get("surfaceTerrainPasses", 4))))
     for key in (
         "playDiskProps",
@@ -323,11 +374,28 @@ def _normalize_config(cfg: dict[str, Any]) -> dict[str, Any]:
         if key in out:
             out[key] = bool(out[key])
 
-    # Floating-islands social demo — strip AAA bloat the LLM sometimes leaves on.
-    if out.get("floatingTiles") and out.get("tileCount", 81) <= 81 and not out.get("proLevelWorld"):
+    if out["tileCount"] == 9:
+        out["floatingTiles"] = False
         out["enhancementPhases"] = False
         out["prePlacementResearch"] = False
-        out["sequentialTerrain"] = False
+        out["preBuildReloop"] = False
+        out["outerRingMountains"] = False
+        out["mountainLabyrinth"] = False
+        out["agentInvokes"] = False
+        out["runPostBuildResearch"] = False
+        out["hollowTitan"] = False
+        out["surfaceTerrainPasses"] = min(3, int(out.get("surfaceTerrainPasses", 4)))
+
+    # Floating-islands social demo — strip AAA bloat the LLM sometimes leaves on.
+    if (
+        out.get("floatingTiles")
+        and out.get("tileCount") == 13
+        and not out.get("proLevelWorld")
+    ):
+        out["enhancementPhases"] = False
+        out["prePlacementResearch"] = False
+        # 1 tile/step — safer on 8–16 GB RAM (parallel heightmaps OOM on Neo-class laptops).
+        out["sequentialTerrain"] = True
         out["preBuildReloop"] = False
         out["outerRingMountains"] = False
         out["mountainLabyrinth"] = False
@@ -588,7 +656,12 @@ def _llm_messages(
         if stream_doc is not None:
             _clear_streaming(stream_doc)
             try:
-                _write_session(hub, stream_doc)
+                # Director (and other callers) pass stream_persist for non-planner JSON;
+                # never mirror that doc into CaveBuildPlannerSession.json.
+                if stream_persist is not None:
+                    stream_persist(stream_doc)
+                else:
+                    _write_session(hub, stream_doc)
             except OSError:
                 pass
         try:
@@ -603,6 +676,19 @@ You are ALSO a patient senior level-design mentor. The user is learning producti
 Every reply must teach something real before you ask the next question.
 
 ALWAYS preserve: 9 play tiles centered (3×3 play disk) — never relocate the play disk.
+
+## Terrain tab scope (CRITICAL — terrain ONLY)
+This chat is **terrain / world build only** (tile footprint, surface trails, terrain passes, planner grid markers, sessionConfig).
+Do **NOT** plan: MainScene dialog trees, hybrid Talk+Shop, quest blockers, cave room graphs, maze grids, interior loot, music, or video scripts.
+Redirect off-topic requests to the correct wizard tab by name (Surface content, Caves, Mazes, Interior, Atmosphere, Music, Video).
+For checklist **npcs** / **enemies** / **props** here: only counts and planner marker labels for the procedural world — not dialog or shop inventory.
+
+## Scope presets (small / medium / large — MUST match sessionConfig.tileCount)
+- **small (9):** layoutPlan covers **play disk only** — every marker on play rows 0–2, cols 0–2. No outer-ring markers.
+- **medium (81):** layoutPlan must include **play disk markers** plus **ringProps** for foothill/peak rings (prop/trail density per ring), and trails reaching at least one outer ring edge.
+- **large (289):** layoutPlan must include play disk + **ringProps** for rings 2–8 with decreasing prop density; note horizon/open rings.
+- **floatingTiles (13):** use island markers (N/E/S/W) + play disk; no 81-tile mountain shell.
+Never reuse a generic 3×3-only layout when tileCount is 81 or 289 — the concept image must show the **full scoped grid** for that build.
 
 ## Checklist interview (STRICT — required while qnaComplete is false)
 - The session checklist has numbered options 1–15. Ask about **every** pending id before finishing Q&A.
@@ -634,13 +720,14 @@ When ready, set qnaComplete true and include:
       markers: [
         { kind: "spawn|prop|npc|enemy|collectible", zone: "play|island", row, col, dir, slot, label }
       ],
-      trails: [ { from: "play-south|play-center", to: "island-N|island-E|...", label } ],
+      ringProps: [ { ring: 2|3|4|5|6|7|8, density: "none|low|medium|high", trails: bool, label } ],
+      trails: [ { from: "play-south|play-center", to: "island-N|foothill|peak|...", label } ],
       islands: [ { dir: "N|E|S|W", label, enemies, npcs, props, collectibles } ],
       caveMouths: [ { pos: "play-north-center", label } ]
     }
   }
 - sessionConfig: object matching these keys:
-  label, tileCount (81 or 289), randomSeedEachBuild, playDiskProps, hollowTitan, enhancementPhases,
+  label, tileCount (9, 13, 81, or 289), randomSeedEachBuild, playDiskProps, hollowTitan, enhancementPhases,
   prePlacementResearch, sequentialTerrain, surfaceTerrainPasses, outerRingMountains, mountainLabyrinth,
   surfaceTrails, surfaceWater, agentInvokes, runPostBuildResearch, preBuildReloop,
   randomLandPlacement, floatingTiles, import3DObjects, proLevelWorld, use3DCaveSystem
@@ -667,24 +754,22 @@ WORLD_PRESETS: dict[str, dict[str, Any]] = {
     "small": {
         "title": "Small world",
         "kickoff": (
-            "Small floating-islands demo: 9-tile play disk always centered, four cardinal hop "
-            "islands, fast social clip build, dense props on play disk, minimal outer terrain, "
-            "no mountain ring."
+            "Minimum play disk demo: 9-tile centered 3×3 play disk only, no outer rings, "
+            "fast social clip build, dense props on play disk, minimal terrain scope."
         ),
         "description": (
-            "9-tile play disk (3×3) + four cardinal floating islands; 81-tile shell but fast "
-            "floatingTiles path; no outer-ring mountains; play-disk props on; 3–4 terrain passes; "
-            "labyrinth on play disk; demo recording friendly."
+            "9-tile play disk (3×3) only — no outer rings or floating islands; play-disk props on; "
+            "3 terrain passes; labyrinth on play disk; fastest recordable demo."
         ),
         "sessionConfig": {
-            "label": "Small world — floating islands demo",
-            "tileCount": 81,
-            "floatingTiles": True,
+            "label": "Small world — 9-tile play disk",
+            "tileCount": 9,
+            "floatingTiles": False,
             "playDiskProps": True,
             "outerRingMountains": False,
             "mountainLabyrinth": False,
             "enhancementPhases": False,
-            "sequentialTerrain": False,
+            "sequentialTerrain": True,
             "surfaceTerrainPasses": 3,
             "surfaceTrails": True,
             "surfaceWater": False,
@@ -719,7 +804,7 @@ WORLD_PRESETS: dict[str, dict[str, Any]] = {
             "outerRingMountains": False,
             "mountainLabyrinth": False,
             "enhancementPhases": False,
-            "sequentialTerrain": False,
+            "sequentialTerrain": True,
             "surfaceTerrainPasses": 4,
             "surfaceTrails": True,
             "surfaceWater": False,
@@ -883,19 +968,22 @@ def _fallback_auto_reply(preset: str, topic_id: str) -> str:
     spec = _preset_or_raise(preset)
     cfg = spec.get("sessionConfig") or {}
     tech = spec.get("technicalSpecs") or {}
-    tiles = int(cfg.get("tileCount", 81))
+    tiles = int(cfg.get("tileCount", 9))
     floating = bool(cfg.get("floatingTiles"))
     title = spec["title"]
 
     fallbacks: dict[str, str] = {
         "scope": (
-            f"{title}: centered 9-tile play disk (3×3), {tiles}-tile shell, "
-            f"{'floating cardinal islands + fast social clip' if floating else 'full surface grid + buried cave demo'}. "
-            f"Goal is a recordable playable slice with clear spawn-to-cave loop."
+            f"{title}: centered 9-tile play disk (3×3)"
+            + (f", {tiles}-tile shell" if tiles > 9 else " only — no outer rings")
+            + (
+                f", {'floating cardinal islands + fast social clip' if floating else ('minimal play disk demo' if tiles == 9 else 'full surface grid + buried cave demo')}. "
+                f"Goal is a recordable playable slice with clear spawn-to-cave loop."
+            )
         ),
         "props": (
             f"Dense prop scatter on play disk — target ~85% vegetation coverage per tile with wider tree spacing; "
-            f"{'lighter props on outer shell tiles' if tiles > 81 else 'cardinal island hop pads get bush clusters'}. "
+            f"{'lighter props on outer shell tiles' if tiles > 81 else ('play disk tiles only' if tiles == 9 else 'cardinal island hop pads get bush clusters')}. "
             "Use kit vegetation prefabs; keep trail corridors readable."
         ),
         "npcs": (
@@ -911,7 +999,7 @@ def _fallback_auto_reply(preset: str, topic_id: str) -> str:
             "Interactable pickup props only — no block-puzzle gates."
         ),
         "terrain": (
-            f"{'Four floating cardinal islands at +80u plateau with +12u hop platforms; no mountain ring.' if floating else f'{tiles}-tile Florida karst surface with trails to cave mouth;' + (' outer wilderness ring, no water plane.' if tiles > 81 else ' no outer mountains, cave mouth north-center.')}"
+            f"{'Four floating cardinal islands at +80u plateau with +12u hop platforms; no mountain ring.' if floating else ('9-tile flat play disk only; no outer wilderness.' if tiles == 9 else f'{tiles}-tile Florida karst surface with trails to cave mouth;' + (' outer wilderness ring, no water plane.' if tiles > 81 else ' no outer mountains, cave mouth north-center.'))}"
         ),
         "speed": (
             f"{'Fast social demo tier — 3 terrain passes, skip AAA enhancement phases.' if floating else 'Balanced demo tier — 4–6 terrain passes acceptable; prioritize playable loop over ship-grade polish.'}"
@@ -952,6 +1040,25 @@ def _preset_or_raise(preset: str) -> dict[str, Any]:
     return WORLD_PRESETS[key]
 
 
+def _apply_preset_bootstrap(doc: dict[str, Any], preset: str) -> None:
+    """Seed sessionConfig + brief scaffold so builds and concept art match preset scope before Q&A ends."""
+    p = _preset_or_raise(preset)
+    doc["sessionConfig"] = _normalize_config(p.get("sessionConfig") or {})
+    doc["autoRespondPreset"] = preset
+    brief = dict(doc.get("brief") or {})
+    brief.setdefault("title", p["title"])
+    brief.setdefault("summary", p["description"])
+    tc = int(doc["sessionConfig"].get("tileCount", 9))
+    lp = dict(brief.get("layoutPlan") or {})
+    lp.setdefault("technicalSpecs", dict(p.get("technicalSpecs") or {}))
+    lp.setdefault(
+        "gridNote",
+        f"{tc}-tile scope — {p['title']} (fresh layout from your answers, not a catalog preset copy)",
+    )
+    brief["layoutPlan"] = lp
+    doc["brief"] = brief
+
+
 def _format_preset_config_lines(cfg: dict[str, Any]) -> str:
     lines = []
     for k, v in sorted(cfg.items()):
@@ -976,6 +1083,16 @@ def _generate_auto_user_reply(
 ) -> str:
     spec = _preset_or_raise(preset)
     next_id = _next_pending_checklist_id(doc) or "scope"
+    import world_state_snapshot as wss  # noqa: PLC0415
+
+    world_state = {}
+    try:
+        world_state = wss.build_world_state(hub)
+    except Exception:
+        world_state = {}
+    if world_state:
+        doc["worldState"] = world_state
+    world_block = wss.build_prompt_block(world_state) if world_state else ""
     if next_id == "scope":
         kw_hint = "Include scope/goals language and the tile footprint for this preset."
     else:
@@ -1006,6 +1123,8 @@ def _generate_auto_user_reply(
         prior_block=_format_prior_replies_block(doc),
         retry_block=retry_block,
     )
+    if world_block:
+        system += f"\n\n{world_block}\nUse this matrix to keep placement/world claims scene-aware."
     planner_msg = _last_assistant_message(doc) or "Introduce the build and ask the first checklist question."
     planner_excerpt = planner_msg.replace("\n", " ").strip()[:600]
     user_prompt = (
@@ -1119,6 +1238,12 @@ def auto_respond_step(
         kickoff = _preset_or_raise(preset)["kickoff"]
         start_session(hub, kickoff, internet_research)
         doc = _read_session(hub) or {}
+        _apply_preset_bootstrap(doc, preset)
+        _write_session(hub, doc)
+    elif internet_research and not doc.get("internetResearch"):
+        # Respect late toggle: enable research for the active session.
+        doc["internetResearch"] = True
+        _write_session(hub, doc)
 
     if doc.get("phase") == "awaiting_concept_approval":
         doc["autoRespondActive"] = False
@@ -1151,6 +1276,8 @@ def auto_respond_until_concept(
         kickoff = _preset_or_raise(preset)["kickoff"]
         start_session(hub, kickoff, internet_research)
         doc = _read_session(hub) or {}
+        _apply_preset_bootstrap(doc, preset)
+        _write_session(hub, doc)
 
     if doc.get("phase") == "awaiting_concept_approval":
         return public_session(hub)
@@ -1491,8 +1618,23 @@ def _format_checklist_for_llm(doc: dict[str, Any]) -> str:
 
 
 def _build_qna_system(doc: dict[str, Any]) -> str:
+    from wizard_tab_research import build_prompt_injection  # noqa: PLC0415
+    import world_state_snapshot as wss  # noqa: PLC0415
+
+    injection = build_prompt_injection("terrain", doc)
+    world_state = {}
+    try:
+        hub_root = Path(os.environ.get("HUB_ROOT") or Path.cwd())
+        world_state = wss.build_world_state(hub_root)
+    except Exception:
+        world_state = {}
+    if world_state:
+        doc["worldState"] = world_state
+    world_block = wss.build_prompt_block(world_state) if world_state else ""
     return (
         f"{SYSTEM_QNA}\n\n"
+        f"{injection}\n\n"
+        f"{world_block}\n"
         "## Live checklist state (authoritative)\n"
         f"{_format_checklist_for_llm(doc)}\n"
     )
@@ -1803,10 +1945,12 @@ def _qna_turn(hub: Path, doc: dict[str, Any], bootstrap: bool = False) -> dict[s
 
         if parsed.get("qnaComplete"):
             brief = parsed.get("brief") or {}
-            if not brief.get("layoutPlan"):
-                brief["layoutPlan"] = None  # derived at render time
+            base_cfg = doc.get("sessionConfig") or {}
+            doc["sessionConfig"] = _normalize_config({**base_cfg, **(parsed.get("sessionConfig") or {})})
+            from planner_concept_render import derive_layout_plan
+
+            brief["layoutPlan"] = derive_layout_plan(brief, doc["sessionConfig"])
             doc["brief"] = brief
-            doc["sessionConfig"] = _normalize_config(parsed.get("sessionConfig") or {})
             try:
                 _render_concept_image(hub, doc)
                 doc["conceptImageRel"] = str(CONCEPT_REL)
@@ -2332,7 +2476,12 @@ def approve_concept(hub: Path, approved: bool, feedback: str = "") -> dict[str, 
     return public_session(hub)
 
 
-def _cursor_research(hub: Path, doc: dict[str, Any]) -> dict[str, Any]:
+def _cursor_research(
+    hub: Path,
+    doc: dict[str, Any],
+    *,
+    tab_id: str | None = None,
+) -> dict[str, Any]:
     """Run web research via Cursor Agent (web search tools), not raw URL scraping."""
     load_dotenv(hub)
     api_key = os.environ.get("CURSOR_API_KEY", "").strip()
@@ -2347,16 +2496,26 @@ def _cursor_research(hub: Path, doc: dict[str, Any]) -> dict[str, Any]:
 
     import tempfile
 
+    from wizard_tab_research import (  # noqa: PLC0415
+        TAB_RESEARCH_FOCUS,
+        research_queries_for_tab,
+    )
+
+    resolved_tab = tab_id or str(doc.get("tabId") or "terrain")
     brief = doc.get("brief") or {}
-    queries = brief.get("researchQueries") or [
-        "procedural terrain game design playable demo",
-        "unity terrain tile grid open world best practices",
-    ]
+    queries = brief.get("researchQueries") or research_queries_for_tab(
+        resolved_tab,
+        str((doc.get("messages") or [{}])[-1].get("content") or ""),
+        brief,
+    )
+    research_focus = TAB_RESEARCH_FOCUS.get(resolved_tab, TAB_RESEARCH_FOCUS["terrain"])
     payload = {
         "hubRoot": str(hub),
         "brief": brief,
         "sessionConfig": doc.get("sessionConfig") or {},
         "queries": queries[:5],
+        "tabId": resolved_tab,
+        "researchFocus": research_focus,
     }
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
         json.dump(payload, tmp)
@@ -2414,13 +2573,12 @@ def run_research(hub: Path) -> None:
     doc["phase"] = "research"
     _write_session(hub, doc)
 
+    from wizard_tab_research import research_queries_for_tab  # noqa: PLC0415
+
     brief = doc.get("brief") or {}
-    default_queries = brief.get("researchQueries") or [
-        "procedural terrain game design playable demo",
-        "unity terrain tile grid open world best practices",
-    ]
+    default_queries = brief.get("researchQueries") or research_queries_for_tab("terrain", "", brief)
     try:
-        bundle = _cursor_research(hub, doc)
+        bundle = _cursor_research(hub, doc, tab_id="terrain")
         doc["researchBundle"] = bundle
         doc["researchError"] = None
     except Exception as exc:
@@ -2466,7 +2624,7 @@ def _save_research_entries(hub: Path, items: list[dict[str, Any]]) -> None:
         cwd=TOOLS,
         check=False,
         timeout=120,
-        env=_augment_path_env(),
+        env=_planner_subprocess_env(hub),
     )
 
 
@@ -2479,7 +2637,7 @@ def _compile_plan_summary(doc: dict[str, Any]) -> str:
         brief.get("summary") or "",
         "",
         "## Session settings",
-        f"- Tiles: {cfg.get('tileCount', 81)} (9 play tiles always centered)",
+        f"- Tiles: {cfg.get('tileCount', 9)} (9 play tiles always centered)",
         f"- Props: {'on' if cfg.get('playDiskProps') else 'off'}",
         f"- Mountains/labyrinth: {cfg.get('outerRingMountains')}/{cfg.get('mountainLabyrinth')}",
         f"- Pro level: {'yes' if cfg.get('proLevelWorld') else 'no'}",
@@ -2593,6 +2751,12 @@ def approve_plan(hub: Path, approved: bool) -> dict[str, Any]:
     except Exception:
         pass
     _activate_unity_editor()
+    try:
+        from wizard_tab_apply import notify_tab_approved
+
+        notify_tab_approved(hub, "terrain")
+    except Exception:
+        pass
     return public_session(hub)
 
 

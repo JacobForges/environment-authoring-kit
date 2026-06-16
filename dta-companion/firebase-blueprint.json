@@ -1,0 +1,236 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about a participant in the Deep Train Academy training laboratory.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Firebase Auth User ID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's public display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's registered email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["student", "teacher"],
+          "description": "Access level role in the platform."
+        },
+        "isLinked": {
+          "type": "boolean",
+          "description": "Check if player has successfully linked their Unity game client."
+        },
+        "linkCode": {
+          "type": "string",
+          "description": "The temporary 5-digit character code used to connect the Unity client."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration ISO-8601 timestamp."
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Agent": {
+      "title": "Agent",
+      "description": "Shedules, settings and levels of the trained neural network companion.",
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "description": "Unique identifier of the AI agent."
+        },
+        "playerId": {
+          "type": "string",
+          "description": "Firebase UID of the owning player."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Name given to this trained AI companion."
+        },
+        "level": {
+          "type": "integer",
+          "description": "The agent's calibrated training milestone level."
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Accumulated experience points inside the ecosystem."
+        },
+        "avatarId": {
+          "type": "string",
+          "description": "Visual ID representing the AI core sphere."
+        },
+        "mood": {
+          "type": "string",
+          "description": "Description of the current brain state."
+        },
+        "activeFocus": {
+          "type": "string",
+          "enum": ["battle", "follow", "explore", "chat", "reasoning"],
+          "description": "Current target focus channel."
+        },
+        "checkpointVersion": {
+          "type": "integer",
+          "description": "Active ONNX gameplay adapter version currently synchronized."
+        },
+        "lastTrainUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last execution of PyTorch behavior cloning training job."
+        }
+      },
+      "required": ["agentId", "playerId", "displayName", "level", "xp"]
+    },
+    "Checkpoint": {
+      "title": "Checkpoint",
+      "description": "Lineage entry for trained adapter weights containing manifest particulars.",
+      "type": "object",
+      "properties": {
+        "checkpointId": {
+          "type": "string",
+          "description": "Combines agentId and version."
+        },
+        "agentId": {
+          "type": "string",
+          "description": "The training target Agent ID."
+        },
+        "checkpointVersion": {
+          "type": "integer",
+          "description": "Sequential revision number (e.g. v7)."
+        },
+        "sha256": {
+          "type": "string",
+          "description": "Computed cryptographic hash of the compiled ONNX adapter."
+        },
+        "trainUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when behavior cloning completed."
+        },
+        "focusActivity": {
+          "type": "string",
+          "description": "Activity focus (battle, follow, explore etc) this adapter was adjusted for."
+        },
+        "rowsUsed": {
+          "type": "integer",
+          "description": "Number of gameplay episode steps approved for learning."
+        },
+        "rowsRejected": {
+          "type": "integer",
+          "description": "Number of poison/manual-override steps excluded during the quality gate."
+        },
+        "trainMethod": {
+          "type": "string",
+          "description": "Method of reinforcement/cloning, e.g. bc_adapter."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Firebase storage URL pathway for the gameplay_adapter.onnx file."
+        }
+      },
+      "required": ["agentId", "checkpointVersion", "sha256", "trainUtc", "focusActivity"]
+    },
+    "TrainingPlan": {
+      "title": "TrainingPlan",
+      "description": "Defines active objectives assigned by coaches or teachers in classroom cohorts.",
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "description": "AI agent targeted."
+        },
+        "focusActivity": {
+          "type": "string",
+          "description": "Specific focus required."
+        },
+        "minDatasetRows": {
+          "type": "integer",
+          "description": "Target volume of approved rows requested before compiling."
+        },
+        "targetMetric": {
+          "type": "string",
+          "description": "Calibrated target performance metric to trigger high-confidence certification."
+        }
+      },
+      "required": ["agentId", "focusActivity"]
+    },
+    "SyncMeta": {
+      "title": "SyncMeta",
+      "description": "Keeps ledger summaries and state snapshots synced from Unity client.",
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "description": "Target Agent ID."
+        },
+        "lastUploadUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of final sync push."
+        },
+        "catalogSnapshot": {
+          "type": "string",
+          "description": "Raw metadata text summarizing training_catalog file."
+        }
+      },
+      "required": ["agentId", "lastUploadUtc"]
+    },
+    "Cohort": {
+      "title": "Cohort",
+      "description": "The classroom training maturity syndicate.",
+      "type": "object",
+      "properties": {
+        "cohortId": {
+          "type": "string",
+          "description": "Class identifier e.g. DTA-SPRING26."
+        },
+        "cohortName": {
+          "type": "string",
+          "description": "Custom name of school syndicate."
+        },
+        "teacherUid": {
+          "type": "string",
+          "description": "Owner/moderator teacher UID."
+        },
+        "activeObjective": {
+          "type": "string",
+          "description": "Assigned cohort task."
+        }
+      },
+      "required": ["cohortId", "cohortName"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "Collection storing player profile documents."
+    },
+    "/agents/{agentId}": {
+      "schema": "Agent",
+      "description": "Collection cataloging individual tactical AI brains."
+    },
+    "/agents/{agentId}/checkpoints/{version}": {
+      "schema": "Checkpoint",
+      "description": "Subcollection recording compiled neural network manifests."
+    },
+    "/agents/{agentId}/trainingPlans/current": {
+      "schema": "TrainingPlan",
+      "description": "Plan documenting standard objectives."
+    },
+    "/agents/{agentId}/syncMeta": {
+      "schema": "SyncMeta",
+      "description": "Sync configuration and catalog ledger states."
+    },
+    "/cohorts/{cohortId}": {
+      "schema": "Cohort",
+      "description": "Classroom associations where students align training targets."
+    }
+  }
+}

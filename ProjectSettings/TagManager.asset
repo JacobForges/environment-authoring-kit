@@ -18,6 +18,7 @@ TagManager:
   - Minable
   - CavePlaytestBot
   - BossStagePortal
+  - Race1
   layers:
   - Default
   - TransparentFX

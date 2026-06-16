@@ -101,6 +101,29 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 return true;
             }
 
+            var expectedTiles = FullWorldConceptLayoutCatalog.ExpectedTerrainTileCount(request);
+            if (expectedTiles > 0 &&
+                doc.label != null &&
+                doc.label.IndexOf($"/{expectedTiles}", StringComparison.Ordinal) < 0 &&
+                (doc.label.IndexOf("/81", StringComparison.Ordinal) >= 0 ||
+                 doc.label.IndexOf("/289", StringComparison.Ordinal) >= 0))
+            {
+                reason = $"checkpoint scope ({doc.label}) mismatches active tile plan ({expectedTiles})";
+                return true;
+            }
+
+            if (expectedTiles > 0 &&
+                doc.terrainCount > 0 &&
+                doc.terrainCount < Mathf.Min(9, expectedTiles) &&
+                doc.pacedStep > 120 &&
+                doc.label != null &&
+                doc.label.IndexOf("grid weld", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                reason =
+                    $"grid weld checkpoint with only {doc.terrainCount} terrain(s) for {expectedTiles}-tile plan";
+                return true;
+            }
+
             return false;
         }
     }

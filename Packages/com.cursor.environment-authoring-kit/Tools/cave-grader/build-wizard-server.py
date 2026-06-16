@@ -11,11 +11,21 @@ from urllib.parse import parse_qs, urlparse
 import base64
 
 import build_planner as planner
+import content_planner as content
 import planner_recording as recording
-from envkit_paths import ENV_VAR, resolve_envkit_root
+import wizard_manifest as wizard_manifest_mod
+import wizard_pipeline as wizard_pipeline_mod
+import wizard_pipeline_apply as wizard_pipeline_apply_mod
+import wizard_tab_apply as wizard_tab_apply_mod
+import wizard_director as wizard_director_mod
+import wizard_music as wizard_music_mod
+import wizard_registry as wizard_registry_mod
+import onnx_brain_config as onnx_cfg_mod
+from envkit_paths import ENV_VAR, ensure_planner_process_env, planner_ipc_temp_dir, planner_tmpdir_ok, resolve_envkit_root
 
 planner.load_dotenv(None)
 os.environ.setdefault(ENV_VAR, str(resolve_envkit_root()))
+ensure_planner_process_env()
 
 PORT = int(os.environ.get("BUILD_WIZARD_PORT", "8766"))
 ACTIVE_REL = Path("Assets/EnvironmentKit/Generated/CaveBuildActiveSessionConfig.json")
@@ -61,6 +71,80 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def _parse_tab_path(self, path: str) -> tuple[str | None, str | None]:
+        parts = path.strip("/").split("/")
+        if len(parts) < 3 or parts[0] != "api":
+            return None, None
+        tab_id = wizard_registry_mod.resolve_tab_id(parts[1])
+        if not tab_id or tab_id in ("video", "music"):
+            return None, None
+        if len(parts) == 3:
+            return tab_id, parts[2]
+        if len(parts) == 4 and parts[2] == "auto-respond" and parts[3] == "step":
+            return tab_id, "auto-respond/step"
+        return None, None
+
+    def _match_tab_route(self, path: str, action: str) -> str | None:
+        tab_id, act = self._parse_tab_path(path)
+        if tab_id and act == action:
+            return tab_id
+        return None
+
+    def _handle_tab_post(self, hub: Path, tab_id: str, action: str, body: dict):
+        if action == "start":
+            msg = (body.get("message") or "").strip()
+            if not msg:
+                return self._err(400, "message required")
+            session = wizard_registry_mod.start_session(
+                hub, tab_id, msg, internetResearch=bool(body.get("internetResearch"))
+            )
+            return self._json(200, {"ok": True, "session": session})
+        if action == "chat":
+            msg = (body.get("message") or "").strip()
+            if not msg:
+                return self._err(400, "message required")
+            session = wizard_registry_mod.chat_turn(hub, tab_id, msg)
+            return self._json(200, {"ok": True, "session": session})
+        if action == "resume":
+            session = wizard_registry_mod.resume_qna(hub, tab_id)
+            return self._json(200, {"ok": True, "session": session})
+        if action == "approve":
+            session = wizard_registry_mod.approve(
+                hub, tab_id, bool(body.get("approved", True)), str(body.get("feedback") or "")
+            )
+            return self._json(200, {"ok": True, "session": session})
+        if action == "reset":
+            session = wizard_registry_mod.reset_session(hub, tab_id)
+            return self._json(200, {"ok": True, "session": session})
+        if action == "export":
+            result = wizard_registry_mod.export_tab(hub, tab_id)
+            return self._json(200, {"ok": True, **result})
+        if action == "auto-respond/step":
+            preset = (body.get("preset") or "").strip().lower()
+            if not preset:
+                return self._err(400, "preset required")
+            result = wizard_registry_mod.auto_respond_step(
+                hub, tab_id, preset, internetResearch=bool(body.get("internetResearch"))
+            )
+            return self._json(
+                200,
+                {
+                    "ok": True,
+                    "done": bool(result.get("done")),
+                    "waiting": bool(result.get("waiting")),
+                    "session": result.get("session"),
+                },
+            )
+        if action == "auto-respond":
+            preset = (body.get("preset") or "").strip().lower()
+            if not preset:
+                return self._err(400, "preset required")
+            session = wizard_registry_mod.auto_respond_until_done(
+                hub, tab_id, preset, internetResearch=bool(body.get("internetResearch"))
+            )
+            return self._json(200, {"ok": True, "session": session})
+        return None
+
     def _json(self, code: int, payload: dict):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(code)
@@ -98,15 +182,76 @@ class Handler(BaseHTTPRequestHandler):
                     "ok": True,
                     "port": PORT,
                     "mode": "ai-planner",
+                    "contentApi": True,
+                    "contentApiVersion": 1,
                     "cursorApiConfigured": planner.cursor_api_configured(hub),
                     "cursorModel": os.environ.get("CAVE_CURSOR_MODEL", "composer-2.5"),
+                    "plannerTmpDir": str(planner_ipc_temp_dir()),
+                    "plannerTmpDirOk": planner_tmpdir_ok(),
+                    "wizardTabs": len(wizard_registry_mod.TAB_DEFS),
+                    "musicApi": True,
+                    "pipelineApi": True,
+                    "directorApi": True,
+                    "directorReady": wizard_director_mod.public_status(hub).get("ready") if hub else False,
                 },
             )
+
+        if parsed.path == "/api/wizard/manifest":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"manifest": wizard_manifest_mod.read_manifest(hub)})
+
+        if parsed.path == "/api/wizard/pipeline/status":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"pipeline": wizard_pipeline_mod.public_status(hub)})
+
+        if parsed.path == "/api/wizard/pipeline/apply/status":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"apply": wizard_tab_apply_mod.public_status(hub)})
+
+        if parsed.path == "/api/wizard/director/status":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"director": wizard_director_mod.public_status(hub)})
+
+        if parsed.path == "/api/wizard/music/status":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"music": wizard_music_mod.public_status(hub)})
+
+        if parsed.path == "/api/onnx/config":
+            if not hub:
+                return self._err(400, "hub query required")
+            cfg = onnx_cfg_mod.read_config(hub)
+            onnx_cfg_mod.apply_config_to_env(cfg, hub)
+            return self._json(
+                200,
+                {
+                    "ok": True,
+                    "config": cfg,
+                    "models": onnx_cfg_mod.available_models(hub),
+                    "diagnostics": onnx_cfg_mod.diagnostics(hub, cfg),
+                },
+            )
+
+        tab_id, _action = self._parse_tab_path(parsed.path)
+        if tab_id and hub:
+            if parsed.path.endswith("/session"):
+                return self._json(200, {"session": wizard_registry_mod.public_session(hub, tab_id)})
+            if parsed.path.endswith("/pulse"):
+                return self._json(200, {"pulse": wizard_registry_mod.session_pulse(hub, tab_id)})
 
         if parsed.path == "/api/planner/session":
             if not hub:
                 return self._err(400, "hub query required")
             return self._json(200, {"session": planner.public_session(hub, side_effects=False)})
+
+        if parsed.path == "/api/content/session":
+            if not hub:
+                return self._err(400, "hub query required")
+            return self._json(200, {"session": content.public_session(hub)})
 
         if parsed.path == "/api/planner/pulse":
             if not hub:
@@ -356,6 +501,24 @@ class Handler(BaseHTTPRequestHandler):
                 session = planner.approve_plan(hub, bool(body.get("approved", True)))
                 return self._json(200, {"ok": True, "session": session})
 
+            if parsed.path == "/api/onnx/config":
+                if not hub:
+                    return self._err(400, "hub query required")
+                incoming = body.get("config")
+                if not isinstance(incoming, dict):
+                    return self._err(400, "config object required")
+                cfg = onnx_cfg_mod.write_config(hub, incoming)
+                onnx_cfg_mod.apply_config_to_env(cfg, hub)
+                return self._json(
+                    200,
+                    {
+                        "ok": True,
+                        "config": cfg,
+                        "models": onnx_cfg_mod.available_models(hub),
+                        "diagnostics": onnx_cfg_mod.diagnostics(hub, cfg),
+                    },
+                )
+
             if parsed.path == "/api/planner/reset":
                 if not hub:
                     return self._err(400, "hub query required")
@@ -374,10 +537,130 @@ class Handler(BaseHTTPRequestHandler):
                 (hub / STATE_REL).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
                 return self._json(200, {"ok": True, "config": cfg})
 
+            if parsed.path == "/api/content/start":
+                if not hub:
+                    return self._err(400, "hub query required")
+                msg = (body.get("message") or "").strip()
+                if not msg:
+                    return self._err(400, "message required")
+                session = content.start_session(
+                    hub, msg, internet_research=bool(body.get("internetResearch", True))
+                )
+                return self._json(200, {"ok": True, "session": session})
+
+            if parsed.path == "/api/content/chat":
+                if not hub:
+                    return self._err(400, "hub query required")
+                msg = (body.get("message") or "").strip()
+                if not msg:
+                    return self._err(400, "message required")
+                session = content.chat_turn(hub, msg)
+                return self._json(200, {"ok": True, "session": session})
+
+            if parsed.path == "/api/content/resume":
+                if not hub:
+                    return self._err(400, "hub query required")
+                session = content.resume_qna(hub)
+                return self._json(200, {"ok": True, "session": session})
+
+            if parsed.path == "/api/content/approve":
+                if not hub:
+                    return self._err(400, "hub query required")
+                session = content.approve_layout(
+                    hub,
+                    bool(body.get("approved", True)),
+                    str(body.get("feedback") or ""),
+                )
+                return self._json(200, {"ok": True, "session": session})
+
+            if parsed.path == "/api/content/reset":
+                if not hub:
+                    return self._err(400, "hub query required")
+                session = content.reset_session(hub)
+                return self._json(200, {"ok": True, "session": session})
+
+            if parsed.path == "/api/content/auto-respond/step":
+                if not hub:
+                    return self._err(400, "hub query required")
+                preset = (body.get("preset") or "").strip().lower()
+                if preset not in ("town_hub", "arena_trainers", "full_mainscene"):
+                    return self._err(400, "preset must be town_hub, arena_trainers, or full_mainscene")
+                result = content.auto_respond_step(
+                    hub, preset, internet_research=bool(body.get("internetResearch", True))
+                )
+                return self._json(
+                    200,
+                    {
+                        "ok": True,
+                        "done": bool(result.get("done")),
+                        "waiting": bool(result.get("waiting")),
+                        "session": result.get("session"),
+                    },
+                )
+
+            if parsed.path == "/api/content/auto-respond":
+                if not hub:
+                    return self._err(400, "hub query required")
+                preset = (body.get("preset") or "").strip().lower()
+                if preset not in ("town_hub", "arena_trainers", "full_mainscene"):
+                    return self._err(400, "preset must be town_hub, arena_trainers, or full_mainscene")
+                session = content.auto_respond_until_approval(
+                    hub, preset, internet_research=bool(body.get("internetResearch", True))
+                )
+                return self._json(200, {"ok": True, "session": session})
+
             if parsed.path == "/api/build/cancel":
                 if hub:
                     planner.cancel(hub)
                 return self._json(200, {"ok": True})
+
+            if parsed.path == "/api/wizard/pipeline/start":
+                if not hub:
+                    return self._err(400, "hub query required")
+                presets = body.get("presets") if isinstance(body.get("presets"), dict) else None
+                status = wizard_pipeline_mod.start_pipeline(
+                    hub, presets, auto_approve=bool(body.get("autoApprove", True))
+                )
+                return self._json(200, {"ok": True, "pipeline": status})
+
+            if parsed.path == "/api/wizard/pipeline/step":
+                if not hub:
+                    return self._err(400, "hub query required")
+                result = wizard_pipeline_mod.pipeline_step(hub)
+                return self._json(200, result)
+
+            if parsed.path == "/api/wizard/pipeline/cancel":
+                if not hub:
+                    return self._err(400, "hub query required")
+                status = wizard_pipeline_mod.cancel_pipeline(hub)
+                return self._json(200, {"ok": True, "pipeline": status})
+
+            if parsed.path == "/api/wizard/director/ensure":
+                if not hub:
+                    return self._err(400, "hub query required")
+                result = wizard_director_mod.ensure_for_hub(hub)
+                return self._json(200 if result.get("ok") else 503, result)
+
+            if parsed.path == "/api/wizard/music/ensure":
+                if not hub:
+                    return self._err(400, "hub query required")
+                result = wizard_music_mod.ensure_for_hub(hub)
+                return self._json(200 if result.get("ok") else 503, result)
+
+            if parsed.path == "/api/wizard/restart-build":
+                if not hub:
+                    return self._err(400, "hub query required")
+                for t in wizard_registry_mod.TAB_DEFS:
+                    wizard_registry_mod.reset_session(hub, t["id"])
+                wizard_pipeline_mod.cancel_pipeline(hub)
+                wizard_manifest_mod.refresh_manifest(hub)
+                return self._json(200, {"ok": True})
+
+            tab_id, action = self._parse_tab_path(parsed.path)
+            if hub and tab_id and action:
+                handled = self._handle_tab_post(hub, tab_id, action, body)
+                if handled:
+                    return handled
 
         except Exception as ex:
             return self._err(500, str(ex))

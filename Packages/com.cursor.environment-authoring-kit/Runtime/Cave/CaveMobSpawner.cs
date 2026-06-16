@@ -95,9 +95,26 @@ namespace EnvironmentAuthoringKit.Cave
                 {
                     var id = instance.GetComponent<BiomeEnemyIdentity>() ??
                         instance.AddComponent<BiomeEnemyIdentity>();
-                    id.Configure(WorldSurfaceBiomeId.AnnexLabyrinth, legendary: false);
+                    id.Configure(WorldSurfaceBiomeId.PlayKarst, legendary: false);
+
+                    ConfigureSpawnedEnemy(instance, seed);
+                    ApplyAggression(instance);
+                    EnsureLootDropper(instance, seed);
                 }
             }
+        }
+
+        static void EnsureLootDropper(GameObject instance, int seed)
+        {
+            if (instance == null)
+                return;
+
+            var dropper = instance.GetComponent<WorldEnemyLootDropper>();
+            if (dropper == null)
+                dropper = instance.AddComponent<WorldEnemyLootDropper>();
+            dropper.biome = WorldSurfaceBiomeId.PlayKarst;
+            dropper.lootSeed = UnityObjectCompat.ReferenceId(instance) ^ seed;
+            dropper.dropChance = 0.45f + (seed % 23) * 0.01f;
         }
 
         void ConfigureSpawnedEnemy(GameObject instance, int seed)

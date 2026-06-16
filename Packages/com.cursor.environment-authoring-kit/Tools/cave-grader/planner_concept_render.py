@@ -238,8 +238,7 @@ def _sanitize_layout_plan(layout: dict[str, Any]) -> dict[str, Any]:
 def derive_layout_plan(brief: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     """Build layoutPlan from brief.layoutPlan or infer from config + summary."""
     explicit = brief.get("layoutPlan")
-    if isinstance(explicit, dict) and explicit.get("markers"):
-        return _sanitize_layout_plan(explicit)
+    has_explicit = isinstance(explicit, dict) and bool(explicit.get("markers"))
 
     summary = (brief.get("summary") or cfg.get("label") or "").lower()
     goals = " ".join(brief.get("userGoals") or []).lower()
@@ -327,20 +326,64 @@ def derive_layout_plan(brief: dict[str, Any], cfg: dict[str, Any]) -> dict[str, 
     if cfg.get("use3DCaveSystem") or "cave" in text:
         cave_mouths.append({"pos": "play-north-center", "label": "cave mouth"})
 
-    return {
-        "gridNote": "289 extended" if int(cfg.get("tileCount", 81)) > 81 else "81-tile shell",
+    tc = int(cfg.get("tileCount", 9))
+    if tc == 9:
+        grid_note = "9-tile play disk"
+    elif tc == 13:
+        grid_note = "13-tile floating islands"
+    elif tc == 81:
+        grid_note = "81-tile shell"
+    elif tc >= 289:
+        grid_note = "289 extended"
+    else:
+        grid_note = f"{tc}-tile (normalized to play disk)"
+
+    ring_props: list[dict[str, Any]] = []
+    if tc > 9 and not floating:
+        if props_on:
+            ring_props = [
+                {"ring": 2, "density": "medium", "trails": bool(has_trails), "label": "foothill props"},
+                {"ring": 3, "density": "low", "trails": False, "label": "peak sparse"},
+            ]
+        if tc > 81:
+            ring_props.extend(
+                [
+                    {"ring": 5, "density": "low", "trails": False, "label": "mid open"},
+                    {"ring": 7, "density": "none", "trails": False, "label": "horizon"},
+                ]
+            )
+        elif cfg.get("outerRingMountains"):
+            ring_props.append({"ring": 4, "density": "none", "trails": False, "label": "horizon ring"})
+
+    inferred = {
+        "gridNote": grid_note,
         "spawn": {"row": 0, "col": 1, "label": "Player spawn"},
         "playDisk": {
             "labyrinth": labyrinth,
             "labyrinthNote": "rows 1–2 maze (6 tiles) · row 0 north flat overlook" if labyrinth else "open flat 3×3",
         },
         "markers": markers,
+        "ringProps": ring_props,
         "trails": trails,
         "islands": islands,
         "caveMouths": cave_mouths,
         "surfaceWater": bool(cfg.get("surfaceWater")),
         "surfaceTrails": bool(cfg.get("surfaceTrails")) or bool(trails),
     }
+
+    if not has_explicit:
+        return inferred
+
+    base = _sanitize_layout_plan(explicit)
+    if not base.get("ringProps"):
+        base["ringProps"] = inferred.get("ringProps") or []
+    if not base.get("trails"):
+        base["trails"] = inferred.get("trails") or []
+    if not base.get("islands") and inferred.get("islands"):
+        base["islands"] = inferred["islands"]
+    if not base.get("gridNote"):
+        base["gridNote"] = inferred.get("gridNote")
+    return base
 
 
 def _draw_marker(draw: ImageDraw.ImageDraw, x: int, y: int, kind: str, label: str, font) -> None:
@@ -579,7 +622,7 @@ def _draw_inspector(
     draw.text((x, y), title, fill=(230, 230, 230), font=font)
     y += 24
     rows = [
-        ("Tiles", str(cfg.get("tileCount", 81))),
+        ("Tiles", str(cfg.get("tileCount", 9))),
         ("Props", "on" if cfg.get("playDiskProps") else "off"),
         ("Trails", "on" if cfg.get("surfaceTrails") or layout.get("trails") else "off"),
         ("Caves", "on" if cfg.get("use3DCaveSystem") else "off"),
@@ -608,6 +651,301 @@ def _draw_inspector(
             color = (120, 210, 140) if item.get("done") else (120, 130, 150)
             draw.text((x, y), f"{mark} {str(item.get('label', ''))[:28]}", fill=color, font=tiny)
             y += 15
+
+
+def _resolve_build_scope(cfg: dict[str, Any]) -> dict[str, Any]:
+    """Map sessionConfig to concept render scope (matches Unity ResolveFullWorldPlaceOffsets tiers)."""
+    tc = int(cfg.get("tileCount", 9))
+    floating = bool(cfg.get("floatingTiles"))
+    if tc <= 9:
+        return {
+            "mode": "play_disk",
+            "tile_count": 9,
+            "max_ring": 1,
+            "topdown": True,
+            "grid_side": 3,
+            "label": "9-tile play disk",
+        }
+    if tc == 13 or (floating and tc not in (81, 289)):
+        return {
+            "mode": "floating",
+            "tile_count": 13,
+            "max_ring": 2,
+            "topdown": False,
+            "grid_side": 5,
+            "label": "13-tile floating islands",
+        }
+    if tc > 81:
+        return {
+            "mode": "extended",
+            "tile_count": 289,
+            "max_ring": 8,
+            "topdown": True,
+            "grid_side": 17,
+            "label": "289-tile extended",
+        }
+    if tc == 81:
+        return {
+            "mode": "fullworld",
+            "tile_count": 81,
+            "max_ring": 4,
+            "topdown": True,
+            "grid_side": 9,
+            "label": "81-tile FullWorld",
+        }
+    return {
+        "mode": "play_disk",
+        "tile_count": 9,
+        "max_ring": 1,
+        "topdown": True,
+        "grid_side": 3,
+        "label": "9-tile play disk",
+    }
+
+
+TOPDOWN_ZONES = {
+    "play": (72, 140, 88),
+    "play_open": (100, 175, 110),
+    "lab": (34, 110, 72),
+    "foot": (88, 105, 72),
+    "peak": (110, 95, 82),
+    "horizon": (55, 75, 95),
+    "mixed": (70, 90, 75),
+    "open": (45, 65, 55),
+    "water": (66, 165, 245),
+    "trail": (210, 165, 90),
+    "mouth": (40, 48, 55),
+    "empty": (28, 34, 42),
+}
+
+
+def _cheb_ring_color(ring: int) -> tuple[int, int, int]:
+    if ring <= 1:
+        return TOPDOWN_ZONES["play"]
+    if ring == 2:
+        return TOPDOWN_ZONES["foot"]
+    if ring == 3:
+        return TOPDOWN_ZONES["peak"]
+    if ring == 4:
+        return TOPDOWN_ZONES["horizon"]
+    if ring <= 7:
+        return TOPDOWN_ZONES["mixed"]
+    return TOPDOWN_ZONES["open"]
+
+
+def _topdown_scene_metrics(scene_rect: tuple[int, int, int, int], grid_side: int) -> dict[str, Any]:
+    sx0, sy0, sx1, sy1 = scene_rect
+    w, h = sx1 - sx0, sy1 - sy0
+    cx = (sx0 + sx1) // 2
+    cy = sy0 + int(h * 0.52)
+    cell = max(5, min(w, h) // max(5, grid_side + 1))
+    return {"cx": cx, "cy": cy, "cell": cell, "scene_rect": scene_rect}
+
+
+def _draw_topdown_play_disk(
+    draw: ImageDraw.ImageDraw,
+    cx: int,
+    cy: int,
+    cell: int,
+    *,
+    labyrinth: bool = False,
+) -> None:
+    play_cell = max(4, cell // 3)
+    gx0 = cx - play_cell
+    gy0 = cy - play_cell
+    for row in range(3):
+        for col in range(3):
+            x0 = gx0 + col * play_cell
+            y0 = gy0 + row * play_cell
+            is_lab = labyrinth and row >= 1
+            fill = TOPDOWN_ZONES["lab"] if is_lab else TOPDOWN_ZONES["play_open"]
+            draw.rectangle([x0, y0, x0 + play_cell - 1, y0 + play_cell - 1], fill=fill, outline=(20, 50, 30))
+            if row == 0 and col == 1:
+                draw.ellipse(
+                    [x0 + play_cell // 2 - 3, y0 + 2, x0 + play_cell // 2 + 3, y0 + 8],
+                    fill=TOPDOWN_ZONES["mouth"],
+                )
+
+
+def _draw_topdown_chebyshev_shell(
+    draw: ImageDraw.ImageDraw,
+    metrics: dict[str, Any],
+    max_ring: int,
+    *,
+    labyrinth: bool = False,
+) -> None:
+    cx, cy, cell = metrics["cx"], metrics["cy"], metrics["cell"]
+    draw.rectangle(list(metrics["scene_rect"]), fill=TOPDOWN_ZONES["empty"])
+    for ring in range(max_ring, -1, -1):
+        side = 2 * ring + 1
+        half = ring * cell
+        x0, y0 = cx - half, cy - half
+        x1, y1 = cx + half, cy + half
+        color = _cheb_ring_color(ring)
+        if ring <= 1:
+            continue
+        draw.rectangle([x0, y0, x1, y1], outline=color, width=max(1, cell // 5))
+    _draw_topdown_play_disk(draw, cx, cy, cell, labyrinth=labyrinth)
+
+
+def _density_rgb(level: str) -> tuple[int, int, int]:
+    key = (level or "medium").lower()
+    if key in ("none", "off", "0"):
+        return (40, 48, 44)
+    if key in ("low", "sparse"):
+        return (90, 120, 70)
+    if key in ("high", "dense"):
+        return (200, 150, 60)
+    return (140, 170, 80)
+
+
+def _draw_topdown_ring_props(
+    draw: ImageDraw.ImageDraw,
+    metrics: dict[str, Any],
+    layout: dict[str, Any],
+    tiny,
+    *,
+    density_mode: bool,
+) -> None:
+    cx, cy, cell = metrics["cx"], metrics["cy"], metrics["cell"]
+    for rp in layout.get("ringProps") or []:
+        try:
+            ring = int(rp.get("ring", 0))
+        except (TypeError, ValueError):
+            continue
+        if ring < 2:
+            continue
+        half = ring * cell
+        x0, y0 = cx - half, cy - half
+        x1, y1 = cx + half, cy + half
+        if density_mode:
+            fill = _density_rgb(str(rp.get("density", "medium")))
+            draw.rectangle([x0 + 2, y0 + 2, x1 - 2, y1 - 2], outline=fill, width=max(2, cell // 4))
+            label = str(rp.get("label", f"ring {ring}"))[:20]
+            draw.text((x0 + 4, y0 + 4), label, fill=(220, 210, 180), font=tiny)
+        elif rp.get("trails"):
+            draw.ellipse([x0, y0, x1, y1], outline=TOPDOWN_ZONES["trail"], width=2)
+
+
+def _draw_topdown_markers(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    metrics: dict[str, Any],
+    tiny,
+) -> None:
+    cx, cy, cell = metrics["cx"], metrics["cy"], metrics["cell"]
+    play_cell = max(4, cell // 3)
+    gx0, gy0 = cx - play_cell, cy - play_cell
+    island_offsets = {"N": (0, -2), "E": (2, 0), "S": (0, 2), "W": (-2, 0)}
+
+    for m in layout.get("markers") or []:
+        kind = str(m.get("kind", "prop"))
+        label = str(m.get("label", ""))[:14]
+        zone = str(m.get("zone", "play"))
+        if zone == "island":
+            d = str(m.get("dir", "N")).upper()[:1]
+            dx, dy = island_offsets.get(d, (0, -2))
+            px = cx + dx * cell
+            py = cy + dy * cell
+        else:
+            row, col = _coerce_play_row_col(m.get("row"), m.get("col"))
+            px = gx0 + col * play_cell + play_cell // 2
+            py = gy0 + row * play_cell + play_cell // 2
+        color = COLORS.get(kind, COLORS["prop"])
+        if kind == "spawn":
+            draw.ellipse([px - 8, py - 8, px + 8, py + 8], fill=UNITY["spawn"], outline=(20, 80, 40), width=2)
+        elif kind == "enemy":
+            draw.polygon([(px, py - 8), (px + 8, py + 6), (px - 8, py + 6)], fill=color)
+        else:
+            draw.ellipse([px - 6, py - 6, px + 6, py + 6], fill=color)
+        if label:
+            draw.text((px, py + 10), label, fill=(210, 210, 200), anchor="mm", font=tiny)
+
+
+def _draw_topdown_trails(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    metrics: dict[str, Any],
+    *,
+    color: tuple[int, int, int],
+    width: int = 3,
+) -> None:
+    cx, cy, cell = metrics["cx"], metrics["cy"], metrics["cell"]
+    for tr in layout.get("trails") or []:
+        dest = str(tr.get("to", "")).lower()
+        if dest.startswith("island-"):
+            d = dest.split("-")[-1].upper()
+            offsets = {"N": (0, -2), "E": (2, 0), "S": (0, 2), "W": (-2, 0)}
+            dx, dy = offsets.get(d, (0, -2))
+            draw.line([(cx, cy), (cx + dx * cell, cy + dy * cell)], fill=color, width=width)
+        elif "foothill" in dest or "peak" in dest or "ring" in dest:
+            draw.line([(cx, cy), (cx, cy + cell * 2)], fill=color, width=width)
+        elif "south" in dest:
+            draw.line([(cx, cy), (cx, cy + cell * 2)], fill=color, width=width)
+
+
+def _draw_topdown_layout_world(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    scene_rect: tuple[int, int, int, int],
+    tiny,
+    scope: dict[str, Any],
+) -> None:
+    metrics = _topdown_scene_metrics(scene_rect, scope["grid_side"])
+    labyrinth = bool((layout.get("playDisk") or {}).get("labyrinth"))
+    _draw_topdown_chebyshev_shell(draw, metrics, scope["max_ring"], labyrinth=labyrinth)
+    _draw_topdown_ring_props(draw, metrics, layout, tiny, density_mode=False)
+    _draw_topdown_trails(draw, layout, metrics, color=TOPDOWN_ZONES["trail"], width=3)
+    _draw_topdown_markers(draw, layout, metrics, tiny)
+    sx0, sy0, _, _ = scene_rect
+    note = str(layout.get("gridNote") or scope["label"])
+    draw.text((sx0 + 10, sy0 + 8), note[:72], fill=(200, 210, 220), font=tiny)
+
+
+def _draw_topdown_density_world(
+    draw: ImageDraw.ImageDraw,
+    layout: dict[str, Any],
+    cfg: dict[str, Any],
+    scene_rect: tuple[int, int, int, int],
+    tiny,
+    scope: dict[str, Any],
+) -> None:
+    metrics = _topdown_scene_metrics(scene_rect, scope["grid_side"])
+    draw.rectangle(list(scene_rect), fill=(18, 22, 28))
+    for ring in range(scope["max_ring"], 0, -1):
+        half = ring * metrics["cell"]
+        x0 = metrics["cx"] - half
+        y0 = metrics["cy"] - half
+        x1 = metrics["cx"] + half
+        y1 = metrics["cy"] + half
+        draw.rectangle([x0, y0, x1, y1], outline=(38, 48, 42), width=1)
+    _draw_topdown_play_disk(draw, metrics["cx"], metrics["cy"], metrics["cell"])
+    _draw_topdown_ring_props(draw, metrics, layout, tiny, density_mode=True)
+    _draw_topdown_trails(draw, layout, metrics, color=DENSITY_TRAIL_RGB, width=5)
+    prop_counts = _prop_density_by_cell(layout)
+    play_cell = max(4, metrics["cell"] // 3)
+    gx0, gy0 = metrics["cx"] - play_cell, metrics["cy"] - play_cell
+    max_count = max(prop_counts.values(), default=1)
+    for row in range(3):
+        for col in range(3):
+            n = prop_counts.get(("play", row, col), 0)
+            if n <= 0:
+                continue
+            px = gx0 + col * play_cell + play_cell // 2
+            py = gy0 + row * play_cell + play_cell // 2
+            t = n / max_count
+            heat = (int(50 + 120 * t), int(90 + 80 * t), int(40 + 30 * t))
+            r = int(10 + 14 * t)
+            draw.ellipse([px - r, py - r, px + r, py + r], fill=heat)
+            draw.text((px, py), str(n), fill=(240, 250, 235), anchor="mm", font=tiny)
+    sx0, sy0, _, _ = scene_rect
+    draw.text(
+        (sx0 + 10, sy0 + 8),
+        f"Prop density — {scope['label']}",
+        fill=(210, 200, 170),
+        font=tiny,
+    )
 
 
 def _scene_layout_params(
@@ -769,6 +1107,10 @@ def _draw_scene_world(
     specs = _parse_specs(layout)
     maze_cells = _corner_maze_cells(layout)
     floating = params["floating"]
+    scope = _resolve_build_scope(cfg)
+    if scope["topdown"]:
+        _draw_topdown_layout_world(draw, layout, cfg, scene_rect, tiny, scope)
+        return
 
     # Ground grid lines (Unity scene grid)
     for i in range(-6, 7):
@@ -906,7 +1248,12 @@ def _draw_scene_density(
     *,
     zoom: float = 1.0,
 ) -> None:
-    """Trail + prop density map — same iso projection as layout (Unity samples these colors)."""
+    """Trail + prop density map — same projection as layout (Unity samples these colors)."""
+    scope = _resolve_build_scope(cfg)
+    if scope["topdown"]:
+        _draw_topdown_density_world(draw, layout, cfg, scene_rect, tiny, scope)
+        return
+
     params = _scene_layout_params(cfg, scene_rect, zoom=zoom)
     sx0, sy0, sx1, sy1 = params["scene_rect"]
     ox = params["ox"]

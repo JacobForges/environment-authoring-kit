@@ -38,7 +38,7 @@ if [[ -z "$WORKFLOW" ]]; then
     polish)   WORKFLOW=post_build ;;
     *)        WORKFLOW=post_build ;;
   esac
-  echo "[cursor-bot] mission phase=$PHASE → workflow=$WORKFLOW (G1–G7 done + no CaveBuildQualityReport.json → gameplay/G8)"
+  echo "[cursor-bot] mission phase=$PHASE → workflow=$WORKFLOW"
 fi
 
 exec "$GRADER_DIR/run-grade-and-fix.sh" --auto --workflow="$WORKFLOW" "${PASSTHRU[@]}"

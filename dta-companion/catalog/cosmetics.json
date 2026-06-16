@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "helm_scout",
+      "name": "Scout Dome",
+      "description": "Lightweight polycarbonate dome for surface recon runs.",
+      "slot": "helmet",
+      "rarity": "Common",
+      "priceGold": 120,
+      "priceGems": 0,
+      "previewColor": "#22D3EE",
+      "iconKey": "helm_scout"
+    },
+    {
+      "id": "helm_bastion",
+      "name": "Bastion Plate",
+      "description": "Reinforced helmet shell for cave-rail collisions.",
+      "slot": "helmet",
+      "rarity": "Rare",
+      "priceGold": 280,
+      "priceGems": 2,
+      "previewColor": "#64748B",
+      "iconKey": "helm_bastion"
+    },
+    {
+      "id": "visor_pulse",
+      "name": "Pulse Visor",
+      "description": "Cyan HUD overlay with signal-node highlighting.",
+      "slot": "visor",
+      "rarity": "Common",
+      "priceGold": 90,
+      "priceGems": 0,
+      "previewColor": "#06B6D4",
+      "iconKey": "visor_pulse"
+    },
+    {
+      "id": "visor_spectrum",
+      "name": "Spectrum Lens",
+      "description": "Multi-band visor for reward heat-map overlays.",
+      "slot": "visor",
+      "rarity": "Epic",
+      "priceGold": 0,
+      "priceGems": 8,
+      "previewColor": "#A78BFA",
+      "iconKey": "visor_spectrum"
+    },
+    {
+      "id": "chassis_slate",
+      "name": "Slate Chassis",
+      "description": "Default rail chassis tuned for Florida karst biomes.",
+      "slot": "chassis",
+      "rarity": "Common",
+      "priceGold": 0,
+      "priceGems": 0,
+      "previewColor": "#334155",
+      "iconKey": "chassis_slate"
+    },
+    {
+      "id": "chassis_obsidian",
+      "name": "Obsidian Frame",
+      "description": "Dark alloy frame with violet induction rails.",
+      "slot": "chassis",
+      "rarity": "Rare",
+      "priceGold": 350,
+      "priceGems": 0,
+      "previewColor": "#1E1B4B",
+      "iconKey": "chassis_obsidian"
+    },
+    {
+      "id": "chassis_aurora",
+      "name": "Aurora Shell",
+      "description": "Legendary chassis with animated gradient plating.",
+      "slot": "chassis",
+      "rarity": "Legendary",
+      "priceGold": 0,
+      "priceGems": 18,
+      "previewColor": "#F472B6",
+      "iconKey": "chassis_aurora"
+    },
+    {
+      "id": "trail_ion",
+      "name": "Ion Wake",
+      "description": "Cyan particle trail left on high-velocity curves.",
+      "slot": "trail",
+      "rarity": "Common",
+      "priceGold": 75,
+      "priceGems": 0,
+      "previewColor": "#22D3EE",
+      "iconKey": "trail_ion"
+    },
+    {
+      "id": "trail_magma",
+      "name": "Magma Sparks",
+      "description": "Ember trail for lava-tube underground routes.",
+      "slot": "trail",
+      "rarity": "Rare",
+      "priceGold": 200,
+      "priceGems": 3,
+      "previewColor": "#F97316",
+      "iconKey": "trail_magma"
+    },
+    {
+      "id": "emblem_dta",
+      "name": "DTA Crest",
+      "description": "Official Deep Train Academy squad emblem.",
+      "slot": "emblem",
+      "rarity": "Common",
+      "priceGold": 50,
+      "priceGems": 0,
+      "previewColor": "#22D3EE",
+      "iconKey": "emblem_dta"
+    },
+    {
+      "id": "emblem_vanguard",
+      "name": "Vanguard Sigil",
+      "description": "Elite cohort sigil for top leaderboard agents.",
+      "slot": "emblem",
+      "rarity": "Epic",
+      "priceGold": 400,
+      "priceGems": 5,
+      "previewColor": "#EAB308",
+      "iconKey": "emblem_vanguard"
+    },
+    {
+      "id": "voice_calm",
+      "name": "Calm Comms",
+      "description": "Soft telemetry voice pack for coaching prompts.",
+      "slot": "voice",
+      "rarity": "Common",
+      "priceGold": 60,
+      "priceGems": 0,
+      "previewColor": "#94A3B8",
+      "iconKey": "voice_calm"
+    },
+    {
+      "id": "voice_tactical",
+      "name": "Tactical Bark",
+      "description": "Crisp command voice for battle-focus sessions.",
+      "slot": "voice",
+      "rarity": "Rare",
+      "priceGold": 180,
+      "priceGems": 2,
+      "previewColor": "#10B981",
+      "iconKey": "voice_tactical"
+    },
+    {
+      "id": "helm_crown",
+      "name": "Crown Relay",
+      "description": "Legendary crown antenna for championship agents.",
+      "slot": "helmet",
+      "rarity": "Legendary",
+      "priceGold": 0,
+      "priceGems": 22,
+      "previewColor": "#FBBF24",
+      "iconKey": "helm_crown"
+    },
+    {
+      "id": "trail_void",
+      "name": "Void Ribbon",
+      "description": "Legendary shadow ribbon that fades into cave darkness.",
+      "slot": "trail",
+      "rarity": "Legendary",
+      "priceGold": 0,
+      "priceGems": 15,
+      "previewColor": "#6366F1",
+      "iconKey": "trail_void"
+    },
+    {
+      "id": "voice_chorus",
+      "name": "Chorus Link",
+      "description": "Harmonic multi-agent voice blend for squad play.",
+      "slot": "voice",
+      "rarity": "Epic",
+      "priceGold": 0,
+      "priceGems": 10,
+      "previewColor": "#C084FC",
+      "iconKey": "voice_chorus"
+    }
+  ]
+}

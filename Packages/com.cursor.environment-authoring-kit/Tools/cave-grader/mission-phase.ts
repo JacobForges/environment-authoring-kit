@@ -102,11 +102,16 @@ export function demoWorldGatePassed(hubRoot: string): boolean {
   return q.buildAcceptable === true && score >= DEMO_WORLD_MIN_SCORE;
 }
 
+/** G8 scene-only work without a fresh grade — opt-in via CAVE_SCENE_DEMO_BYPASS=1. */
+export function sceneDemoBypassEnabled(): boolean {
+  return process.env.CAVE_SCENE_DEMO_BYPASS === "1";
+}
+
 export function gameplayPhaseUnlocked(hubRoot: string): boolean {
   if (!gameplayMilestonesReady(hubRoot)) return false;
 
   const q = loadPrimaryQualityGate(hubRoot);
-  if (!q) return true;
+  if (!q) return sceneDemoBypassEnabled();
 
   return shouldUseDemoWorldGate(hubRoot)
     ? demoWorldGatePassed(hubRoot)
@@ -132,7 +137,8 @@ export function formatMissionPhaseLine(hubRoot: string): string {
   const smoke = phase !== "world" ? ` playSmoke=${playSmokePassed(hubRoot)}` : "";
   const g17 = gameplayMilestonesReady(hubRoot);
   const noReport = loadPrimaryQualityGate(hubRoot) == null;
-  const bypass = g17 && noReport ? " sceneDemoBypass=true" : "";
+  const bypass =
+    g17 && noReport && sceneDemoBypassEnabled() ? " sceneDemoBypass=true" : "";
   return (
     `[CaveCursor:mission] phase=${phase} worldScore=${score} buildAcceptable=${acceptable} demoReady=${demoReady} g17=${g17}${bypass}${smoke}`
   );

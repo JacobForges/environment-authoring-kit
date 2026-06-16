@@ -113,11 +113,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildStepCounter.Current > 0)
                 return;
 
-            var session = SurfaceTerrainTileExpansion.CreateMinimalFullWorldGridSession(main);
+            var request = FullWorldConceptLayoutCatalog.CreateHubBoundRequest();
+            var session = SurfaceTerrainTileExpansion.CreateMinimalFullWorldGridSession(main, request);
             if (session == null)
                 return;
 
-            session.Request = FullWorldConceptLayoutCatalog.CreateHubBoundRequest();
+            session.Request = request;
             session.Phase = FullWorldGridPhase.PlaceAll;
             session.Index = Mathf.Max(0, UnityEngine.Object.FindObjectsByType<Terrain>().Length - 1);
             BindActiveSession(session);

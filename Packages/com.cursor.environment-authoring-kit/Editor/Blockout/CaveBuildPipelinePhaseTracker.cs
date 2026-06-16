@@ -63,12 +63,14 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (tilePlanCount > 81)
                 CaveBuildStepCounter.ConfigureForExtendedTilePlan(tilePlanCount);
 
-            var label = tilePlanCount <= SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
-                        CaveBuildSessionConfig.IsFloatingIslandsDemo()
-                ? $"Floating islands demo — 3×3 play disk + 4 cardinal tiles ({tilePlanCount} terrains)"
-                : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
-                    ? $"Extended flat grid + terraform (~{tilePlanCount} tiles, Chebyshev 8)"
-                    : $"FullWorld core grid + terraform ({tilePlanCount} tiles)";
+            var label = CaveBuildSessionConfig.IsPlayDiskOnlyDemo()
+                ? $"Play disk only — 3×3 ({tilePlanCount} terrains)"
+                : tilePlanCount <= SurfaceTerrainTileExpansion.FloatingIslandsTerrainTileCount &&
+                  CaveBuildSessionConfig.IsFloatingIslandsDemo()
+                    ? $"Floating islands demo — 3×3 play disk + 4 cardinal tiles ({tilePlanCount} terrains)"
+                    : CaveBuildAaaSessionPolicy.UsesExtendedOpenWorldGrid
+                        ? $"Extended flat grid + terraform (~{tilePlanCount} tiles, Chebyshev 8)"
+                        : $"FullWorld core grid + terraform ({tilePlanCount} tiles)";
             CaveBuildStepCounter.SetSegment(
                 CaveBuildStepCounter.BuildSegment.FlatGrid,
                 tilePlanCount * 2 + 320,

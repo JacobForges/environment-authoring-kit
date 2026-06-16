@@ -8,6 +8,8 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
     /// <summary>
     /// Editor work queue — one queued action per editor frame when possible.
     /// Timing uses ReadyAt / cooldown timestamps only (never Thread.Sleep on the main thread).
+    /// Batch size is resolved via <see cref="CaveBuildLoadAwareBatching.Clamp"/> (default 1 on 16GB RAM);
+    /// no alternate fast-path bypasses the queue for heavy build steps.
     /// </summary>
     static class CaveBuildActionPacing
     {
@@ -18,7 +20,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public const float CooldownLightSeconds = LightDelaySeconds;
         public const float CooldownNormalSeconds = LightDelaySeconds * 3f;
         public const float CooldownHeavySeconds = LightDelaySeconds * 8f;
-        public const int DefaultBatchSize = 2;
+        public const int DefaultBatchSize = 1;
         public const int MaxQueueDepth = 4096;
 
         public enum ActionWeight

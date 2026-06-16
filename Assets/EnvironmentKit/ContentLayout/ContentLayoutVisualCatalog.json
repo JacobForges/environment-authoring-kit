@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "license": "CC0 — Assets/EnvironmentKit/CC0Imports (see package LICENSE)",
+  "usage": "Agent/wizard maps brief ids to prefab asset paths. Unity loads ContentLayoutVisualCatalog.asset at runtime.",
+  "assetPath": "Assets/EnvironmentKit/Resources/ContentLayoutVisualCatalog.asset",
+  "npcs": {
+    "npc_mara_dispatch": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_PlayMerchant.prefab", "scale": 1 },
+    "npc_sera_scout": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_FoothillRanger.prefab", "scale": 1 },
+    "npc_lumen_gate": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_HorizonWatcher.prefab", "scale": 1 },
+    "npc_ambient_sigrid": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_Ambient_A.prefab", "scale": 1 },
+    "npc_ambient_jonas": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_Ambient_B.prefab", "scale": 1 },
+    "npc_ambient_ren": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/NPC_Ambient_C.prefab", "scale": 1 }
+  },
+  "enemies": {
+    "enemy_spawner_east_trail": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/ENEMY_Annex_1.prefab", "scale": 0.85 },
+    "enemy_spawner_arena_ring": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Characters/ENEMY_Foothill_1.prefab", "scale": 0.9 }
+  },
+  "props": {
+    "prop_depot_sign": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/W01.prefab", "scale": 1.2 },
+    "prop_mara_manifest_crate": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/B02.prefab", "scale": 1 },
+    "prop_sera_fork_sign": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/W01.prefab", "scale": 1.1 },
+    "prop_jonas_rumor_board": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/P01.prefab", "scale": 1 },
+    "prop_cave_mouth_arch": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/G-C05.prefab", "scale": 1.5 },
+    "prop_depot_pennant": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/L01.prefab", "scale": 1.2 },
+    "prop_sera_fork_pennant": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/L02.prefab", "scale": 1.2 },
+    "prop_ren_bleacher_banners": { "prefab": "Assets/EnvironmentKit/CC0Imports/Prefabs/Items/L03.prefab", "scale": 1.3 }
+  }
+}

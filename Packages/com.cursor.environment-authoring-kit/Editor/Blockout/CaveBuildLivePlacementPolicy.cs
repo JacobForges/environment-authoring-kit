@@ -17,14 +17,21 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     return true;
 
                 if (CaveBuildSessionConfig.HasFinalizedActive &&
-                    CaveBuildSessionConfig.IsFloatingIslandsDemo())
+                    (CaveBuildSessionConfig.IsFloatingIslandsDemo() ||
+                     CaveBuildSessionConfig.IsPlayDiskOnlyDemo()))
                     return true;
 
                 var settings = CaveBuildCursorSettings.LoadOrCreate();
                 settings.LoadFromPrefs();
-                return settings.showLiveScenePlacement &&
-                       (CaveBuildLiveSceneFeedback.SessionActive ||
-                        CaveBuildEditorResponsiveness.IsLongBuildActive);
+                if (!settings.showLiveScenePlacement)
+                    return false;
+
+                if (SurfaceTerrainTileExpansion.PreferSequentialFullWorldTerrain &&
+                    CaveBuildHubSessionReconcile.IsPacedWorkActive())
+                    return true;
+
+                return CaveBuildLiveSceneFeedback.SessionActive ||
+                       CaveBuildEditorResponsiveness.IsLongBuildActive;
             }
         }
 

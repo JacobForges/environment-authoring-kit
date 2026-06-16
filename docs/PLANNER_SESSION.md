@@ -15,6 +15,8 @@ The **planner** turns a **layout brief** into terrain, trails, props, and option
 
 Both paths produce the same Unity contract: **`CaveBuildActiveSessionConfig.json`** + **`CaveBuildPlannerBrief.json`**.
 
+**Content layout (NPCs / enemies / props):** separate tab in the same wizard — see [CONTENT_LAYOUT_WIZARD.md](CONTENT_LAYOUT_WIZARD.md). Writes **`CaveBuildContentLayoutBrief.json`** for MainScene.
+
 ---
 
 ## Start the wizard (optional AI)

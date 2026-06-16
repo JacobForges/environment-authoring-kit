@@ -286,7 +286,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                         return;
                     }
 
-                    CaveBuildDemoAutoRecorder.OnHubBuildStarting(label);
                     buildAction?.Invoke();
                 }
                 catch (Exception ex)
@@ -323,7 +322,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         void DrawBuildTab()
         {
             DrawBuildCompletionBanner();
-            DrawPostBuildPlaythroughPanel();
+            DrawWizardLauncherRow();
             CaveBuildHubSessionReconcile.ReconcileStaleState();
 
             var buildRunning = CaveBuildHubSessionReconcile.IsCoreBuildRunning();
@@ -415,15 +414,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     EditorGUILayout.BeginHorizontal();
                     if (GUILayout.Button("Full AAA Rebuild", GUILayout.Height(24f)))
                         DeferHubBuildAction(LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild, "Full AAA Rebuild");
-                    if (GUILayout.Button("Full AAA Rebuild + Recording", GUILayout.Height(24f)))
-                    {
-                        DeferHubBuildAction(() =>
-                        {
-                            CaveBuildDemoAutoRecorder.AutoEnabled = true;
-                            LavaTubeCaveBuilder.BuildCompleteCaveFullAaaRebuild();
-                        }, "Full AAA Rebuild + Recording");
-                    }
-
                     EditorGUILayout.EndHorizontal();
                 }
             }
@@ -448,6 +438,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (GUILayout.Button("Open Terrain Grader"))
                 TerrainBuildGraderWindow.Open();
             EditorGUILayout.EndHorizontal();
+        }
+
+        void DrawWizardLauncherRow()
+        {
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Open AI Build Wizard (7 tabs)", GUILayout.Height(26f)))
+                CaveBuildWizardGate.OpenPreview();
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField(
+                "Planning: terrain → surface → caves → mazes → interior → atmosphere → video. Each tab has its own session.",
+                EditorStyles.miniLabel);
+            EditorGUILayout.Space(4f);
         }
 
         void DrawApprovedPlanPanel(bool buildRunning)
@@ -475,28 +477,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             var steps = CaveBuildSessionConfig.EstimatePlannedSteps(session);
             var tilePlan = CaveBuildSessionConfig.DescribeActiveTilePlan();
-            var awaitingStart = !buildRunning &&
-                CaveBuildSessionConfig.TryReadWizardPhase(out var wizardPhase) &&
-                string.Equals(wizardPhase, "finalized", StringComparison.OrdinalIgnoreCase);
 
             EditorGUILayout.LabelField($"{session.label} · {tilePlan} · ~{steps:N0} paced steps", EditorStyles.miniLabel);
             EditorGUILayout.LabelField(
                 $"Props={(session.playDiskProps ? "on" : "off")} · " +
                 $"trails={(session.surfaceTrails ? "on" : "off")} · " +
                 $"caves={(session.use3DCaveSystem ? "on" : "off")} · " +
+                $"sequential terrain={(session.sequentialTerrain ? "on (1 tile/step)" : "off")} · " +
                 $"seed={(session.randomSeedEachBuild ? "random each build" : "fixed")}",
                 EditorStyles.miniLabel);
 
-            if (awaitingStart)
-            {
-                EditorGUILayout.LabelField("Plan approved — waiting to start (or click below).", EditorStyles.miniLabel);
-                if (GUILayout.Button("Start build from approved plan", GUILayout.Height(28f)))
-                    DeferHubBuildAction(CaveBuildWizardGate.StartFinalizedPlanNow, "Start approved plan");
-            }
-            else if (!buildRunning)
+            if (!buildRunning)
             {
                 EditorGUILayout.LabelField(
-                    "Last approved plan loaded from disk. Build Complete Cave opens the planner for a new session.",
+                    "Click Build Complete Cave to open the planner and start a fresh session.",
                     EditorStyles.miniLabel);
             }
         }
@@ -537,38 +531,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
             if (GUILayout.Button("Dismiss"))
                 _showCompletionPanel = false;
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.Space(6f);
-        }
-
-        void DrawPostBuildPlaythroughPanel()
-        {
-            if (!_postBuildPlaythroughPending && !CaveBuildPostBuildFinalizeGate.IsActive)
-                return;
-
-            EditorGUILayout.LabelField("Post-build — record gameplay", EditorStyles.boldLabel);
-            var recording = CaveBuildPostBuildFinalizeGate.IsRecordingPlaythrough;
-            EditorGUILayout.HelpBox(
-                recording
-                    ? "Recording Play Mode (1080p Game view). Exit Play Mode when done — " +
-                      "the kit saves the scene, exports the world prefab, and composes DemoRecapPresentation.mp4."
-                    : "Generation finished. Enter Play Mode to record a gameplay playthrough for the recap video. " +
-                      "Skip if you only want the Scene timelapse recap.",
-                MessageType.Info);
-
-            EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(recording || EditorApplication.isPlaying))
-            {
-                if (GUILayout.Button("Enter Play Mode & record", GUILayout.Height(28f)))
-                    CaveBuildPostBuildFinalizeGate.UserEnterPlayMode();
-            }
-
-            using (new EditorGUI.DisabledScope(recording))
-            {
-                if (GUILayout.Button("Skip — finalize now", GUILayout.Height(28f)))
-                    CaveBuildPostBuildFinalizeGate.UserSkipPlaythrough();
-            }
-
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(6f);
         }
@@ -632,16 +594,15 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             if (!paused && pacedWorkActive)
             {
                 EditorGUILayout.LabelField(
-                    "Playtest break can be used multiple times per build (each Play → new playtest-NNN.mp4).",
+                    "Playtest break can be used multiple times per build.",
                     EditorStyles.miniLabel);
             }
 
             if (CaveBuildPauseController.PlaytestBreakActive)
             {
                 EditorGUILayout.HelpBox(
-                    "Playtest break — queue frozen, Scene timelapse still recording. " +
-                    "Terrain is checkpoint-saved before Play. Press Play for Game view MP4 (Unity Recorder), " +
-                    "then Continue build — do not click Build Complete Cave (that starts fresh).",
+                    "Playtest break — queue frozen. Terrain is checkpoint-saved before Play. " +
+                    "Press Continue build when done — do not click Build Complete Cave (that starts fresh).",
                     MessageType.Info);
             }
         }
@@ -674,15 +635,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 CaveBuildSceneCameraDirector.NotifyLiveZoomChanged(_settings.liveSceneCameraZoomOut);
             }
 
-            _settings.forceLivePreviewWhenRecording = EditorGUILayout.Toggle(
-                "Force live preview while recording",
-                _settings.forceLivePreviewWhenRecording);
             _settings.autoRunPlaytestBotAfterBuild = EditorGUILayout.Toggle(
                 "Auto-run playtest bot when build finishes",
                 _settings.autoRunPlaytestBotAfterBuild);
-            CaveBuildPostBuildFinalizeGate.PromptPlayModeRecordingAfterBuild = EditorGUILayout.Toggle(
-                "Prompt Play Mode recording after build",
-                CaveBuildPostBuildFinalizeGate.PromptPlayModeRecordingAfterBuild);
             if (EditorGUI.EndChangeCheck())
             {
                 _settings.SaveToPrefs();
@@ -695,130 +650,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 "Pause/Continue freezes the queue without deleting finished tiles. " +
                 "Playtest bot: Window → Environment Kit → Cave Build → Play Mode → Run Cave Playtest Bot.",
                 MessageType.None);
-
-            EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Demo recording", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "Hub builds auto-capture Scene timelapse. After generation finishes, Hub prompts Play Mode recording " +
-                "(1080p Game view), then saves the scene, exports the world prefab, and composes DemoRecapPresentation.mp4. " +
-                "Legacy toggle below also enables recording for menu-item builds outside Hub.",
-                MessageType.None);
-            CaveBuildDemoAutoRecorder.AutoEnabled = EditorGUILayout.Toggle(
-                "Auto-record build recap video",
-                CaveBuildDemoAutoRecorder.AutoEnabled);
-            CaveBuildDemoAutoRecorder.SmartTimelapseEnabled = EditorGUILayout.Toggle(
-                "Smart timelapse (continuous Scene capture + auto-edit)",
-                CaveBuildDemoAutoRecorder.SmartTimelapseEnabled);
-            if (CaveBuildDemoAutoRecorder.SmartTimelapseEnabled)
-            {
-                CaveBuildDemoAutoRecorder.TimelapseIntervalSeconds = EditorGUILayout.Slider(
-                    "Capture interval (seconds)",
-                    (float)CaveBuildDemoAutoRecorder.TimelapseIntervalSeconds,
-                    1f,
-                    5f);
-                CaveBuildDemoAutoRecorder.TargetRecapMinutes = EditorGUILayout.Slider(
-                    "Target recap length (minutes)",
-                    CaveBuildDemoAutoRecorder.TargetRecapMinutes,
-                    4f,
-                    15f);
-                CaveBuildDemoAutoRecorder.ForceBackgroundSceneUpdates = EditorGUILayout.Toggle(
-                    "Force Scene updates while recording (background timelapse)",
-                    CaveBuildDemoAutoRecorder.ForceBackgroundSceneUpdates);
-            }
-
-            CaveBuildPlayModeUnityRecorder.AutoRecordDuringPlaytestBreak = EditorGUILayout.Toggle(
-                "Unity Recorder on playtest break (1080p Game view → playthroughs/)",
-                CaveBuildPlayModeUnityRecorder.AutoRecordDuringPlaytestBreak);
-
-            CaveBuildDemoNarrationAi.AiNarrationEnabled = EditorGUILayout.Toggle(
-                "AI polish captions (uses Hub AI provider)",
-                CaveBuildDemoNarrationAi.AiNarrationEnabled);
-            CaveBuildDemoAutoRecorder.ProducerNarratorEnabled = EditorGUILayout.Toggle(
-                "Narrator: Personal Voice (Jacob Adkins)",
-                CaveBuildDemoAutoRecorder.ProducerNarratorEnabled);
-            CaveBuildRecapDashboardGate.OpenRecapDashboardBeforeCompose = EditorGUILayout.Toggle(
-                "Open AI Director before compose",
-                CaveBuildRecapDashboardGate.OpenRecapDashboardBeforeCompose);
-            CaveBuildRecapDashboardGate.SkipRecapReview = EditorGUILayout.Toggle(
-                "Skip recap review",
-                CaveBuildRecapDashboardGate.SkipRecapReview);
-            if (CaveBuildRecapDashboardGate.OpenRecapDashboardBeforeCompose &&
-                !CaveBuildRecapDashboardGate.SkipRecapReview)
-            {
-                CaveBuildRecapDashboardGate.AutoProceedTimeoutMinutes = EditorGUILayout.IntSlider(
-                    "Auto-proceed after (minutes, 0 = off)",
-                    CaveBuildRecapDashboardGate.AutoProceedTimeoutMinutes,
-                    0,
-                    120);
-                if (CaveBuildRecapDashboardGate.IsWaitingForProceed)
-                {
-                    EditorGUILayout.HelpBox(
-                        "Waiting for recap review — adjust timeline in the dashboard, then click Proceed to compose.",
-                        MessageType.Info);
-                }
-            }
-
-            if (CaveBuildDemoAutoRecorder.ProducerNarratorEnabled)
-            {
-                EditorGUILayout.HelpBox(
-                    "After compose, Terminal.app opens for Personal Voice narration (~30–60 min). Keep that window open until it finishes; the final MP4 opens when done.",
-                    MessageType.Info);
-            }
-            var aiReady = CaveBuildDemoNarrationAi.CanRun;
-            EditorGUILayout.HelpBox(
-                CaveBuildDemoAutoRecorder.IsRecording
-                    ? "Recording: timelapse + forced Scene repaints so placement stays visible even if Unity is in the background (keep Unity awake)."
-                    : "Can record for hours. On stop: Producer recap (emerald cards + presentation + OpenCV) when brand assets exist under DemoRecapApproved on the active data volume, else legacy smart compose. Needs python3, Pillow, ffmpeg. Menu: Rebuild Producer Recap Preview.",
-                MessageType.None);
-            EditorGUILayout.LabelField($"Data storage: {EnvironmentKitDataRoot.DescribeStorage()}", EditorStyles.miniLabel);
-            if (CaveBuildDemoNarrationAi.AiNarrationEnabled && !aiReady)
-            {
-                EditorGUILayout.HelpBox(
-                    "AI captions need API credentials for the active provider in AI provider settings.",
-                    MessageType.Warning);
-            }
-            EditorGUILayout.LabelField(
-                CaveBuildDemoAutoRecorder.IsFfmpegAvailable
-                    ? $"ffmpeg: found at {CaveBuildDemoAutoRecorder.FfmpegPath}"
-                    : "ffmpeg: not found (frames will save, recap mp4 will not render).",
-                EditorStyles.miniLabel);
-            EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(CaveBuildDemoAutoRecorder.IsRecording))
-            {
-                if (GUILayout.Button("Start recording"))
-                    CaveBuildDemoAutoRecorder.StartRecordingManual();
-            }
-
-            using (new EditorGUI.DisabledScope(!CaveBuildDemoAutoRecorder.IsRecording))
-            {
-                if (GUILayout.Button("Stop recording & generate video"))
-                    CaveBuildDemoAutoRecorder.StopRecordingAndCompose();
-            }
-
-            EditorGUILayout.EndHorizontal();
-            if (CaveBuildDemoAutoRecorder.IsRecording)
-            {
-                EditorGUILayout.HelpBox(
-                    "Stop recording ends Scene timelapse only and runs full presentation video " +
-                    "(DemoRecapPresentation.mp4 + Personal Voice). The build queue keeps running.",
-                    MessageType.None);
-            }
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Capture demo checkpoint now"))
-                CaveBuildDemoAutoRecorder.CaptureNow();
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(CaveBuildDemoAutoRecorder.LastOutputFolder)))
-            {
-                if (GUILayout.Button("Reveal last demo output"))
-                    CaveBuildDemoAutoRecorder.RevealLastOutput();
-            }
-
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Verify ffmpeg now"))
-                CaveBuildDemoAutoRecorder.VerifyFfmpegAndReport();
-            if (GUILayout.Button("Install ffmpeg helper"))
-                CaveBuildDemoAutoRecorder.OpenInstallGuide();
-            EditorGUILayout.EndHorizontal();
 
             using (new EditorGUI.DisabledScope(buildInProgress))
             {

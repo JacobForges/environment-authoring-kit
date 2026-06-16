@@ -8,6 +8,8 @@ import { Agent } from "@cursor/sdk";
 
 type ResearchRequest = {
   hubRoot: string;
+  tabId?: string;
+  researchFocus?: string;
   brief?: {
     title?: string;
     summary?: string;
@@ -30,6 +32,43 @@ type ResearchItem = {
   approved: boolean;
 };
 
+const TAB_AGENT_INTRO: Record<string, string> = {
+  terrain:
+    "Environment Kit **Terrain** research agent — procedural world scope, tile grids, Florida karst surface, playable demo footprint.",
+  "surface-content":
+    "Environment Kit **Surface content** research agent — MainScene NPCs, hybrid Talk+Shop, quest gating, plaza placement.",
+  caves:
+    "Environment Kit **Caves** research agent — lava tube routes, dungeon room graphs, underground navmesh.",
+  mazes:
+    "Environment Kit **Mazes** research agent — terrain labyrinth topology, grid navigation, landmark cells.",
+  "interior-content":
+    "Environment Kit **Interior content** research agent — dungeon population, patrol routes, quest items inside caves.",
+  atmosphere:
+    "Environment Kit **Atmosphere** research agent — lighting, water, fog, VFX, cutscene trigger volumes.",
+  music:
+    "Music Director research agent — pop/trap production, bedroom vocal chain, game OST instrumental prompts, streaming mix.",
+};
+
+const TAB_CATEGORIES: Record<string, string[]> = {
+  terrain: ["fullworld_generation_style", "terrain_scope", "navmesh", "playable_demo"],
+  "surface-content": ["npc_dialog", "quest_design", "content_placement", "shop_ux"],
+  caves: ["cave_structure", "dungeon_graph", "navmesh", "entrance_design"],
+  mazes: ["maze_topology", "landmark_nav", "terrain_blend"],
+  "interior-content": ["dungeon_population", "loot_tables", "patrol_routes"],
+  atmosphere: ["lighting", "water_vfx", "cutscene_triggers", "time_of_day"],
+  music: ["pop_trap_production", "vocal_chain", "instrumental_ai", "streaming_mix"],
+};
+
+const TAB_PREFERRED_SOURCES: Record<string, string> = {
+  terrain: "Unity docs, GDC talks, procedural generation blogs, level design case studies",
+  "surface-content": "Unity docs, game UX articles, quest design GDC, indie postmortems",
+  caves: "procedural generation papers, Unity cave tutorials, dungeon design GDC",
+  mazes: "maze generation algorithms, level design blogs, open world navigation",
+  "interior-content": "dungeon design, loot economy, Unity placement patterns",
+  atmosphere: "Unity lighting docs, VFX artist blogs, cinematic trigger design",
+  music: "music production blogs, mixing/mastering guides, trap/pop tutorials, game audio GDC",
+};
+
 const reqPath = process.argv[2];
 if (!reqPath) {
   console.log(JSON.stringify({ error: "usage: planner-research.ts <request.json>" }));
@@ -45,22 +84,36 @@ if (!apiKey) {
 
 const hubRoot = req.hubRoot?.trim() || process.env.HUB_ROOT?.trim() || process.cwd();
 const modelId = process.env.CAVE_CURSOR_MODEL?.trim() || "composer-2.5";
+const tabId = (req.tabId || "terrain").trim();
 const brief = req.brief ?? {};
 const queries = (req.queries?.length ? req.queries : brief.researchQueries) ?? [
-  "procedural terrain game design playable demo",
+  "procedural terrain game design playable demo 2025 2026",
   "unity open world tile grid best practices",
 ];
 
 const goals = (brief.userGoals ?? []).map((g) => `- ${g}`).join("\n");
 const queryBlock = queries.slice(0, 5).map((q, i) => `${i + 1}. ${q}`).join("\n");
+const agentIntro = TAB_AGENT_INTRO[tabId] ?? TAB_AGENT_INTRO.terrain;
+const categories = (TAB_CATEGORIES[tabId] ?? TAB_CATEGORIES.terrain).join(", ");
+const preferredSources = TAB_PREFERRED_SOURCES[tabId] ?? TAB_PREFERRED_SOURCES.terrain;
+const researchFocus =
+  req.researchFocus?.trim() ||
+  `2025–2026 best practices for ${tabId.replace(/-/g, " ")} in Unity game production`;
 
-const prompt = `You are the Environment Kit build planner research agent.
+const prompt = `You are the ${agentIntro}
 
-**Task:** Use your **web search** tool to research each query below. Find real, reputable sources (docs, tutorials, GDC talks, engine guides, proven game-design articles). Do NOT invent URLs.
+**Task:** Use your **web search** tool to research each query below. Find real, reputable sources published **2024–2026** when possible (docs, tutorials, GDC talks, engine guides, proven game-design / music-production articles). Do NOT invent URLs.
+
+## Research focus
+${researchFocus}
+
+## Preferred source types
+${preferredSources}
 
 ## Build context
 Title: ${brief.title ?? "Build session"}
 Summary: ${brief.summary ?? ""}
+Tab: ${tabId}
 ${goals ? `Goals:\n${goals}` : ""}
 
 ## Research queries (run web search for each)
@@ -73,8 +126,8 @@ Return **valid JSON only** (no markdown fence) with 8–15 items total across al
     {
       "title": "source title",
       "url": "https://real-url",
-      "category": "fullworld_generation_style",
-      "summary": "2-3 sentences: actionable insight for this Unity procedural world build",
+      "category": "${categories.split(", ")[0]}",
+      "summary": "2-3 sentences: actionable insight for this ${tabId} wizard tab",
       "sourceType": "visual_ref",
       "topics": "comma-separated tags",
       "year": 2026
@@ -84,8 +137,10 @@ Return **valid JSON only** (no markdown fence) with 8–15 items total across al
 
 Rules:
 - Every item must come from an actual web search result you found this run.
-- Prefer Unity, procedural generation, level design, combat/inventory demos, social clip pacing.
-- Skip paywalled or broken links.`;
+- Use categories from: ${categories}
+- Prefer sources from 2025–2026; include year field accurately.
+- Skip paywalled or broken links.
+- Stay strictly within **${tabId}** domain — do not mix terrain, content, caves, music, or video topics.`;
 
 function parseJson(raw: string): { items: ResearchItem[] } {
   let text = raw.trim();
@@ -100,14 +155,15 @@ function parseJson(raw: string): { items: ResearchItem[] } {
 
 function stampItems(items: ResearchItem[]): ResearchItem[] {
   const ts = Math.floor(Date.now() / 1000);
+  const defaultCategory = (TAB_CATEGORIES[tabId] ?? TAB_CATEGORIES.terrain)[0];
   return items.map((item, i) => ({
-    id: `planner-cursor-${ts}-${i}`,
+    id: `planner-cursor-${tabId}-${ts}-${i}`,
     title: String(item.title ?? "").slice(0, 200),
     url: String(item.url ?? "").slice(0, 500),
-    category: item.category ?? "fullworld_generation_style",
+    category: item.category ?? defaultCategory,
     summary: String(item.summary ?? "").slice(0, 500),
     sourceType: item.sourceType ?? "visual_ref",
-    topics: String(item.topics ?? "planner_session,cursor_research").slice(0, 200),
+    topics: String(item.topics ?? `planner_session,${tabId},cursor_research`).slice(0, 200),
     year: Number(item.year) || new Date().getFullYear(),
     approved: false,
   }));
@@ -153,7 +209,9 @@ try {
       process.exit(1);
     }
 
-    console.log(JSON.stringify({ items, queries: queries.slice(0, 5), provider: "cursor" }));
+    console.log(
+      JSON.stringify({ items, queries: queries.slice(0, 5), provider: "cursor", tabId, researchFocus })
+    );
   } finally {
     await agent[Symbol.asyncDispose]();
   }

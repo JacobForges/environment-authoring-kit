@@ -21,7 +21,9 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             settings.LoadFromPrefs();
 
             if (CaveBuildSpeedDemoPolicy.IsActiveHubSelection() ||
-                (CaveBuildSessionConfig.HasFinalizedActive && CaveBuildSessionConfig.IsFloatingIslandsDemo()))
+                (CaveBuildSessionConfig.HasFinalizedActive &&
+                 (CaveBuildSessionConfig.IsPlayDiskOnlyDemo() ||
+                  CaveBuildSessionConfig.IsFloatingIslandsDemo())))
             {
                 CaveBuildSpeedDemoPolicy.ApplySessionSettings(settings);
                 CaveBuildEditorResponsiveness.ApplyForActiveBuild(settings);

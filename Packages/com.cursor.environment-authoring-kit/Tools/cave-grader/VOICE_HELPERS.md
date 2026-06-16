@@ -155,3 +155,11 @@ bash test-personal-voice.sh
 | `personal-voice-speak.swift` | AVSpeech + authorize |
 | `mysay.dylib` / `mysay.c` | Capture `say` audio to file |
 | `demo-recap-narrator.py` | Capture + deliver + word queue |
+
+---
+
+## License / Copyright
+
+- Tooling is covered by `LICENSE_TOOL.md` (JacobForges non-commercial tooling terms).
+- Copyright (c) JacobForges.
+- Game/project code and content remain proprietary and protected.

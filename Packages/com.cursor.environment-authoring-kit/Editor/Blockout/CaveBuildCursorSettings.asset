@@ -42,7 +42,7 @@ MonoBehaviour:
   showLiveScenePlacement: 1
   lidarGuidedSculptOnly: 1
   cinematicSceneCamera: 1
-  liveSceneCameraZoomOut: 3.8
+  liveSceneCameraZoomOut: 25
   forceLivePreviewWhenRecording: 1
   useIncrementalLadder: 1
   constrainBotToResearchOnFailure: 1
@@ -51,8 +51,8 @@ MonoBehaviour:
   batchJobCount: 3
   batchDelaySeconds: 0.5
   batchSeedIncrement: 10007
-  runPostBuildResearchPhase: 0
-  invokeCursorOnResearchPhase: 0
+  runPostBuildResearchPhase: 1
+  invokeCursorOnResearchPhase: 1
   autoInvokeTerrainAfterSurfaceBuild: 0
   autoRebuildSurfaceAfterTerrainAgent: 0
   suggestTerrainGradeWatcher: 1

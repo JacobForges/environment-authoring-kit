@@ -29,14 +29,20 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool AutoRecordDuringPlaytestBreak
         {
-            get => EditorPrefs.GetBool(PrefAutoRecord, true);
+            get => EditorPrefs.GetBool(PrefAutoRecord, false);
             set => EditorPrefs.SetBool(PrefAutoRecord, value);
         }
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1
+            if (!CaveBuildDemoAutoRecorder.HubBuildRecordingOptIn)
+                return;
+
             var recordPostBuild = CaveBuildPostBuildFinalizeGate.IsRecordingPlaythrough;
             if (!AutoRecordDuringPlaytestBreak ||
+                (!CaveBuildDemoAutoRecorder.HubBuildRecordingEnabled &&
+                 !CaveBuildDemoAutoRecorder.IsRecording) ||
                 (!CaveBuildPauseController.PlaytestBreakActive && !recordPostBuild))
                 return;
 

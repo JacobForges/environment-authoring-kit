@@ -43,7 +43,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool PromptPlayModeRecordingAfterBuild
         {
-            get => EditorPrefs.GetBool(PrefPrompt, true);
+            get => EditorPrefs.GetBool(PrefPrompt, false);
             set => EditorPrefs.SetBool(PrefPrompt, value);
         }
 
@@ -54,16 +54,10 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
         public static bool IsRecordingPlaythrough =>
             _phase == Phase.RecordingPlayMode || CaveBuildPauseController.PostBuildPlaythroughActive;
 
-        /// <summary>Hold recap compose until Play Mode capture + finalize chain runs.</summary>
+        /// <summary>Finalize demo recorder when the queued pipeline ends (no compose hold).</summary>
         public static void OnRunStatusSessionEnded()
         {
-            if (!ShouldOfferPlayModeRecording())
-            {
-                CaveBuildDemoAutoRecorder.TryFinalizeOnBuildSessionEnd();
-                return;
-            }
-
-            CaveBuildDemoAutoRecorder.HoldComposeForPostBuildPlaythrough();
+            CaveBuildDemoAutoRecorder.TryFinalizeOnBuildSessionEnd();
         }
 
         /// <summary>Returns true when the gate owns completion (caller should skip ShowFinished).</summary>
@@ -96,7 +90,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                 out _,
                 out _);
 
-            CaveBuildDemoAutoRecorder.HoldComposeForPostBuildPlaythrough();
             EnvironmentKitSceneSafeguards.SaveBuildCheckpointSnapshot(
                 "post-build (before Play Mode prompt)",
                 out var detail,
@@ -137,7 +130,6 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
             _ctx = null;
             CaveBuildPauseController.EndPostBuildPlaythrough();
             EnvironmentKitHubWindow.ClearPostBuildPlaythroughPending();
-            CaveBuildDemoAutoRecorder.ReleaseComposeHoldAndFinalize();
         }
 
         static void ShowPlayModePrompt()
@@ -239,14 +231,18 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
                     showDialog: !ctx.SkipDialogs && !EnvironmentKitHubWindow.IsOpen);
             }
 
-            CaveBuildDemoAutoRecorder.ReleaseComposeHoldAndFinalize();
+            CaveBuildDemoAutoRecorder.TryFinalizeOnBuildSessionEnd();
             _phase = Phase.Idle;
             EnvironmentKitHubWindow.ClearPostBuildPlaythroughPending();
         }
 
         static bool ShouldOfferPlayModeRecording()
         {
-            if (!PromptPlayModeRecordingAfterBuild)
+            // Easter egg: CAVE_ENABLE_DEMO_RECORDER=1 — no Hub prompts on normal builds.
+            if (!CaveBuildDemoAutoRecorder.HubBuildRecordingOptIn)
+                return false;
+
+            if (!PromptPlayModeRecordingAfterBuild || !CaveBuildDemoAutoRecorder.HubBuildRecordingEnabled)
                 return false;
 
             var settings = CaveBuildCursorSettings.LoadOrCreate();

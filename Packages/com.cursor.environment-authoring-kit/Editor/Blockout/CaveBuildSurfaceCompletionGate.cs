@@ -21,7 +21,7 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool IsSurfaceBuildActive => _surfaceBuildActive;
 
-        /// <summary>True while the flat grid / outer-ring / terraform queue chain is still running (~81 core or ~289 extended).</summary>
+        /// <summary>True while the flat grid / outer-ring / terraform queue chain is still running (9 / 13 / 81 core / ~289 extended).</summary>
         public static bool IsFullWorldGridPipelineActive => _fullWorldGridPipelineActive;
         public static bool WasSurfacePipelineQueued => _surfacePipelineStarted;
 

@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "usage": "NPCs cluster on four-way plaza (town_center). Enemies only in wild zones outside Polyvania. Props at zone landmarks — shop props only beside Mara.",
+  "sceneName": "MainScene",
+  "landmark": "PolyvaniaTownMap four-way intersection = town_center social plaza",
+  "zones": {
+    "town_center": {
+      "hubOffsetX": 0,
+      "hubOffsetZ": 0,
+      "storyBeat": "social_plaza_shops"
+    },
+    "east_trail": {
+      "hubOffsetX": 28,
+      "hubOffsetZ": 0,
+      "storyBeat": "road_fork_east"
+    },
+    "cave_gate": {
+      "hubOffsetX": 0,
+      "hubOffsetZ": 32,
+      "storyBeat": "cave_recon_gate"
+    },
+    "battle_arena": {
+      "hubOffsetX": -24,
+      "hubOffsetZ": 0,
+      "storyBeat": "training_spar"
+    },
+    "wild_east": {
+      "hubOffsetX": 58,
+      "hubOffsetZ": -22,
+      "storyBeat": "open_patrol"
+    },
+    "wild_west": {
+      "hubOffsetX": -62,
+      "hubOffsetZ": -28,
+      "storyBeat": "arena_drill_wild"
+    }
+  },
+  "npcSlots": {
+    "npc_mara_dispatch": { "zoneId": "town_center", "offsetX": -7, "offsetZ": -3, "rotationY": 90 },
+    "npc_ambient_sigrid": { "zoneId": "town_center", "offsetX": 7, "offsetZ": 2, "rotationY": 270 },
+    "npc_sera_scout": { "zoneId": "town_center", "offsetX": 3, "offsetZ": -7, "rotationY": 180 },
+    "npc_lumen_gate": { "zoneId": "town_center", "offsetX": -2, "offsetZ": 8, "rotationY": 180 },
+    "npc_ambient_jonas": { "zoneId": "town_center", "offsetX": 8, "offsetZ": 5, "rotationY": 225 },
+    "npc_ren_coach": { "zoneId": "town_center", "offsetX": -6, "offsetZ": 5, "rotationY": 90 },
+    "npc_ambient_ren": { "zoneId": "town_center", "offsetX": -6, "offsetZ": 5, "rotationY": 90 }
+  },
+  "enemySlots": {
+    "enemy_spawner_east_trail": {
+      "zoneId": "wild_east",
+      "offsetX": 0,
+      "offsetZ": 0,
+      "patrolOffsetX": [0, 8, -6, -8],
+      "patrolOffsetZ": [0, 6, 10, -4]
+    },
+    "enemy_spawner_arena_ring": {
+      "zoneId": "wild_west",
+      "offsetX": 0,
+      "offsetZ": 0,
+      "patrolOffsetX": [0, 6, 10, 2],
+      "patrolOffsetZ": [0, 5, -4, -10]
+    }
+  },
+  "propSlots": {
+    "prop_depot_sign": { "zoneId": "town_center", "offsetX": -9, "offsetZ": -1 },
+    "prop_mara_manifest_crate": { "zoneId": "town_center", "offsetX": -8, "offsetZ": -5 },
+    "prop_depot_pennant": { "zoneId": "town_center", "offsetX": -10, "offsetZ": 0, "height": 3.2 },
+    "prop_sera_fork_sign": { "zoneId": "east_trail", "offsetX": 6, "offsetZ": -8 },
+    "prop_sera_fork_pennant": { "zoneId": "east_trail", "offsetX": 10, "offsetZ": -12, "height": 3.0 },
+    "prop_jonas_rumor_board": { "zoneId": "east_trail", "offsetX": 14, "offsetZ": 8 },
+    "prop_cave_mouth_arch": { "zoneId": "cave_gate", "offsetX": 0, "offsetZ": 8, "height": 1.4 },
+    "prop_ren_bleacher_banners": { "zoneId": "battle_arena", "offsetX": 6, "offsetZ": 4, "height": 2.4 },
+    "prop_arena_supply_crate": { "zoneId": "battle_arena", "offsetX": -8, "offsetZ": -6 }
+  }
+}

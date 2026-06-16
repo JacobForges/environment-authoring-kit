@@ -12,6 +12,8 @@ namespace EnvironmentAuthoringKit.World
         public WorldSurfaceBiomeId biome = WorldSurfaceBiomeId.PlayKarst;
         public int lootSeed;
 
+        public float dropChance = 0.58f;
+
         WorldSimpleHealth _simple;
         Component _combatStats;
         FieldInfo _hpField;
@@ -72,6 +74,9 @@ namespace EnvironmentAuthoringKit.World
             _dropped = true;
 
             var rng = new System.Random(lootSeed ^ 0x4C4F4F54);
+            if (rng.NextDouble() > Mathf.Clamp01(dropChance))
+                return;
+
             if (!WorldEnemyLootTables.TryRoll(biome, rng, out var defId, out var qty))
                 return;
 

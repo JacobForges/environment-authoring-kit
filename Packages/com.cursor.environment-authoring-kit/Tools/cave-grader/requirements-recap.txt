@@ -1,5 +1,7 @@
 # Producer recap optional Python deps (same python3 as run-producer-recap.py)
 # Narration docs: PERSONAL_VOICE_NARRATION.md, VOICE_HELPERS.md
+# License: LICENSE_TOOL.md (JacobForges non-commercial tooling terms)
+# Copyright (c) JacobForges
 opencv-python-headless>=4.8.0
 numpy>=1.24.0
 edge-tts>=6.1.0

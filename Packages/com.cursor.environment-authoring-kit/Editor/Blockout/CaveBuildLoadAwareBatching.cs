@@ -20,6 +20,12 @@ namespace EnvironmentAuthoringKit.Editor.Blockout
 
         public static bool PreferSingleItem()
         {
+            // 16GB-class RAM: default one item per queue step (cap stays MaxItemsPerBatch=2).
+            if (CaveBuildMemoryGuard.SystemRamGb() is > 0f and <= 17f)
+                return true;
+            if (EnvironmentKitHardwareBudget.ResolveEditorRamBudgetGb() <= 16f)
+                return true;
+
             if (CaveBuildMemoryGuard.ShouldHoldQueueForMemory())
                 return true;
             if (EnvironmentKitHardwareBudget.Active.ConserveGpuMemory)
